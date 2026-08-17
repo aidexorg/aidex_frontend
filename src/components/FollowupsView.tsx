@@ -1,0 +1,187 @@
+import { useState, useEffect, useCallback } from 'react';
+import { AlertCircle, Clock, User, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
+import type { Action, Part, Session, Period, Profile } from '@/types';
+import { LoadingState, EmptyState } from './ui';
+
+interface FollowupItem {
+  action: Action;
+  part: Part;
+  session: Session;
+  period: Period;
+  profile: Profile;
+}
+
+interface FollowupsViewProps {
+  onOpenProfile: (profile: Profile) => void;
+}
+
+export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
+  const [items, setItems] = useState<FollowupItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'incomplete' | 'followup'>('all');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [aRes, pRes, sRes, perRes, profRes] = await Promise.all([
+        supabase.from('actions').select('*'),
+        supabase.from('parts').select('*'),
+        supabase.from('sessions').select('*'),
+        supabase.from('periods').select('*'),
+        supabase.from('profiles').select('*'),
+      ]);
+      if (aRes.error || pRes.error || sRes.error || perRes.error || profRes.error) {
+        throw new Error('خطا در بارگذاری.');
+      }
+      const actions = (aRes.data ?? []) as Action[];
+      const parts = (pRes.data ?? []) as Part[];
+      const sessions = (sRes.data ?? []) as Session[];
+      const periods = (perRes.data ?? []) as Period[];
+      const profiles = (profRes.data ?? []) as Profile[];
+
+      const partMap = new Map(parts.map((p) => [p.id, p]));
+      const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+      const periodMap = new Map(periods.map((p) => [p.id, p]));
+      const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
+      const joined: FollowupItem[] = [];
+      for (const action of actions) {
+        const part = partMap.get(action.part_id);
+        if (!part) continue;
+        const session = sessionMap.get(part.session_id);
+        if (!session) continue;
+        const period = periodMap.get(session.period_id);
+        if (!period) continue;
+        const profile = profileMap.get(period.profile_id);
+        if (!profile) continue;
+        if (action.status === 'incomplete' || action.needs_followup) {
+          joined.push({ action, part, session, period, profile });
+        }
+      }
+      joined.sort(
+        (a, b) =>
+          new Date(a.session.session_date).getTime() - new Date(b.session.session_date).getTime()
+      );
+      setItems(joined);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const filtered = items.filter((item) => {
+    if (filter === 'incomplete') return item.action.status === 'incomplete';
+    if (filter === 'followup') return item.action.needs_followup;
+    return true;
+  });
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">پیگیری‌ها</h1>
+        <p className="text-sm text-slate-400 mt-0.5">
+          اقدامات ناقص یا نیازمند پیگیری
+        </p>
+      </div>
+
+      {/* Filter tabs */}
+      <div className="flex gap-2">
+        {[
+          { key: 'all' as const, label: 'همه', count: items.length },
+          {
+            key: 'incomplete' as const,
+            label: 'ناقص',
+            count: items.filter((i) => i.action.status === 'incomplete').length,
+          },
+          {
+            key: 'followup' as const,
+            label: 'نیازمند پیگیری',
+            count: items.filter((i) => i.action.needs_followup).length,
+          },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setFilter(tab.key)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              filter === tab.key
+                ? 'bg-teal-600 text-white'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            {tab.label} ({toFaDigits(tab.count)})
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <LoadingState />
+      ) : filtered.length === 0 ? (
+        <div className="card">
+          <EmptyState
+            icon={<AlertCircle size={48} />}
+            title="موردی برای پیگیری وجود ندارد"
+            description="همه‌ی اقدامات کامل شده‌اند و پیگیری‌ای باقی نمانده."
+          />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(({ action, part, session, period, profile }) => (
+            <button
+              key={action.id}
+              onClick={() => onOpenProfile(profile)}
+              className="card p-4 w-full text-right hover:shadow-md hover:border-teal-300 transition-all flex items-center gap-3"
+            >
+              <div
+                className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                  action.status === 'incomplete'
+                    ? 'bg-amber-50 text-amber-600'
+                    : 'bg-red-50 text-red-600'
+                }`}
+              >
+                {action.status === 'incomplete' ? <Clock size={20} /> : <AlertCircle size={20} />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-slate-900">{action.title}</span>
+                  {action.status === 'incomplete' && (
+                    <span className="badge bg-amber-100 text-amber-700">ناقص</span>
+                  )}
+                  {action.needs_followup && (
+                    <span className="badge bg-red-100 text-red-700">پیگیری</span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-400 mt-1 flex flex-wrap gap-x-3">
+                  <span className="flex items-center gap-1">
+                    <User size={11} />
+                    {profile.first_name} {profile.last_name}
+                  </span>
+                  <span>جلسه {toFaDigits(session.session_number)}</span>
+                  <span>بخش {toFaDigits(part.part_number)}</span>
+                  <span>{formatDate(session.session_date)}</span>
+                </div>
+                {action.incomplete_reason && (
+                  <div className="text-xs text-amber-600 mt-1">
+                    دلیل: {action.incomplete_reason}
+                  </div>
+                )}
+              </div>
+              <div className="text-left shrink-0">
+                <div className="text-sm font-medium text-slate-600">
+                  {formatPrice(action.price - action.discount)}
+                </div>
+                <ArrowLeft size={16} className="text-slate-300 mt-1" />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
