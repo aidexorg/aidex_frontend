@@ -37,9 +37,12 @@ interface ProfileDetailProps {
 /** BR-UX-05: bounded periods per page (accordion-heavy) */
 const PERIOD_PAGE_SIZE = 6;
 
+/** BR-POL-03: deferred delete undo window (ms) */
+const DELETE_UNDO_MS = 30_000;
+
 export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailProps) {
   const data = useData();
-  const { showToast } = useToast();
+  const { showToast, showUndoToast } = useToast();
   const { refresh: refreshFollowupCount } = useFollowupCount();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -66,6 +69,17 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
   } | null>(null);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
+  /** BR-POL-03: hide until undo window expires */
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(() => new Set());
+  const deleteTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const timers = deleteTimersRef.current;
+    return () => {
+      timers.forEach(clearTimeout);
+      timers.clear();
+    };
+  }, []);
 
   /** BR-UX-01: keep viewport stable when accordion height changes */
   const periodsScrollRef = useRef<HTMLDivElement>(null);
@@ -149,13 +163,18 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     loadAll();
   }, [loadAll]);
 
-  // Derived totals
+  // Derived totals (exclude pending deletes from UI)
   const periodActions = (periodId: string) => {
-    const sessionIds = sessions.filter((s) => s.period_id === periodId).map((s) => s.id);
-    const partIds = parts.filter((p) => sessionIds.includes(p.session_id)).map((p) => p.id);
-    return actions.filter((a) => partIds.includes(a.part_id));
+    const sessionIds = sessions
+      .filter((s) => s.period_id === periodId && !pendingDeleteIds.has(s.id))
+      .map((s) => s.id);
+    const partIds = parts
+      .filter((p) => sessionIds.includes(p.session_id) && !pendingDeleteIds.has(p.id))
+      .map((p) => p.id);
+    return actions.filter((a) => partIds.includes(a.part_id) && !pendingDeleteIds.has(a.id));
   };
-  const periodPayments = (periodId: string) => payments.filter((p) => p.period_id === periodId);
+  const periodPayments = (periodId: string) =>
+    payments.filter((p) => p.period_id === periodId && !pendingDeleteIds.has(p.id));
   const periodTotal = (periodId: string) => {
     const acts = periodActions(periodId);
     return acts.reduce((sum, a) => sum + (a.price - a.discount), 0);
@@ -189,7 +208,9 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     return haystack.includes(q);
   };
 
-  const filteredPeriods = periods.filter(periodMatchesSearch);
+  const filteredPeriods = periods.filter(
+    (period) => !pendingDeleteIds.has(period.id) && periodMatchesSearch(period)
+  );
   const periodTotalPages = Math.max(1, Math.ceil(filteredPeriods.length / PERIOD_PAGE_SIZE));
   const safePeriodPage = Math.min(periodPage, periodTotalPages);
   const periodPageStart = (safePeriodPage - 1) * PERIOD_PAGE_SIZE;
@@ -229,22 +250,54 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     payment: 'پرداخت حذف شد.',
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!confirmDelete) return;
-    const { type, id } = confirmDelete;
-    try {
-      if (type === 'period') await data.deletePeriod(id);
-      else if (type === 'session') await data.deleteSession(id);
-      else if (type === 'part') await data.deletePart(id);
-      else if (type === 'action') await data.deleteAction(id);
-      else await data.deletePayment(id);
-      showToast({ message: deleteSuccessMessage[type], variant: 'success' });
-      setConfirmDelete(null);
-      refreshFollowupCount();
-      loadAll();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'خطا در حذف.');
-    }
+    const { type, id, label } = confirmDelete;
+    setConfirmDelete(null);
+
+    setPendingDeleteIds((prev) => new Set(prev).add(id));
+
+    const commitDelete = async () => {
+      deleteTimersRef.current.delete(id);
+      setPendingDeleteIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      try {
+        if (type === 'period') await data.deletePeriod(id);
+        else if (type === 'session') await data.deleteSession(id);
+        else if (type === 'part') await data.deletePart(id);
+        else if (type === 'action') await data.deleteAction(id);
+        else await data.deletePayment(id);
+        showToast({ message: deleteSuccessMessage[type], variant: 'success' });
+        refreshFollowupCount();
+        await loadAll();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'خطا در حذف.');
+      }
+    };
+
+    const timer = setTimeout(() => {
+      void commitDelete();
+    }, DELETE_UNDO_MS);
+    deleteTimersRef.current.set(id, timer);
+
+    showUndoToast({
+      message: `«${label}» حذف شد. تا ۳۰ ثانیه می‌توانید بازگردانی کنید.`,
+      onUndo: () => {
+        const pendingTimer = deleteTimersRef.current.get(id);
+        if (pendingTimer) clearTimeout(pendingTimer);
+        deleteTimersRef.current.delete(id);
+        setPendingDeleteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        showToast({ message: 'حذف لغو شد.', variant: 'info' });
+      },
+      durationMs: DELETE_UNDO_MS,
+    });
   };
 
   const addSession = async (periodId: string) => {
@@ -412,7 +465,9 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
           ) : (
           paginatedPeriods.map((period) => {
             const displayNum = periodDisplayNum(period.id);
-            const periodSess = sessions.filter((s) => s.period_id === period.id);
+            const periodSess = sessions.filter(
+              (s) => s.period_id === period.id && !pendingDeleteIds.has(s.id)
+            );
             const expanded = expandedPeriod === period.id;
             const total = periodTotal(period.id);
             const paid = periodPaid(period.id);
@@ -550,7 +605,9 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
                     ) : (
                       <div className="space-y-2">
                         {periodSess.map((session) => {
-                          const sessParts = parts.filter((p) => p.session_id === session.id);
+                          const sessParts = parts.filter(
+                            (p) => p.session_id === session.id && !pendingDeleteIds.has(p.id)
+                          );
                           const sessExpanded = expandedSession === session.id;
                           return (
                             <div key={session.id} className="rounded-lg border border-slate-200">
@@ -586,7 +643,8 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
                                   ) : (
                                     sessParts.map((part) => {
                                       const partActions = actions.filter(
-                                        (a) => a.part_id === part.id
+                                        (a) =>
+                                          a.part_id === part.id && !pendingDeleteIds.has(a.id)
                                       );
                                       return (
                                         <div
@@ -903,7 +961,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
       <ConfirmDialog
         open={confirmDelete !== null}
         title="حذف"
-        message={`آیا از حذف «${confirmDelete?.label ?? ''}» مطمئن هستید؟ این عمل قابل بازگشت نیست.`}
+        message={`آیا از حذف «${confirmDelete?.label ?? ''}» مطمئن هستید؟ تا ۳۰ ثانیه پس از تأیید می‌توانید بازگردانی کنید.`}
         confirmLabel="حذف"
         danger
         onConfirm={handleDelete}

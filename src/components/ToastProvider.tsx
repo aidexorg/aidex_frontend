@@ -16,15 +16,25 @@ export interface ToastOptions {
   message: string;
   variant?: ToastVariant;
   durationMs?: number;
+  /** BR-POL-03: optional action (e.g. undo) shown beside dismiss */
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ToastItem extends Required<Pick<ToastOptions, 'message' | 'variant'>> {
   id: number;
   durationMs: number;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ToastContextValue {
   showToast: (options: ToastOptions) => void;
+  showUndoToast: (options: {
+    message: string;
+    onUndo: () => void;
+    durationMs?: number;
+  }) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -71,6 +81,11 @@ function ToastCard({
   const Icon =
     toast.variant === 'success' ? CheckCircle2 : toast.variant === 'error' ? XCircle : Info;
 
+  const handleAction = () => {
+    toast.onAction?.();
+    onDismiss(toast.id);
+  };
+
   return (
     <div
       className={`pointer-events-auto flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm shadow-lg shadow-slate-900/10 animate-fade-in ${styles}`}
@@ -78,6 +93,15 @@ function ToastCard({
     >
       <Icon size={18} className="shrink-0 mt-0.5" />
       <span className="flex-1 leading-relaxed">{toast.message}</span>
+      {toast.actionLabel && toast.onAction && (
+        <button
+          type="button"
+          onClick={handleAction}
+          className="shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold bg-white/80 hover:bg-white border border-current/20 transition-colors"
+        >
+          {toast.actionLabel}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
@@ -105,10 +129,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const showToast = useCallback(
-    ({ message, variant = 'success', durationMs }: ToastOptions) => {
+    ({ message, variant = 'success', durationMs, actionLabel, onAction }: ToastOptions) => {
       const id = ++nextId.current;
       const resolvedDuration = durationMs ?? DEFAULT_DURATION[variant];
-      const item: ToastItem = { id, message, variant, durationMs: resolvedDuration };
+      const item: ToastItem = {
+        id,
+        message,
+        variant,
+        durationMs: resolvedDuration,
+        actionLabel,
+        onAction,
+      };
 
       setToasts((current) => [...current.slice(-(MAX_VISIBLE - 1)), item]);
 
@@ -116,6 +147,27 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       timers.current.set(id, timer);
     },
     [dismiss]
+  );
+
+  const showUndoToast = useCallback(
+    ({
+      message,
+      onUndo,
+      durationMs = 30_000,
+    }: {
+      message: string;
+      onUndo: () => void;
+      durationMs?: number;
+    }) => {
+      showToast({
+        message,
+        variant: 'info',
+        durationMs,
+        actionLabel: 'بازگردانی',
+        onAction: onUndo,
+      });
+    },
+    [showToast]
   );
 
   useEffect(() => {
@@ -126,7 +178,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value = useMemo(() => ({ showToast }), [showToast]);
+  const value = useMemo(() => ({ showToast, showUndoToast }), [showToast, showUndoToast]);
 
   return (
     <ToastContext.Provider value={value}>
