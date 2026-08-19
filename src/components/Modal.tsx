@@ -41,7 +41,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       <div
         className={`relative w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto card animate-fade-in`}
       >
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 sticky top-0 bg-white rounded-t-xl z-10">
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sticky top-0 bg-white/95 backdrop-blur-sm rounded-t-[1.25rem] z-10">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           <button
             onClick={onClose}

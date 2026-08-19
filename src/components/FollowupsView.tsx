@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Clock, User, ArrowLeft } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import type { Action, Part, Session, Period, Profile } from '@/types';
 import { LoadingState, EmptyState } from './ui';
@@ -18,6 +18,7 @@ interface FollowupsViewProps {
 }
 
 export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
+  const data = useData();
   const [items, setItems] = useState<FollowupItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'incomplete' | 'followup'>('all');
@@ -25,21 +26,13 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [aRes, pRes, sRes, perRes, profRes] = await Promise.all([
-        supabase.from('actions').select('*'),
-        supabase.from('parts').select('*'),
-        supabase.from('sessions').select('*'),
-        supabase.from('periods').select('*'),
-        supabase.from('profiles').select('*'),
+      const [actions, parts, sessions, periods, profiles] = await Promise.all([
+        data.listActions(),
+        data.listParts(),
+        data.listSessions(),
+        data.listPeriods(),
+        data.listProfiles(),
       ]);
-      if (aRes.error || pRes.error || sRes.error || perRes.error || profRes.error) {
-        throw new Error('خطا در بارگذاری.');
-      }
-      const actions = (aRes.data ?? []) as Action[];
-      const parts = (pRes.data ?? []) as Part[];
-      const sessions = (sRes.data ?? []) as Session[];
-      const periods = (perRes.data ?? []) as Period[];
-      const profiles = (profRes.data ?? []) as Profile[];
 
       const partMap = new Map(parts.map((p) => [p.id, p]));
       const sessionMap = new Map(sessions.map((s) => [s.id, s]));
@@ -70,7 +63,7 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     load();
@@ -85,8 +78,8 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">پیگیری‌ها</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
+        <h1 className="page-title">پیگیری‌ها</h1>
+        <p className="page-sub">
           اقدامات ناقص یا نیازمند پیگیری
         </p>
       </div>
@@ -109,11 +102,7 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
           <button
             key={tab.key}
             onClick={() => setFilter(tab.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              filter === tab.key
-                ? 'bg-teal-600 text-white'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            }`}
+            className={filter === tab.key ? 'chip-active' : 'chip'}
           >
             {tab.label} ({toFaDigits(tab.count)})
           </button>
@@ -136,7 +125,7 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
             <button
               key={action.id}
               onClick={() => onOpenProfile(profile)}
-              className="card p-4 w-full text-right hover:shadow-md hover:border-teal-300 transition-all flex items-center gap-3"
+              className="card p-4 w-full text-right hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-3"
             >
               <div
                 className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${

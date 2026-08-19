@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { FileText, Copy, Check, User, ClipboardList } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import { LoadingState, EmptyState } from './ui';
@@ -12,6 +12,7 @@ interface OutputsViewProps {
 type OutputType = 'profile' | 'review';
 
 export function OutputsView({ onOpenProfile }: OutputsViewProps) {
+  const data = useData();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [outputType, setOutputType] = useState<OutputType>('profile');
@@ -23,19 +24,15 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
   const loadProfiles = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setProfiles((data ?? []) as Profile[]);
-      if (data && data.length > 0 && !selectedId) setSelectedId(data[0].id);
+      const rows = await data.listProfiles();
+      setProfiles(rows);
+      if (rows.length > 0 && !selectedId) setSelectedId(rows[0].id);
     } catch {
       setProfiles([]);
     } finally {
       setLoading(false);
     }
-  }, [selectedId]);
+  }, [selectedId, data]);
 
   useEffect(() => {
     loadProfiles();
@@ -49,13 +46,8 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
       const profile = profiles.find((p) => p.id === selectedId);
       if (!profile) return;
 
-      const [perRes] = await Promise.all([
-        supabase.from('periods').select('*').eq('profile_id', selectedId).order('created_at'),
-      ]);
-      if (perRes.error) throw perRes.error;
-      const periods = (perRes.data ?? []) as Period[];
+      const periods = await data.listPeriods(selectedId);
 
-      // Gather sessions, parts, actions, payments across all periods
       let sessions: Session[] = [];
       let parts: Part[] = [];
       let actions: Action[] = [];
@@ -63,43 +55,19 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
 
       if (periods.length > 0) {
         const periodIds = periods.map((p) => p.id);
-        const sRes = await supabase
-          .from('sessions')
-          .select('*')
-          .in('period_id', periodIds)
-          .order('session_number');
-        if (sRes.error) throw sRes.error;
-        sessions = (sRes.data ?? []) as Session[];
+        sessions = await data.listSessions(periodIds);
 
         if (sessions.length > 0) {
           const sessionIds = sessions.map((s) => s.id);
-          const pRes2 = await supabase
-            .from('parts')
-            .select('*')
-            .in('session_id', sessionIds)
-            .order('part_number');
-          if (pRes2.error) throw pRes2.error;
-          parts = (pRes2.data ?? []) as Part[];
+          parts = await data.listParts(sessionIds);
 
           if (parts.length > 0) {
             const partIds = parts.map((p) => p.id);
-            const aRes = await supabase
-              .from('actions')
-              .select('*')
-              .in('part_id', partIds)
-              .order('created_at');
-            if (aRes.error) throw aRes.error;
-            actions = (aRes.data ?? []) as Action[];
+            actions = await data.listActions(partIds);
           }
         }
 
-        const payRes = await supabase
-          .from('payments')
-          .select('*')
-          .in('period_id', periodIds)
-          .order('payment_date');
-        if (payRes.error) throw payRes.error;
-        payments = (payRes.data ?? []) as Payment[];
+        payments = await data.listPayments(periodIds);
       }
 
       const lines: string[] = [];
@@ -191,7 +159,7 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
     } finally {
       setGenerating(false);
     }
-  }, [selectedId, outputType, profiles]);
+  }, [selectedId, outputType, profiles, data]);
 
   const copyText = async () => {
     try {
@@ -208,8 +176,8 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">خروجی قالب</h1>
-        <p className="text-sm text-slate-400 mt-0.5">
+        <h1 className="page-title">خروجی قالب</h1>
+        <p className="page-sub">
           تولید متن آماده‌ی پرونده یا مرور درمان برای کپی و استفاده
         </p>
       </div>
@@ -246,9 +214,9 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
               <div className="flex gap-2">
                 <button
                   onClick={() => setOutputType('profile')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition ${
                     outputType === 'profile'
-                      ? 'bg-teal-600 text-white border-teal-600'
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm shadow-teal-600/20'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
                 >
@@ -257,9 +225,9 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
                 </button>
                 <button
                   onClick={() => setOutputType('review')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium border transition ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition ${
                     outputType === 'review'
-                      ? 'bg-teal-600 text-white border-teal-600'
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm shadow-teal-600/20'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
                 >

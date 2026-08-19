@@ -15,7 +15,7 @@ import {
   Clock,
   CircleDot,
 } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits, todayISO } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import { LoadingState, EmptyState, ErrorBanner, ConfirmDialog } from './ui';
@@ -30,6 +30,7 @@ interface ProfileDetailProps {
 }
 
 export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
+  const data = useData();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -59,56 +60,24 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
     setLoading(true);
     setError(null);
     try {
-      const pRes = await supabase
-        .from('periods')
-        .select('*')
-        .eq('profile_id', profile.id)
-        .order('created_at');
-      if (pRes.error) throw pRes.error;
-      const periodList = (pRes.data ?? []) as Period[];
+      const periodList = await data.listPeriods(profile.id);
       setPeriods(periodList);
-      setPayments([]);
 
       if (periodList.length > 0) {
         const periodIds = periodList.map((p) => p.id);
-        // Load payments for these periods
-        const paymentsRes = await supabase
-          .from('payments')
-          .select('*')
-          .in('period_id', periodIds)
-          .order('payment_date');
-        if (paymentsRes.error) throw paymentsRes.error;
-        setPayments((paymentsRes.data ?? []) as Payment[]);
+        setPayments(await data.listPayments(periodIds));
 
-        const sRes = await supabase
-          .from('sessions')
-          .select('*')
-          .in('period_id', periodIds)
-          .order('session_number');
-        if (sRes.error) throw sRes.error;
-        const sessionList = (sRes.data ?? []) as Session[];
+        const sessionList = await data.listSessions(periodIds);
         setSessions(sessionList);
 
         if (sessionList.length > 0) {
           const sessionIds = sessionList.map((s) => s.id);
-          const partRes = await supabase
-            .from('parts')
-            .select('*')
-            .in('session_id', sessionIds)
-            .order('part_number');
-          if (partRes.error) throw partRes.error;
-          const partList = (partRes.data ?? []) as Part[];
+          const partList = await data.listParts(sessionIds);
           setParts(partList);
 
           if (partList.length > 0) {
             const partIds = partList.map((p) => p.id);
-            const aRes = await supabase
-              .from('actions')
-              .select('*')
-              .in('part_id', partIds)
-              .order('created_at');
-            if (aRes.error) throw aRes.error;
-            setActions((aRes.data ?? []) as Action[]);
+            setActions(await data.listActions(partIds));
           } else {
             setActions([]);
           }
@@ -127,7 +96,7 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
     } finally {
       setLoading(false);
     }
-  }, [profile.id]);
+  }, [profile.id, data]);
 
   useEffect(() => {
     loadAll();
@@ -151,10 +120,12 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
   const handleDelete = async () => {
     if (!confirmDelete) return;
     const { type, id } = confirmDelete;
-    const table = type === 'period' ? 'periods' : type === 'session' ? 'sessions' : type === 'part' ? 'parts' : type === 'action' ? 'actions' : 'payments';
     try {
-      const { error } = await supabase.from(table).delete().eq('id', id);
-      if (error) throw error;
+      if (type === 'period') await data.deletePeriod(id);
+      else if (type === 'session') await data.deleteSession(id);
+      else if (type === 'part') await data.deletePart(id);
+      else if (type === 'action') await data.deleteAction(id);
+      else await data.deletePayment(id);
       setConfirmDelete(null);
       loadAll();
     } catch (err) {
@@ -166,10 +137,11 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
     const existing = sessions.filter((s) => s.period_id === periodId);
     const nextNum = existing.length > 0 ? Math.max(...existing.map((s) => s.session_number)) + 1 : 1;
     try {
-      const { error } = await supabase
-        .from('sessions')
-        .insert({ period_id: periodId, session_number: nextNum, session_date: todayISO() });
-      if (error) throw error;
+      await data.createSession({
+        period_id: periodId,
+        session_number: nextNum,
+        session_date: todayISO(),
+      });
       loadAll();
       setExpandedSession(null);
       setExpandedPeriod(periodId);
@@ -183,10 +155,13 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
     const nextNum = existing.length > 0 ? Math.max(...existing.map((p) => p.part_number)) + 1 : 1;
     const treatmentOrder = nextNum;
     try {
-      const { error } = await supabase
-        .from('parts')
-        .insert({ session_id: sessionId, part_number: nextNum, treatment_order: treatmentOrder });
-      if (error) throw error;
+      await data.createPart({
+        session_id: sessionId,
+        part_number: nextNum,
+        treatment_order: treatmentOrder,
+        tooth: null,
+        area: null,
+      });
       loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ایجاد بخش.');
@@ -206,18 +181,39 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
       </div>
 
       {/* Patient card */}
-      <div className="card p-5">
+      <div className="card p-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">
-              {profile.first_name} {profile.last_name}
-            </h2>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm text-slate-500">
-              {profile.file_number && (
-                <span>شماره پرونده: {toFaDigits(profile.file_number)}</span>
-              )}
-              {profile.birth_year && <span>سال تولد: {toFaDigits(profile.birth_year)}</span>}
-              {profile.phone && <span>تلفن: {toFaDigits(profile.phone)}</span>}
+          <div className="flex items-start gap-4 min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-700 text-white flex items-center justify-center text-lg font-bold shrink-0 shadow-md shadow-teal-700/20">
+              {profile.first_name.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] text-slate-400">
+                {profile.file_number ? `پرونده ${toFaDigits(profile.file_number)}` : 'پرونده بیمار'}
+              </p>
+              <h2 className="text-xl font-bold text-slate-900">
+                {profile.first_name} {profile.last_name}
+              </h2>
+              <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-slate-500">
+                {profile.birth_year && (
+                  <span>
+                    <span className="text-slate-400 block text-[11px]">سال تولد</span>
+                    {toFaDigits(profile.birth_year)}
+                  </span>
+                )}
+                {profile.phone && (
+                  <span>
+                    <span className="text-slate-400 block text-[11px]">تلفن</span>
+                    {toFaDigits(profile.phone)}
+                  </span>
+                )}
+                {profile.national_id && (
+                  <span>
+                    <span className="text-slate-400 block text-[11px]">کد ملی</span>
+                    {toFaDigits(profile.national_id)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex gap-2">
@@ -237,18 +233,12 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
             </button>
           </div>
         </div>
-        {(profile.address || profile.national_id || profile.clinical_notes || profile.file_description) && (
+        {(profile.address || profile.clinical_notes || profile.file_description) && (
           <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             {profile.address && (
               <div>
                 <span className="text-slate-400">نشانی: </span>
                 <span className="text-slate-600">{profile.address}</span>
-              </div>
-            )}
-            {profile.national_id && (
-              <div>
-                <span className="text-slate-400">کد ملی: </span>
-                <span className="text-slate-600">{toFaDigits(profile.national_id)}</span>
               </div>
             )}
             {profile.file_description && (

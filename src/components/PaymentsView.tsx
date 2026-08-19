@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Wallet, ArrowLeft, User, Search } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import type { Payment, Period, Profile } from '@/types';
 import { LoadingState, EmptyState } from './ui';
@@ -15,6 +15,7 @@ interface PaymentsViewProps {
 }
 
 export function PaymentsView({ onOpenProfile }: PaymentsViewProps) {
+  const data = useData();
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -22,15 +23,14 @@ export function PaymentsView({ onOpenProfile }: PaymentsViewProps) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [payRes, perRes, profRes] = await Promise.all([
-        supabase.from('payments').select('*').order('payment_date', { ascending: false }),
-        supabase.from('periods').select('*'),
-        supabase.from('profiles').select('*'),
+      const [paymentsAsc, periods, profiles] = await Promise.all([
+        data.listPayments(),
+        data.listPeriods(),
+        data.listProfiles(),
       ]);
-      if (payRes.error || perRes.error || profRes.error) throw new Error('خطا');
-      const payments = (payRes.data ?? []) as Payment[];
-      const periods = (perRes.data ?? []) as Period[];
-      const profiles = (profRes.data ?? []) as Profile[];
+      const payments = [...paymentsAsc].sort(
+        (a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+      );
       const periodMap = new Map(periods.map((p) => [p.id, p]));
       const profileMap = new Map(profiles.map((p) => [p.id, p]));
 
@@ -45,7 +45,7 @@ export function PaymentsView({ onOpenProfile }: PaymentsViewProps) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     load();
@@ -67,14 +67,14 @@ export function PaymentsView({ onOpenProfile }: PaymentsViewProps) {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">پرداخت‌ها</h1>
-        <p className="text-sm text-slate-400 mt-0.5">لیست تمام پرداخت‌های ثبت‌شده</p>
+        <h1 className="page-title">پرداخت‌ها</h1>
+        <p className="page-sub">لیست تمام پرداخت‌های ثبت‌شده</p>
       </div>
 
       {/* Summary card */}
       <div className="card p-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <div className="icon-well bg-emerald-50 text-emerald-600">
             <Wallet size={22} />
           </div>
           <div>

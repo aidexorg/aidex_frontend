@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
-import { supabase } from '@/lib/supabase';
-import { TOOTH_QUADRANTS, TOOTH_NUMBERS, AREA_OPTIONS } from '@/types';
+import { DentalChart } from './DentalChart';
+import { useData } from '@/data';
+import { AREA_OPTIONS } from '@/types';
 import type { Period } from '@/types';
 
 interface PeriodFormProps {
@@ -24,6 +25,7 @@ export function PeriodForm({
   existingAreas = [],
   editing,
 }: PeriodFormProps) {
+  const data = useData();
   const [teeth, setTeeth] = useState<string[]>(existingTeeth);
   const [areas, setAreas] = useState<string[]>(existingAreas);
   const [saving, setSaving] = useState(false);
@@ -45,19 +47,10 @@ export function PeriodForm({
     setError(null);
     try {
       const payload = { profile_id: profileId, teeth, areas };
-      let result;
-      if (editing) {
-        result = await supabase
-          .from('periods')
-          .update({ teeth, areas })
-          .eq('id', editing.id)
-          .select()
-          .maybeSingle();
-      } else {
-        result = await supabase.from('periods').insert(payload).select().maybeSingle();
-      }
-      if (result.error) throw result.error;
-      if (result.data) onSaved(result.data as Period);
+      const row = editing
+        ? await data.updatePeriod(editing.id, { teeth, areas })
+        : await data.createPeriod(payload);
+      onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
     } finally {
@@ -70,49 +63,30 @@ export function PeriodForm({
       open={open}
       onClose={onClose}
       title={editing ? 'ویرایش دوره درمان' : 'دوره درمان جدید'}
-      size="lg"
+      size="xl"
     >
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && <ErrorBanner message={error} />}
 
         <div>
-          <label className="label">دندان‌های درگیر</label>
-          <p className="text-xs text-slate-400 mb-3">
-            برای هر دندان، quadrant و شماره را انتخاب کنید.
-          </p>
-          <div className="space-y-2">
-            {TOOTH_QUADRANTS.map((q) => (
-              <div key={q.value} className="flex items-start gap-2">
-                <div className="w-28 shrink-0 text-xs text-slate-500 pt-1.5">{q.label}</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {TOOTH_NUMBERS.map((n) => {
-                    const code = `${q.value}${n}`;
-                    const selected = teeth.includes(code);
-                    return (
-                      <button
-                        key={code}
-                        type="button"
-                        onClick={() => toggleTooth(code)}
-                        className={`w-9 h-9 rounded-lg text-xs font-medium border transition ${
-                          selected
-                            ? 'bg-teal-600 text-white border-teal-600'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-teal-400'
-                        }`}
-                      >
-                        {code}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+          <div className="flex items-baseline justify-between gap-3 mb-1">
+            <label className="label mb-0">دندان‌های درگیر</label>
+            {teeth.length > 0 && (
+              <span className="text-xs text-teal-700">
+                {teeth.length.toLocaleString('fa-IR')} دندان انتخاب شد
+              </span>
+            )}
           </div>
+          <p className="text-xs text-slate-400 mb-3">
+            روی هر دندان در نمودار کلیک کنید. شمارهٔ ۱ تا ۸ همان شمارهٔ دندان در هر ربع است.
+          </p>
+          <DentalChart selected={teeth} onToggle={toggleTooth} />
           {teeth.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">
               {teeth.map((t) => (
                 <span
                   key={t}
-                  className="badge bg-teal-50 text-teal-700 border border-teal-200"
+                  className="badge bg-teal-50 text-teal-700 border border-teal-100"
                 >
                   {t}
                   <button type="button" onClick={() => toggleTooth(t)} className="mr-0.5">
@@ -134,11 +108,7 @@ export function PeriodForm({
                   key={a.value}
                   type="button"
                   onClick={() => toggleArea(a.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition ${
-                    selected
-                      ? 'bg-teal-600 text-white border-teal-600'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-teal-400'
-                  }`}
+                  className={selected ? 'chip-active' : 'chip'}
                 >
                   {a.label}
                 </button>

@@ -26,10 +26,10 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-      {icon && <div className="text-slate-300">{icon}</div>}
+    <div className="flex flex-col items-center justify-center py-20 text-center gap-3 px-6">
+      {icon && <div className="text-slate-200">{icon}</div>}
       <div>
-        <p className="text-slate-500 font-medium">{title}</p>
+        <p className="text-slate-600 font-medium">{title}</p>
         {description && <p className="text-sm text-slate-400 mt-1">{description}</p>}
       </div>
       {action}
@@ -39,7 +39,7 @@ export function EmptyState({
 
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+    <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
       <XCircle size={18} className="shrink-0" />
       <span>{message}</span>
     </div>
@@ -48,7 +48,7 @@ export function ErrorBanner({ message }: { message: string }) {
 
 export function SuccessBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700">
+    <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
       <CheckCircle2 size={18} className="shrink-0" />
       <span>{message}</span>
     </div>
@@ -57,7 +57,7 @@ export function SuccessBanner({ message }: { message: string }) {
 
 export function InfoBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 text-sm text-sky-700">
+    <div className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-sm text-sky-700">
       <Info size={18} className="shrink-0" />
       <span>{message}</span>
     </div>

@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { User, Phone, MapPin, FileText, Stethoscope, ClipboardList } from 'lucide-react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
-import { supabase } from '@/lib/supabase';
+import { DataError, useData } from '@/data';
+import { toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
 
 interface ProfileFormProps {
@@ -11,7 +13,30 @@ interface ProfileFormProps {
   editing?: Profile | null;
 }
 
+function Section({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 space-y-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+        <span className="icon-well !w-8 !h-8 rounded-xl bg-white text-teal-700 shadow-sm">
+          {icon}
+        </span>
+        {title}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function ProfileForm({ open, onClose, onSaved, editing }: ProfileFormProps) {
+  const data = useData();
   const [form, setForm] = useState({
     first_name: editing?.first_name ?? '',
     last_name: editing?.last_name ?? '',
@@ -28,6 +53,10 @@ export function ProfileForm({ open, onClose, onSaved, editing }: ProfileFormProp
 
   const update = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const displayName =
+    [form.first_name.trim(), form.last_name.trim()].filter(Boolean).join(' ') || '—';
+  const initial = form.first_name.trim().charAt(0) || '?';
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,24 +82,20 @@ export function ProfileForm({ open, onClose, onSaved, editing }: ProfileFormProp
         file_description: form.file_description.trim() || null,
         clinical_notes: form.clinical_notes.trim() || null,
       };
-      let result;
-      if (editing) {
-        result = await supabase
-          .from('profiles')
-          .update(payload)
-          .eq('id', editing.id)
-          .select()
-          .maybeSingle();
-      } else {
-        result = await supabase.from('profiles').insert(payload).select().maybeSingle();
-      }
-      if (result.error) throw result.error;
-      if (result.data) onSaved(result.data as Profile);
+      const row = editing
+        ? await data.updateProfile(editing.id, payload)
+        : await data.createProfile(payload);
+      onSaved(row);
     } catch (err) {
       const anyErr = err as { code?: string; message?: string } | null;
       const msg =
         err instanceof Error ? err.message : (anyErr?.message ?? 'خطا در ذخیره‌سازی پرونده.');
-      if (anyErr?.code === '23505' || msg.includes('duplicate') || msg.includes('unique')) {
+      if (
+        (err instanceof DataError && err.code === '23505') ||
+        anyErr?.code === '23505' ||
+        msg.includes('duplicate') ||
+        msg.includes('unique')
+      ) {
         setError('شماره پرونده تکراری است.');
       } else {
         setError(msg);
@@ -85,102 +110,143 @@ export function ProfileForm({ open, onClose, onSaved, editing }: ProfileFormProp
       open={open}
       onClose={onClose}
       title={editing ? 'ویرایش پرونده' : 'پرونده جدید'}
-      size="lg"
+      size="xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-4 text-white flex flex-wrap items-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-xl font-bold">
+            {initial}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] text-teal-100">
+              {editing ? 'ویرایش اطلاعات بیمار' : 'ثبت پرونده جدید'}
+            </p>
+            <p className="text-lg font-bold truncate">{displayName}</p>
+            {form.file_number.trim() && (
+              <p className="text-xs text-teal-100 mt-0.5">
+                پرونده {toFaDigits(form.file_number.trim())}
+              </p>
+            )}
+          </div>
+        </div>
+
         {error && <ErrorBanner message={error} />}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+        <Section title="اطلاعات هویتی" icon={<User size={16} />}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">نام *</label>
+              <input
+                className="input bg-white"
+                value={form.first_name}
+                onChange={(e) => update('first_name', e.target.value)}
+                placeholder="مثلاً: علی"
+                autoFocus
+              />
+            </div>
+            <div>
+              <label className="label">نام خانوادگی *</label>
+              <input
+                className="input bg-white"
+                value={form.last_name}
+                onChange={(e) => update('last_name', e.target.value)}
+                placeholder="مثلاً: رضایی"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="label">سال تولد</label>
+              <input
+                className="input bg-white"
+                value={form.birth_year}
+                onChange={(e) => update('birth_year', e.target.value)}
+                placeholder="۱۳۷۰"
+              />
+            </div>
+            <div>
+              <label className="label">شماره پرونده *</label>
+              <input
+                className="input bg-white"
+                value={form.file_number}
+                onChange={(e) => update('file_number', e.target.value)}
+                placeholder="۱۰۲۳"
+              />
+            </div>
+            <div>
+              <label className="label">کد ملی</label>
+              <input
+                className="input bg-white"
+                value={form.national_id}
+                onChange={(e) => update('national_id', e.target.value)}
+                placeholder="———"
+              />
+            </div>
+          </div>
+        </Section>
+
+        <Section title="تماس و نشانی" icon={<Phone size={16} />}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label">شماره تماس</label>
+              <div className="relative">
+                <Phone size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  className="input bg-white pr-10"
+                  value={form.phone}
+                  onChange={(e) => update('phone', e.target.value)}
+                  placeholder="۰۹۱۲———"
+                  type="tel"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label">نشانی</label>
+              <div className="relative">
+                <MapPin size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  className="input bg-white pr-10"
+                  value={form.address}
+                  onChange={(e) => update('address', e.target.value)}
+                  placeholder="نشانی منزل یا محل کار"
+                />
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section title="شرح و یادداشت بالینی" icon={<Stethoscope size={16} />}>
           <div>
-            <label className="label">نام *</label>
-            <input
-              className="input"
-              value={form.first_name}
-              onChange={(e) => update('first_name', e.target.value)}
-              placeholder="مثلاً: علی"
-              autoFocus
+            <label className="label flex items-center gap-1.5">
+              <FileText size={14} className="text-slate-400" />
+              شرح پرونده
+            </label>
+            <textarea
+              className="input min-h-[80px] bg-white resize-y"
+              value={form.file_description}
+              onChange={(e) => update('file_description', e.target.value)}
+              placeholder="شرح کلی وضعیت پرونده"
             />
           </div>
           <div>
-            <label className="label">نام خانوادگی *</label>
-            <input
-              className="input"
-              value={form.last_name}
-              onChange={(e) => update('last_name', e.target.value)}
-              placeholder="مثلاً: رضایی"
+            <label className="label flex items-center gap-1.5">
+              <ClipboardList size={14} className="text-slate-400" />
+              یادداشت‌های بالینی
+            </label>
+            <textarea
+              className="input min-h-[90px] bg-white resize-y"
+              value={form.clinical_notes}
+              onChange={(e) => update('clinical_notes', e.target.value)}
+              placeholder="یادداشت‌های بالینی، حساسیت‌ها، بیماری‌های زمینه‌ای…"
             />
           </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="label">سال تولد</label>
-            <input
-              className="input"
-              value={form.birth_year}
-              onChange={(e) => update('birth_year', e.target.value)}
-              placeholder="۱۳۷۰"
-            />
-          </div>
-          <div>
-            <label className="label">شماره پرونده *</label>
-            <input
-              className="input"
-              value={form.file_number}
-              onChange={(e) => update('file_number', e.target.value)}
-              placeholder="۱۰۲۳"
-            />
-          </div>
-          <div>
-            <label className="label">کد ملی</label>
-            <input
-              className="input"
-              value={form.national_id}
-              onChange={(e) => update('national_id', e.target.value)}
-              placeholder="———"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="label">شماره تماس</label>
-          <input
-            className="input"
-            value={form.phone}
-            onChange={(e) => update('phone', e.target.value)}
-            placeholder="۰۹۱۲———"
-            type="tel"
-          />
-        </div>
-        <div>
-          <label className="label">نشانی</label>
-          <input
-            className="input"
-            value={form.address}
-            onChange={(e) => update('address', e.target.value)}
-            placeholder="نشانی منزل یا محل کار"
-          />
-        </div>
-        <div>
-          <label className="label">شرح پرونده</label>
-          <textarea
-            className="input min-h-[70px]"
-            value={form.file_description}
-            onChange={(e) => update('file_description', e.target.value)}
-            placeholder="شرح کلی وضعیت پرونده"
-          />
-        </div>
-        <div>
-          <label className="label">یادداشت‌های بالینی</label>
-          <textarea
-            className="input min-h-[70px]"
-            value={form.clinical_notes}
-            onChange={(e) => update('clinical_notes', e.target.value)}
-            placeholder="یادداشت‌های بالینی، حساسیت‌ها، بیماری‌های زمینه‌ای…"
-          />
-        </div>
-        <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
+        </Section>
+
+        <div className="flex flex-wrap gap-2 justify-end pt-2 border-t border-slate-100 sticky bottom-0 bg-white pb-1">
           <button type="button" onClick={onClose} className="btn-secondary">
             انصراف
           </button>
-          <button type="submit" disabled={saving} className="btn-primary">
+          <button type="submit" disabled={saving} className="btn-primary min-w-[140px]">
             {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد پرونده'}
           </button>
         </div>

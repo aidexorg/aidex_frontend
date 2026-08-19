@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
-import { supabase } from '@/lib/supabase';
+import { useData } from '@/data';
 import { todayISO } from '@/lib/format';
 import type { Payment } from '@/types';
 
@@ -14,6 +14,7 @@ interface PaymentFormProps {
 }
 
 export function PaymentForm({ open, onClose, onSaved, periodId, editing }: PaymentFormProps) {
+  const data = useData();
   const [form, setForm] = useState({
     payment_date: editing?.payment_date ?? todayISO(),
     tracking_code: editing?.tracking_code ?? '',
@@ -28,6 +29,14 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!periodId) {
+      setError('پرداخت باید به یک دوره درمان متصل باشد.');
+      return;
+    }
+    if (!form.payment_date) {
+      setError('تاریخ پرداخت الزامی است.');
+      return;
+    }
     if (!form.amount || Number(form.amount) <= 0) {
       setError('مبلغ پرداخت باید بزرگتر از صفر باشد.');
       return;
@@ -42,19 +51,10 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         amount: Number(form.amount),
         description: form.description.trim() || null,
       };
-      let result;
-      if (editing) {
-        result = await supabase
-          .from('payments')
-          .update(payload)
-          .eq('id', editing.id)
-          .select()
-          .maybeSingle();
-      } else {
-        result = await supabase.from('payments').insert(payload).select().maybeSingle();
-      }
-      if (result.error) throw result.error;
-      if (result.data) onSaved(result.data as Payment);
+      const row = editing
+        ? await data.updatePayment(editing.id, payload)
+        : await data.createPayment(payload);
+      onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
     } finally {
@@ -78,6 +78,7 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
             <input
               className="input"
               type="date"
+              required
               value={form.payment_date}
               onChange={(e) => update('payment_date', e.target.value)}
             />

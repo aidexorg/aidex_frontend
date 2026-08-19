@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BarChart3, TrendingUp, Calendar, Wallet } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { useData } from '@/data';
 import { formatPrice, formatMonthYear, toFaDigits } from '@/lib/format';
 import type { Payment, Action, Part, Session, Period } from '@/types';
 import { LoadingState, EmptyState } from './ui';
@@ -14,6 +14,7 @@ interface MonthAgg {
 }
 
 export function ReportsView() {
+  const data = useData();
   const [months, setMonths] = useState<MonthAgg[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalIncome, setTotalIncome] = useState(0);
@@ -22,21 +23,13 @@ export function ReportsView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [payRes, aRes, pRes, sRes, perRes] = await Promise.all([
-        supabase.from('payments').select('*'),
-        supabase.from('actions').select('*'),
-        supabase.from('parts').select('*'),
-        supabase.from('sessions').select('*'),
-        supabase.from('periods').select('*'),
+      const [payments, actions, parts, sessions, periods] = await Promise.all([
+        data.listPayments(),
+        data.listActions(),
+        data.listParts(),
+        data.listSessions(),
+        data.listPeriods(),
       ]);
-      if (payRes.error || aRes.error || pRes.error || sRes.error || perRes.error) {
-        throw new Error('خطا');
-      }
-      const payments = (payRes.data ?? []) as Payment[];
-      const actions = (aRes.data ?? []) as Action[];
-      const parts = (pRes.data ?? []) as Part[];
-      const sessions = (sRes.data ?? []) as Session[];
-      const periods = (perRes.data ?? []) as Period[];
 
       // Income by month
       const monthMap = new Map<string, MonthAgg>();
@@ -89,7 +82,7 @@ export function ReportsView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     load();
@@ -100,8 +93,8 @@ export function ReportsView() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">گزارش درآمد</h1>
-        <p className="text-sm text-slate-400 mt-0.5">تحلیل درآمد و هزینه‌های صورت‌شده ماهانه</p>
+        <h1 className="page-title">گزارش درآمد</h1>
+        <p className="page-sub">تحلیل درآمد و هزینه‌های صورت‌شده ماهانه</p>
       </div>
 
       {/* Summary cards */}
