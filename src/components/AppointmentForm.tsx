@@ -4,8 +4,10 @@ import { ErrorBanner, Spinner } from './ui';
 import { useData } from '@/data';
 import {
   APPOINTMENT_TYPES,
+  RECURRENCE_PATTERNS,
   type Appointment,
   type AppointmentType,
+  type RecurrencePattern,
 } from '@/types';
 import { toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
@@ -62,6 +64,14 @@ export function AppointmentForm({
     editing?.duration_minutes?.toString() ?? '45'
   );
   const [notes, setNotes] = useState(editing?.notes ?? '');
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>(
+    editing?.recurrence_pattern ?? 'none'
+  );
+  const [recurrenceEndType, setRecurrenceEndType] = useState<'date' | 'count'>(
+    editing?.series_id ? 'count' : 'date'
+  );
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [recurrenceCount, setRecurrenceCount] = useState('6');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflictWarnings, setConflictWarnings] = useState<
@@ -89,6 +99,7 @@ export function AppointmentForm({
       setTime(toLocalTime(editing.start_time));
       setDuration(editing.duration_minutes.toString());
       setNotes(editing.notes ?? '');
+      setRecurrencePattern(editing.recurrence_pattern ?? 'none');
       setProfileSearch('');
     } else {
       setSelectedProfileId(prefillProfileId ?? '');
@@ -97,6 +108,10 @@ export function AppointmentForm({
       setTime('09:00');
       setDuration('45');
       setNotes('');
+      setRecurrencePattern('none');
+      setRecurrenceEndType('date');
+      setRecurrenceEndDate('');
+      setRecurrenceCount('6');
       setProfileSearch('');
     }
     setError(null);
@@ -236,20 +251,95 @@ export function AppointmentForm({
     setError(null);
     try {
       const startIso = new Date(`${date}T${time}:00`).toISOString();
-      const payload = {
-        profile_id: selectedProfileId,
-        dentist_id: editing?.dentist_id ?? null,
-        chair_id: editing?.chair_id ?? null,
-        start_time: startIso,
-        duration_minutes: dur,
-        type,
-        status: editing?.status ?? 'scheduled',
-        notes: notes.trim() || null,
-      };
-      const row = editing
-        ? await data.updateAppointment(editing.id, payload)
-        : await data.createAppointment(payload);
-      onSaved(row);
+
+      if (editing || recurrencePattern === 'none') {
+        // Single appointment (create or edit)
+        const payload = {
+          profile_id: selectedProfileId,
+          dentist_id: editing?.dentist_id ?? null,
+          chair_id: editing?.chair_id ?? null,
+          start_time: startIso,
+          duration_minutes: dur,
+          type,
+          status: editing?.status ?? 'scheduled',
+          notes: notes.trim() || null,
+          series_id: editing?.series_id ?? null,
+          recurrence_pattern: editing?.recurrence_pattern ?? 'none',
+          series_index: editing?.series_index ?? 0,
+        };
+        const row = editing
+          ? await data.updateAppointment(editing.id, payload)
+          : await data.createAppointment(payload);
+        onSaved(row);
+      } else {
+        // Recurring series — create multiple appointments
+        const startDate = new Date(`${date}T${time}:00`);
+        const dates: Date[] = [startDate];
+        const seriesId = crypto.randomUUID();
+
+        if (recurrenceEndType === 'count') {
+          const count = Math.min(Math.max(parseInt(recurrenceCount, 10) || 6, 2), 52);
+          for (let i = 1; i < count; i++) {
+            const next = new Date(startDate);
+            switch (recurrencePattern) {
+              case 'daily':
+                next.setDate(next.getDate() + i);
+                break;
+              case 'weekly':
+                next.setDate(next.getDate() + i * 7);
+                break;
+              case 'biweekly':
+                next.setDate(next.getDate() + i * 14);
+                break;
+              case 'monthly':
+                next.setMonth(next.getMonth() + i);
+                break;
+            }
+            dates.push(next);
+          }
+        } else if (recurrenceEndType === 'date' && recurrenceEndDate) {
+          const endDate = new Date(recurrenceEndDate + 'T23:59:59');
+          let i = 1;
+          while (dates.length < 52) {
+            const next = new Date(startDate);
+            switch (recurrencePattern) {
+              case 'daily':
+                next.setDate(next.getDate() + i);
+                break;
+              case 'weekly':
+                next.setDate(next.getDate() + i * 7);
+                break;
+              case 'biweekly':
+                next.setDate(next.getDate() + i * 14);
+                break;
+              case 'monthly':
+                next.setMonth(next.getMonth() + i);
+                break;
+            }
+            if (next > endDate) break;
+            dates.push(next);
+            i++;
+          }
+        }
+
+        let lastRow: Appointment | null = null;
+        for (let idx = 0; idx < dates.length; idx++) {
+          lastRow = await data.createAppointment({
+            profile_id: selectedProfileId,
+            dentist_id: null,
+            chair_id: null,
+            start_time: dates[idx].toISOString(),
+            duration_minutes: dur,
+            type,
+            status: 'scheduled',
+            notes: notes.trim() || null,
+            series_id: seriesId,
+            recurrence_pattern: recurrencePattern,
+            series_index: idx,
+          });
+        }
+        onSaved(lastRow!);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
     } finally {
@@ -397,6 +487,76 @@ export function AppointmentForm({
             onChange={(e) => setNotes(e.target.value)}
             placeholder="یادداشت اختیاری درباره نوبت…"
           />
+        </div>
+
+        {/* Recurrence */}
+        <div className="border-t border-slate-100 pt-4 space-y-3">
+          <label className="label">تکرار</label>
+          <div className="flex flex-wrap gap-2">
+            {RECURRENCE_PATTERNS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setRecurrencePattern(p.value)}
+                className={recurrencePattern === p.value ? 'chip-active' : 'chip'}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          {recurrencePattern !== 'none' && (
+            <div className="flex gap-3 items-end flex-wrap">
+              <div>
+                <label className="label">پایان تکرار</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecurrenceEndType('date')}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition ${
+                      recurrenceEndType === 'date'
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    تا تاریخ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecurrenceEndType('count')}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition ${
+                      recurrenceEndType === 'count'
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : 'bg-white text-slate-600 border-slate-200'
+                    }`}
+                  >
+                    تا تعداد
+                  </button>
+                </div>
+              </div>
+              {recurrenceEndType === 'date' ? (
+                <div>
+                  <input
+                    className="input"
+                    type="date"
+                    value={recurrenceEndDate}
+                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div>
+                  <input
+                    className="input w-24"
+                    type="number"
+                    min={2}
+                    max={52}
+                    value={recurrenceCount}
+                    onChange={(e) => setRecurrenceCount(e.target.value)}
+                  />
+                  <p className="text-[10px] text-slate-400 mt-0.5">نوبت</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Conflict warnings */}

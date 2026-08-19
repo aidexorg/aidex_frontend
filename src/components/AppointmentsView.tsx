@@ -7,6 +7,7 @@ import {
   Pencil,
   Trash2,
   Phone,
+  Link,
 } from 'lucide-react';
 import { useData } from '@/data';
 import { formatDate, toFaDigits } from '@/lib/format';
@@ -263,6 +264,12 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
                   >
                     {statusLabel(row.status)}
                   </span>
+                  {row.series_id && (
+                    <span className="badge text-[10px] bg-purple-50 text-purple-600 border border-purple-200">
+                      <Link size={10} />
+                      تکراری
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
                   <span className="flex items-center gap-1">

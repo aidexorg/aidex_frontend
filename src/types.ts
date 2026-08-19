@@ -77,6 +77,8 @@ export type AppointmentType = 'consultation' | 'treatment' | 'followup' | 'emerg
 
 export type AppointmentStatus = 'scheduled' | 'confirmed' | 'arrived' | 'in_progress' | 'completed' | 'no_show' | 'cancelled';
 
+export type RecurrencePattern = 'none' | 'daily' | 'weekly' | 'biweekly' | 'monthly';
+
 export interface Appointment {
   id: string;
   profile_id: string;
@@ -87,6 +89,9 @@ export interface Appointment {
   type: AppointmentType;
   status: AppointmentStatus;
   notes: string | null;
+  series_id: string | null;
+  recurrence_pattern: RecurrencePattern;
+  series_index: number;
   created_at: string;
   updated_at: string;
 }
@@ -97,6 +102,14 @@ export const APPOINTMENT_TYPES: { value: AppointmentType; label: string; default
   { value: 'followup', label: 'پیگیری', defaultDuration: 15, color: 'amber' },
   { value: 'emergency', label: 'اورژانس', defaultDuration: 30, color: 'red' },
   { value: 'hygiene', label: 'بهداشت', defaultDuration: 30, color: 'emerald' },
+];
+
+export const RECURRENCE_PATTERNS: { value: RecurrencePattern; label: string }[] = [
+  { value: 'none', label: 'بدون تکرار' },
+  { value: 'daily', label: 'روزانه' },
+  { value: 'weekly', label: 'هفتگی' },
+  { value: 'biweekly', label: 'دوهفتگی' },
+  { value: 'monthly', label: 'ماهانه' },
 ];
 
 export const APPOINTMENT_STATUSES: { value: AppointmentStatus; label: string }[] = [
