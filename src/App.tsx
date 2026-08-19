@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Layout, type View } from '@/components/Layout';
 import { ProfilesList } from '@/components/ProfilesList';
 import { ProfileDetail } from '@/components/ProfileDetail';
+import { ProfileForm } from '@/components/ProfileForm';
 import { FollowupsView } from '@/components/FollowupsView';
 import { PaymentsView } from '@/components/PaymentsView';
 import { ReportsView } from '@/components/ReportsView';
@@ -23,6 +24,7 @@ function App() {
   const [account, setAccount] = useState<Account | null>(null);
   const [view, setView] = useState<View>('login');
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
+  const [creatingProfile, setCreatingProfile] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -45,6 +47,7 @@ function App() {
   const navigate = useCallback(
     (v: View) => {
       setActiveProfile(null);
+      setCreatingProfile(false);
       if (!account) {
         setView(isAuthView(v) ? v : 'login');
         return;
@@ -61,6 +64,7 @@ function App() {
   const enterApp = (next: Account) => {
     setAccount(next);
     setActiveProfile(null);
+    setCreatingProfile(false);
     setView('profiles');
   };
 
@@ -68,10 +72,12 @@ function App() {
     await data.logoutAccount();
     setAccount(null);
     setActiveProfile(null);
+    setCreatingProfile(false);
     setView('login');
   };
 
   const openProfile = (profile: Profile) => {
+    setCreatingProfile(false);
     setActiveProfile(profile);
     setView('profiles');
   };
@@ -104,13 +110,38 @@ function App() {
           />
         );
       }
-      return <ProfilesList onOpenProfile={openProfile} />;
+      if (creatingProfile) {
+        return (
+          <ProfileForm
+            variant="page"
+            onClose={() => setCreatingProfile(false)}
+            onSaved={(profile) => {
+              setCreatingProfile(false);
+              setActiveProfile(profile);
+            }}
+          />
+        );
+      }
+      return (
+        <ProfilesList
+          onOpenProfile={openProfile}
+          onCreateProfile={() => setCreatingProfile(true)}
+        />
+      );
     }
     if (view === 'followups') return <FollowupsView onOpenProfile={openProfile} />;
     if (view === 'payments') return <PaymentsView onOpenProfile={openProfile} />;
     if (view === 'reports') return <ReportsView />;
     if (view === 'outputs') return <OutputsView onOpenProfile={openProfile} />;
-    return <ProfilesList onOpenProfile={openProfile} />;
+    return (
+      <ProfilesList
+        onOpenProfile={openProfile}
+        onCreateProfile={() => {
+          setView('profiles');
+          setCreatingProfile(true);
+        }}
+      />
+    );
   };
 
   return (

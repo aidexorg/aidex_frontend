@@ -21,10 +21,10 @@ import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
 import { LoadingState, EmptyState } from './ui';
-import { ProfileForm } from './ProfileForm';
 
 interface ProfilesListProps {
   onOpenProfile: (profile: Profile) => void;
+  onCreateProfile: () => void;
 }
 
 interface ProfileSummary {
@@ -38,13 +38,11 @@ interface ProfileSummary {
 /** BR-UX-04: bounded profiles per page */
 const PAGE_SIZE = 10;
 
-export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
+export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListProps) {
   const data = useData();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Profile | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summary, setSummary] = useState<ProfileSummary | null>(null);
@@ -211,13 +209,7 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-            className="btn-primary"
-          >
+          <button onClick={onCreateProfile} className="btn-primary">
             <Plus size={16} />
             پرونده جدید
           </button>
@@ -266,13 +258,7 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
                 }
                 action={
                   !search && (
-                    <button
-                      onClick={() => {
-                        setEditing(null);
-                        setFormOpen(true);
-                      }}
-                      className="btn-primary mt-2"
-                    >
+                    <button onClick={onCreateProfile} className="btn-primary mt-2">
                       <Plus size={16} />
                       ایجاد پرونده
                     </button>
@@ -584,22 +570,6 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
           </div>
         </aside>
       </section>
-
-      {formOpen && (
-        <ProfileForm
-          open={formOpen}
-          onClose={() => {
-            setFormOpen(false);
-            setEditing(null);
-          }}
-          onSaved={() => {
-            setFormOpen(false);
-            setEditing(null);
-            load();
-          }}
-          editing={editing}
-        />
-      )}
     </div>
   );
 }
