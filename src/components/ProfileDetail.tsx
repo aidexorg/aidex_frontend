@@ -27,6 +27,7 @@ import { useFollowupCount } from './FollowupCountProvider';
 import { PeriodForm } from './PeriodForm';
 import { ActionForm } from './ActionForm';
 import { PaymentForm } from './PaymentForm';
+import { AppointmentForm } from './AppointmentForm';
 
 interface ProfileDetailProps {
   profile: Profile;
@@ -67,6 +68,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     id: string;
     label: string;
   } | null>(null);
+  const [appointmentFormOpen, setAppointmentFormOpen] = useState(false);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
   /** BR-POL-03: hide until undo window expires */
@@ -393,10 +395,19 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
                 setEditingPeriod(null);
                 setPeriodFormOpen(true);
               }}
-              className="btn-primary"
+              className="btn-secondary"
             >
               <Plus size={16} />
               دوره درمان جدید
+            </button>
+            <button
+              onClick={() => {
+                setAppointmentFormOpen(true);
+              }}
+              className="btn-primary"
+            >
+              <CalendarDays size={16} />
+              نوبت جدید
             </button>
           </div>
         </div>
@@ -955,6 +966,18 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
           }}
           periodId={paymentPeriodId}
           editing={editingPayment}
+        />
+      )}
+
+      {appointmentFormOpen && (
+        <AppointmentForm
+          open={appointmentFormOpen}
+          onClose={() => setAppointmentFormOpen(false)}
+          onSaved={() => {
+            setAppointmentFormOpen(false);
+            loadAll();
+          }}
+          prefillProfileId={profile.id}
         />
       )}
 

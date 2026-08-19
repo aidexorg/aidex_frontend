@@ -5,6 +5,7 @@ import {
   AlertCircle,
   FileText,
   BarChart3,
+  CalendarDays,
   Stethoscope,
   LogOut,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ export type View =
   | 'payments'
   | 'reports'
   | 'outputs'
+  | 'appointments'
   | 'register'
   | 'login';
 
@@ -29,6 +31,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { key: 'profiles', label: 'پرونده‌ها', icon: Users },
+  { key: 'appointments', label: 'نوبت‌ها', icon: CalendarDays },
   { key: 'followups', label: 'پیگیری‌ها', icon: AlertCircle },
   { key: 'payments', label: 'پرداخت‌ها', icon: Wallet },
   { key: 'reports', label: 'گزارش درآمد', icon: BarChart3 },

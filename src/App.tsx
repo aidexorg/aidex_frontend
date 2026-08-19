@@ -7,6 +7,7 @@ import { FollowupsView } from '@/components/FollowupsView';
 import { PaymentsView } from '@/components/PaymentsView';
 import { ReportsView } from '@/components/ReportsView';
 import { OutputsView } from '@/components/OutputsView';
+import { AppointmentsView } from '@/components/AppointmentsView';
 import { RegisterView } from '@/components/RegisterView';
 import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
@@ -154,6 +155,7 @@ function App() {
     if (view === 'payments') return <PaymentsView onOpenProfile={openProfile} />;
     if (view === 'reports') return <ReportsView />;
     if (view === 'outputs') return <OutputsView onOpenProfile={openProfile} />;
+    if (view === 'appointments') return <AppointmentsView onOpenProfile={openProfile} />;
     return (
       <ProfilesList
         onOpenProfile={openProfile}
