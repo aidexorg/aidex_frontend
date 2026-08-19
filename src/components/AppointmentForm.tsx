@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
 import { useData } from '@/data';
@@ -64,6 +64,10 @@ export function AppointmentForm({
   const [notes, setNotes] = useState(editing?.notes ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflictWarnings, setConflictWarnings] = useState<
+    { message: string; severity: 'red' | 'amber' }[]
+  >([]);
+  const conflictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -97,6 +101,96 @@ export function AppointmentForm({
     }
     setError(null);
   }, [open, editing, prefillProfileId]);
+
+  // ── Conflict detection ──
+  useEffect(() => {
+    if (!date || !time) {
+      setConflictWarnings([]);
+      return;
+    }
+    if (conflictTimerRef.current) clearTimeout(conflictTimerRef.current);
+    conflictTimerRef.current = setTimeout(async () => {
+      try {
+        const allDay = await data.listAppointments({ date });
+        const newStart = new Date(`${date}T${time}:00`);
+        const dur = parseInt(duration, 10) || 30;
+        const newEnd = new Date(newStart.getTime() + dur * 60000);
+        const warnings: { message: string; severity: 'red' | 'amber' }[] = [];
+
+        for (const appt of allDay) {
+          if (editing && appt.id === editing.id) continue;
+          const existStart = new Date(appt.start_time);
+          const existEnd = new Date(
+            existStart.getTime() + appt.duration_minutes * 60000
+          );
+          if (!(newStart < existEnd && newEnd > existStart)) continue;
+
+          const prof = profiles.find((p) => p.id === appt.profile_id);
+          const pname = prof
+            ? `${prof.first_name} ${prof.last_name}`
+            : 'بیمار';
+          const existTime = existStart.toLocaleTimeString('fa-IR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+          const existTimeEnd = existEnd.toLocaleTimeString('fa-IR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          });
+          const timeRange = `${existTime}–${existTimeEnd}`;
+
+          // Chair conflict (if both have chair_id and match)
+          const chairId = editing?.chair_id ?? null;
+          if (
+            chairId &&
+            appt.chair_id &&
+            appt.chair_id === chairId
+          ) {
+            warnings.push({
+              message: `تداخل با نوبت ${pname} — ${timeRange} در صندلی`,
+              severity: 'red',
+            });
+          }
+
+          // Dentist conflict (if both have dentist_id and match)
+          const dentistId = editing?.dentist_id ?? null;
+          if (
+            dentistId &&
+            appt.dentist_id &&
+            appt.dentist_id === dentistId
+          ) {
+            warnings.push({
+              message: `تداخل با نوبت ${pname} — ${timeRange} (دندانپزشک)`,
+              severity: 'amber',
+            });
+          }
+
+          // Generic overlap (no chair/dentist match — still warn)
+          if (
+            !chairId &&
+            !dentistId &&
+            !appt.chair_id &&
+            !appt.dentist_id
+          ) {
+            warnings.push({
+              message: `تداخل زمانی با نوبت ${pname} — ${timeRange}`,
+              severity: 'amber',
+            });
+          }
+        }
+
+        setConflictWarnings(warnings);
+      } catch {
+        setConflictWarnings([]);
+      }
+    }, 300);
+
+    return () => {
+      if (conflictTimerRef.current) clearTimeout(conflictTimerRef.current);
+    };
+  }, [date, time, duration, editing, profiles, data]);
 
   const filteredProfiles = profiles.filter((p) => {
     const q = profileSearch.trim().toLowerCase();
@@ -304,6 +398,25 @@ export function AppointmentForm({
             placeholder="یادداشت اختیاری درباره نوبت…"
           />
         </div>
+
+        {/* Conflict warnings */}
+        {conflictWarnings.length > 0 && (
+          <div className="space-y-1.5">
+            {conflictWarnings.map((w, i) => (
+              <div
+                key={i}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm ${
+                  w.severity === 'red'
+                    ? 'bg-red-50 border border-red-100 text-red-700'
+                    : 'bg-amber-50 border border-amber-100 text-amber-700'
+                }`}
+              >
+                <span className="text-lg">⚠️</span>
+                <span>{w.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Submit */}
         <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
