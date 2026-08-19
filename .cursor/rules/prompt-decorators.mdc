@@ -1,0 +1,24 @@
+---
+description: Detect and comply with +++ Prompt Decorators (chat/message scope) across all chats
+alwaysApply: true
+---
+
+# Prompt Decorators (always on)
+
+A **Prompt Decorator** is an instruction added to a prompt (`+++Name` or `+++Name(param=value)`) that modifies how the response is generated.
+
+## Mandatory behavior
+
+1. Whenever any `+++` decorator appears, or the user manages decorator scope, **read and follow** the personal skill:
+   `C:/Users/Hado/.cursor/skills/prompt-decorators/SKILL.md`
+   and the matching file under `.../prompt-decorators/decorators/`.
+2. Detect, apply, and fully comply with every decorator present. Do not ignore any.
+3. Keep an active memory of **chat-scoped** decorators for the whole conversation; update on activate / deactivate / clear.
+4. Honor scope:
+   - `+++ChatScope` → decorators in that message become chat-scoped until cleared
+   - `+++MessageScope` → pause chat-scoped application; message-only for that turn
+   - `+++Clear` / `+++Clear(+++A, +++B)` → clear all or listed chat-scoped decorators
+5. `+++ActiveDecs` → list active chat-scoped decorators, or exactly: `No active decorators`
+6. `+++AvailableDecs` → Name / Description / Status table for the full catalog
+
+Canonical catalog lives in the `prompt-decorators` skill (personal, all projects).
