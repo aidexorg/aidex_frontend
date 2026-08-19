@@ -1,9 +1,10 @@
-import type { Account, Action, Part, Payment, Period, Profile, Session } from '@/types';
+import type { Account, Action, Appointment, AppointmentStatus, Part, Payment, Period, Profile, Session } from '@/types';
 import {
   DataError,
   type AccountLogin,
   type AccountRegister,
   type ActionWrite,
+  type AppointmentWrite,
   type DataProvider,
   type PartWrite,
   type PaymentWrite,
@@ -32,6 +33,7 @@ interface Store {
   parts: Part[];
   actions: Action[];
   payments: Payment[];
+  appointments: Appointment[];
   accounts: StoredAccount[];
   currentAccountId: string | null;
 }
@@ -44,6 +46,7 @@ function emptyStore(): Store {
     parts: [],
     actions: [],
     payments: [],
+    appointments: [],
     accounts: [],
     currentAccountId: null,
   };
@@ -93,6 +96,7 @@ function load(): Store {
       parts: parsed.parts ?? [],
       actions: parsed.actions ?? [],
       payments: (parsed.payments ?? []).map(normalizePayment),
+      appointments: parsed.appointments ?? [],
       accounts: parsed.accounts ?? [],
       currentAccountId: readSessionId(),
     };
@@ -329,6 +333,58 @@ export class LocalStorageDataProvider implements DataProvider {
   async deletePayment(id: string): Promise<void> {
     this.mutate((store) => {
       store.payments = store.payments.filter((p) => p.id !== id);
+    });
+  }
+
+  async listAppointments(
+    filters?: { profileId?: string; date?: string; status?: AppointmentStatus }
+  ): Promise<Appointment[]> {
+    let rows = load().appointments;
+    if (filters?.profileId) {
+      rows = rows.filter((a) => a.profile_id === filters.profileId);
+    }
+    if (filters?.date) {
+      rows = rows.filter((a) => a.start_time.startsWith(filters.date!));
+    }
+    if (filters?.status) {
+      rows = rows.filter((a) => a.status === filters.status);
+    }
+    return rows.sort(
+      (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+    );
+  }
+
+  async createAppointment(data: AppointmentWrite): Promise<Appointment> {
+    return this.mutate((store) => {
+      const ts = nowIso();
+      const row: Appointment = {
+        ...data,
+        dentist_id: data.dentist_id ?? null,
+        chair_id: data.chair_id ?? null,
+        notes: data.notes ?? null,
+        status: data.status ?? 'scheduled',
+        id: newId(),
+        created_at: ts,
+        updated_at: ts,
+      };
+      store.appointments.push(row);
+      return row;
+    });
+  }
+
+  async updateAppointment(id: string, data: Partial<AppointmentWrite>): Promise<Appointment> {
+    return this.mutate((store) => {
+      const idx = store.appointments.findIndex((a) => a.id === id);
+      const current = requireFound(store.appointments[idx], 'نوبت');
+      const row: Appointment = { ...current, ...data, id, updated_at: nowIso() };
+      store.appointments[idx] = row;
+      return row;
+    });
+  }
+
+  async deleteAppointment(id: string): Promise<void> {
+    this.mutate((store) => {
+      store.appointments = store.appointments.filter((a) => a.id !== id);
     });
   }
 

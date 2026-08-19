@@ -1,6 +1,8 @@
 import type {
   Account,
   Action,
+  Appointment,
+  AppointmentStatus,
   Part,
   Payment,
   Period,
@@ -24,6 +26,7 @@ export type SessionWrite = Omit<Session, 'id' | 'created_at' | 'updated_at'>;
 export type PartWrite = Omit<Part, 'id' | 'created_at' | 'updated_at'>;
 export type ActionWrite = Omit<Action, 'id' | 'created_at' | 'updated_at'>;
 export type PaymentWrite = Omit<Payment, 'id' | 'created_at' | 'updated_at'>;
+export type AppointmentWrite = Omit<Appointment, 'id' | 'created_at' | 'updated_at'>;
 export type AccountRegister = {
   email: string;
   password: string;
@@ -63,6 +66,11 @@ export interface DataProvider {
   listPayments(periodIds?: string[]): Promise<Payment[]>;
   createPayment(data: PaymentWrite): Promise<Payment>;
   updatePayment(id: string, data: Partial<PaymentWrite>): Promise<Payment>;
+
+  listAppointments(filters?: { profileId?: string; date?: string; status?: AppointmentStatus }): Promise<Appointment[]>;
+  createAppointment(data: AppointmentWrite): Promise<Appointment>;
+  updateAppointment(id: string, data: Partial<AppointmentWrite>): Promise<Appointment>;
+  deleteAppointment(id: string): Promise<void>;
 
   deletePeriod(id: string): Promise<void>;
   deleteSession(id: string): Promise<void>;

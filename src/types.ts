@@ -73,13 +73,41 @@ export interface Payment {
   updated_at: string;
 }
 
+export type AppointmentType = 'consultation' | 'treatment' | 'followup' | 'emergency' | 'hygiene';
+
+export type AppointmentStatus = 'scheduled' | 'confirmed' | 'arrived' | 'in_progress' | 'completed' | 'no_show' | 'cancelled';
+
 export interface Appointment {
   id: string;
   profile_id: string;
+  dentist_id: string | null;
+  chair_id: string | null;
+  start_time: string; // ISO datetime
+  duration_minutes: number;
+  type: AppointmentType;
+  status: AppointmentStatus;
   notes: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export const APPOINTMENT_TYPES: { value: AppointmentType; label: string; defaultDuration: number; color: string }[] = [
+  { value: 'consultation', label: 'مشاوره', defaultDuration: 20, color: 'sky' },
+  { value: 'treatment', label: 'درمان', defaultDuration: 45, color: 'teal' },
+  { value: 'followup', label: 'پیگیری', defaultDuration: 15, color: 'amber' },
+  { value: 'emergency', label: 'اورژانس', defaultDuration: 30, color: 'red' },
+  { value: 'hygiene', label: 'بهداشت', defaultDuration: 30, color: 'emerald' },
+];
+
+export const APPOINTMENT_STATUSES: { value: AppointmentStatus; label: string }[] = [
+  { value: 'scheduled', label: 'برنامه‌ریزی شده' },
+  { value: 'confirmed', label: 'تأیید شده' },
+  { value: 'arrived', label: 'حاضر شده' },
+  { value: 'in_progress', label: 'در حال درمان' },
+  { value: 'completed', label: 'تکمیل شده' },
+  { value: 'no_show', label: 'عدم حضور' },
+  { value: 'cancelled', label: 'لغو شده' },
+];
 
 /** Operator login account — distinct from patient `Profile` (CLM-005). Password is write-only. */
 export interface Account {
