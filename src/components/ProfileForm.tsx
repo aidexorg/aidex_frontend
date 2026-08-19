@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
+import { useToast } from './ToastProvider';
 import { DataError, useData } from '@/data';
 import { toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
@@ -53,6 +54,7 @@ export function ProfileForm({
   editing,
 }: ProfileFormProps) {
   const data = useData();
+  const { showToast } = useToast();
   const [form, setForm] = useState({
     first_name: editing?.first_name ?? '',
     last_name: editing?.last_name ?? '',
@@ -118,6 +120,10 @@ export function ProfileForm({
       const row = editing
         ? await data.updateProfile(editing.id, payload)
         : await data.createProfile(payload);
+      showToast({
+        message: editing ? 'تغییرات پرونده ذخیره شد.' : 'پرونده جدید ایجاد شد.',
+        variant: 'success',
+      });
       onSaved(row);
     } catch (err) {
       const anyErr = err as { code?: string; message?: string } | null;

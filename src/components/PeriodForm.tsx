@@ -1,6 +1,7 @@
 import { useState, useEffect, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
+import { useToast } from './ToastProvider';
 import { DentalChart } from './DentalChart';
 import { useData } from '@/data';
 import { AREA_OPTIONS } from '@/types';
@@ -26,6 +27,7 @@ export function PeriodForm({
   editing,
 }: PeriodFormProps) {
   const data = useData();
+  const { showToast } = useToast();
   const [teeth, setTeeth] = useState<string[]>(existingTeeth);
   const [areas, setAreas] = useState<string[]>(existingAreas);
   const [saving, setSaving] = useState(false);
@@ -63,6 +65,10 @@ export function PeriodForm({
       const row = editing
         ? await data.updatePeriod(editing.id, { teeth, areas })
         : await data.createPeriod(payload);
+      showToast({
+        message: editing ? 'دوره درمان به‌روزرسانی شد.' : 'دوره درمان جدید ثبت شد.',
+        variant: 'success',
+      });
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');

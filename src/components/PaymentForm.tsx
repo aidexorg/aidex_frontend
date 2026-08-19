@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
+import { useToast } from './ToastProvider';
 import { useData } from '@/data';
 import { todayISO } from '@/lib/format';
 import type { Payment } from '@/types';
@@ -15,6 +16,7 @@ interface PaymentFormProps {
 
 export function PaymentForm({ open, onClose, onSaved, periodId, editing }: PaymentFormProps) {
   const data = useData();
+  const { showToast } = useToast();
   const [form, setForm] = useState({
     payment_date: editing?.payment_date ?? todayISO(),
     tracking_code: editing?.tracking_code ?? '',
@@ -56,6 +58,10 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
       const row = editing
         ? await data.updatePayment(editing.id, payload)
         : await data.createPayment(payload);
+      showToast({
+        message: editing ? 'پرداخت به‌روزرسانی شد.' : 'پرداخت ثبت شد.',
+        variant: 'success',
+      });
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');

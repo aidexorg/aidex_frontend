@@ -10,6 +10,7 @@ import { OutputsView } from '@/components/OutputsView';
 import { RegisterView } from '@/components/RegisterView';
 import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
+import { ToastProvider } from '@/components/ToastProvider';
 import { useData } from '@/data';
 import type { Account, Profile } from '@/types';
 
@@ -164,16 +165,18 @@ function App() {
   };
 
   return (
-    <Layout
-      current={view}
-      onNavigate={navigate}
-      account={account}
-      onLogout={() => {
-        void handleLogout();
-      }}
-    >
-      {renderView()}
-    </Layout>
+    <ToastProvider>
+      <Layout
+        current={view}
+        onNavigate={navigate}
+        account={account}
+        onLogout={() => {
+          void handleLogout();
+        }}
+      >
+        {renderView()}
+      </Layout>
+    </ToastProvider>
   );
 }
 

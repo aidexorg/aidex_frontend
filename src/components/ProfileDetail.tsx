@@ -22,6 +22,7 @@ import { formatPrice, formatDate, toFaDigits, todayISO } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import { AREA_OPTIONS } from '@/types';
 import { LoadingState, EmptyState, ErrorBanner, ConfirmDialog } from './ui';
+import { useToast } from './ToastProvider';
 import { PeriodForm } from './PeriodForm';
 import { ActionForm } from './ActionForm';
 import { PaymentForm } from './PaymentForm';
@@ -37,6 +38,7 @@ const PERIOD_PAGE_SIZE = 6;
 
 export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailProps) {
   const data = useData();
+  const { showToast } = useToast();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -214,6 +216,17 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     }
   }, [safePeriodPage, filteredPeriods, expandedPeriod]);
 
+  const deleteSuccessMessage: Record<
+    NonNullable<typeof confirmDelete>['type'],
+    string
+  > = {
+    period: 'دوره درمان حذف شد.',
+    session: 'جلسه حذف شد.',
+    part: 'بخش درمان حذف شد.',
+    action: 'اقدام درمانی حذف شد.',
+    payment: 'پرداخت حذف شد.',
+  };
+
   const handleDelete = async () => {
     if (!confirmDelete) return;
     const { type, id } = confirmDelete;
@@ -223,6 +236,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
       else if (type === 'part') await data.deletePart(id);
       else if (type === 'action') await data.deleteAction(id);
       else await data.deletePayment(id);
+      showToast({ message: deleteSuccessMessage[type], variant: 'success' });
       setConfirmDelete(null);
       loadAll();
     } catch (err) {

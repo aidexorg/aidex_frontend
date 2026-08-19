@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
+import { useToast } from './ToastProvider';
 import { useData } from '@/data';
 import {
   ACTION_FAMILIES,
@@ -41,6 +42,7 @@ function initialFromEditing(editing?: Action | null) {
 
 export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFormProps) {
   const data = useData();
+  const { showToast } = useToast();
   const [form, setForm] = useState(() => initialFromEditing(editing));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,6 +80,10 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
       const row = editing
         ? await data.updateAction(editing.id, payload)
         : await data.createAction(payload);
+      showToast({
+        message: editing ? 'اقدام درمانی به‌روزرسانی شد.' : 'اقدام درمانی ثبت شد.',
+        variant: 'success',
+      });
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
