@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
 import { DentalChart } from './DentalChart';
@@ -30,6 +30,19 @@ export function PeriodForm({
   const [areas, setAreas] = useState<string[]>(existingAreas);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** BR-UX-02: re-sync chart when opening create vs edit */
+  useEffect(() => {
+    if (!open) return;
+    if (editing) {
+      setTeeth([...editing.teeth]);
+      setAreas([...editing.areas]);
+    } else {
+      setTeeth([...existingTeeth]);
+      setAreas([...existingAreas]);
+    }
+    setError(null);
+  }, [open, editing, existingTeeth, existingAreas]);
 
   const toggleTooth = (t: string) =>
     setTeeth((cur) => (cur.includes(t) ? cur.filter((x) => x !== t) : [...cur, t]));
