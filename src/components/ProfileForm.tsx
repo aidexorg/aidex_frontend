@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from 'react';
+import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
 import {
   User,
   Phone,
@@ -15,7 +15,7 @@ import { toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
 
 interface ProfileFormProps {
-  /** BR-UX-06: full-page create vs modal (edit until UX-07) */
+  /** BR-UX-06/07: full-page create/edit vs legacy modal */
   variant?: 'modal' | 'page';
   open?: boolean;
   onClose: () => void;
@@ -66,6 +66,23 @@ export function ProfileForm({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** BR-UX-07: sync fields when opening edit page */
+  useEffect(() => {
+    if (variant !== 'page' || !editing) return;
+    setForm({
+      first_name: editing.first_name ?? '',
+      last_name: editing.last_name ?? '',
+      birth_year: editing.birth_year ?? '',
+      phone: editing.phone ?? '',
+      address: editing.address ?? '',
+      file_number: editing.file_number ?? '',
+      national_id: editing.national_id ?? '',
+      file_description: editing.file_description ?? '',
+      clinical_notes: editing.clinical_notes ?? '',
+    });
+    setError(null);
+  }, [variant, editing]);
 
   const update = (key: keyof typeof form, value: string) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -272,11 +289,13 @@ export function ProfileForm({
       <div className="max-w-3xl mx-auto space-y-4">
         <button type="button" onClick={onClose} className="btn-ghost">
           <ArrowRight size={18} />
-          بازگشت به پرونده‌ها
+          {editing ? 'بازگشت به پرونده' : 'بازگشت به پرونده‌ها'}
         </button>
         <div className="card p-6 md:p-8">
-          <h1 className="page-title">پرونده جدید</h1>
-          <p className="page-sub mt-1 mb-6">ثبت اطلاعات بیمار در پرونده جدید</p>
+          <h1 className="page-title">{editing ? 'ویرایش پرونده' : 'پرونده جدید'}</h1>
+          <p className="page-sub mt-1 mb-6">
+            {editing ? 'به‌روزرسانی اطلاعات بیمار' : 'ثبت اطلاعات بیمار در پرونده جدید'}
+          </p>
           {formBody}
         </div>
       </div>

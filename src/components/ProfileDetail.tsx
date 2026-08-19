@@ -25,17 +25,17 @@ import { LoadingState, EmptyState, ErrorBanner, ConfirmDialog } from './ui';
 import { PeriodForm } from './PeriodForm';
 import { ActionForm } from './ActionForm';
 import { PaymentForm } from './PaymentForm';
-import { ProfileForm } from './ProfileForm';
 
 interface ProfileDetailProps {
   profile: Profile;
   onBack: () => void;
+  onEditProfile: () => void;
 }
 
 /** BR-UX-05: bounded periods per page (accordion-heavy) */
 const PERIOD_PAGE_SIZE = 6;
 
-export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
+export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailProps) {
   const data = useData();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -60,7 +60,6 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
     id: string;
     label: string;
   } | null>(null);
-  const [profileFormOpen, setProfileFormOpen] = useState(false);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
 
@@ -315,7 +314,7 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
             </div>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setProfileFormOpen(true)} className="btn-secondary">
+            <button onClick={onEditProfile} className="btn-secondary">
               <Pencil size={16} />
               ویرایش پرونده
             </button>
@@ -881,18 +880,6 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
           }}
           periodId={paymentPeriodId}
           editing={editingPayment}
-        />
-      )}
-
-      {profileFormOpen && (
-        <ProfileForm
-          open={profileFormOpen}
-          onClose={() => setProfileFormOpen(false)}
-          onSaved={() => {
-            setProfileFormOpen(false);
-            loadAll();
-          }}
-          editing={profile}
         />
       )}
 

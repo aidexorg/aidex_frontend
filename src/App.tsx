@@ -25,6 +25,7 @@ function App() {
   const [view, setView] = useState<View>('login');
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +49,7 @@ function App() {
     (v: View) => {
       setActiveProfile(null);
       setCreatingProfile(false);
+      setEditingProfile(false);
       if (!account) {
         setView(isAuthView(v) ? v : 'login');
         return;
@@ -65,6 +67,7 @@ function App() {
     setAccount(next);
     setActiveProfile(null);
     setCreatingProfile(false);
+    setEditingProfile(false);
     setView('profiles');
   };
 
@@ -73,11 +76,13 @@ function App() {
     setAccount(null);
     setActiveProfile(null);
     setCreatingProfile(false);
+    setEditingProfile(false);
     setView('login');
   };
 
   const openProfile = (profile: Profile) => {
     setCreatingProfile(false);
+    setEditingProfile(false);
     setActiveProfile(profile);
     setView('profiles');
   };
@@ -102,11 +107,25 @@ function App() {
 
   const renderView = () => {
     if (view === 'profiles') {
+      if (activeProfile && editingProfile) {
+        return (
+          <ProfileForm
+            variant="page"
+            editing={activeProfile}
+            onClose={() => setEditingProfile(false)}
+            onSaved={(updated) => {
+              setEditingProfile(false);
+              setActiveProfile(updated);
+            }}
+          />
+        );
+      }
       if (activeProfile) {
         return (
           <ProfileDetail
             profile={activeProfile}
             onBack={() => setActiveProfile(null)}
+            onEditProfile={() => setEditingProfile(true)}
           />
         );
       }
