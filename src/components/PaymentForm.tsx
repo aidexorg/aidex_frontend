@@ -20,11 +20,12 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
     tracking_code: editing?.tracking_code ?? '',
     amount: editing?.amount != null ? String(editing.amount) : '',
     description: editing?.description ?? '',
+    direct_to_dentist: editing?.direct_to_dentist ?? false,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const update = (key: keyof typeof form, value: string) =>
+  const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = async (e: FormEvent) => {
@@ -49,6 +50,7 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         payment_date: form.payment_date,
         tracking_code: form.tracking_code.trim() || null,
         amount: Number(form.amount),
+        direct_to_dentist: form.direct_to_dentist,
         description: form.description.trim() || null,
       };
       const row = editing
@@ -114,6 +116,16 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
             placeholder="توضیحات پرداخت…"
           />
         </div>
+
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={form.direct_to_dentist}
+            onChange={(e) => update('direct_to_dentist', e.target.checked)}
+            className="w-4 h-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+          />
+          <span className="text-sm text-slate-700">◆ واریز مستقیم به حساب دندانپزشک</span>
+        </label>
 
         <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
           <button type="button" onClick={onClose} className="btn-secondary">

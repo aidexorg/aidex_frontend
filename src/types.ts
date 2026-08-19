@@ -66,6 +66,8 @@ export interface Payment {
   payment_date: string; // ISO date
   tracking_code: string | null;
   amount: number;
+  /** ◆ واریزی مستقیم به حساب دندانپزشک (text.txt §1_1) */
+  direct_to_dentist: boolean;
   description: string | null;
   created_at: string;
   updated_at: string;

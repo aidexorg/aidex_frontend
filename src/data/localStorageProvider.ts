@@ -74,6 +74,11 @@ function writeSessionId(id: string | null): void {
   }
 }
 
+/** Back-compat: rows saved before INC-01 lack direct_to_dentist. */
+function normalizePayment(row: Payment): Payment {
+  return { ...row, direct_to_dentist: row.direct_to_dentist ?? false };
+}
+
 function load(): Store {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -87,7 +92,7 @@ function load(): Store {
       sessions: parsed.sessions ?? [],
       parts: parsed.parts ?? [],
       actions: parsed.actions ?? [],
-      payments: parsed.payments ?? [],
+      payments: (parsed.payments ?? []).map(normalizePayment),
       accounts: parsed.accounts ?? [],
       currentAccountId: readSessionId(),
     };
@@ -272,7 +277,13 @@ export class LocalStorageDataProvider implements DataProvider {
   async createPayment(data: PaymentWrite): Promise<Payment> {
     return this.mutate((store) => {
       const ts = nowIso();
-      const row: Payment = { ...data, id: newId(), created_at: ts, updated_at: ts };
+      const row: Payment = normalizePayment({
+        ...data,
+        direct_to_dentist: data.direct_to_dentist ?? false,
+        id: newId(),
+        created_at: ts,
+        updated_at: ts,
+      });
       store.payments.push(row);
       return row;
     });
