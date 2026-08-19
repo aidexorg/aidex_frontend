@@ -14,10 +14,13 @@ import {
   CheckCircle2,
   Clock,
   CircleDot,
+  Search,
+  ChevronRight,
 } from 'lucide-react';
 import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits, todayISO } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
+import { AREA_OPTIONS } from '@/types';
 import { LoadingState, EmptyState, ErrorBanner, ConfirmDialog } from './ui';
 import { PeriodForm } from './PeriodForm';
 import { ActionForm } from './ActionForm';
@@ -28,6 +31,9 @@ interface ProfileDetailProps {
   profile: Profile;
   onBack: () => void;
 }
+
+/** BR-UX-05: bounded periods per page (accordion-heavy) */
+const PERIOD_PAGE_SIZE = 6;
 
 export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
   const data = useData();
@@ -55,6 +61,8 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
     label: string;
   } | null>(null);
   const [profileFormOpen, setProfileFormOpen] = useState(false);
+  const [periodSearch, setPeriodSearch] = useState('');
+  const [periodPage, setPeriodPage] = useState(1);
 
   /** BR-UX-01: keep viewport stable when accordion height changes */
   const periodsScrollRef = useRef<HTMLDivElement>(null);
@@ -152,6 +160,60 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
   const periodPaid = (periodId: string) =>
     periodPayments(periodId).reduce((sum, p) => sum + p.amount, 0);
   const periodRemaining = (periodId: string) => periodTotal(periodId) - periodPaid(periodId);
+
+  const periodDisplayNum = (periodId: string) =>
+    periods.findIndex((p) => p.id === periodId) + 1;
+
+  const areaLabel = (code: string) =>
+    AREA_OPTIONS.find((a) => a.value === code)?.label ?? code;
+
+  const periodMatchesSearch = (period: Period) => {
+    const q = periodSearch.trim().toLowerCase();
+    if (!q) return true;
+    const num = periodDisplayNum(period.id);
+    const periodSessions = sessions.filter((s) => s.period_id === period.id);
+    const haystack = [
+      String(num),
+      toFaDigits(num),
+      ...period.teeth,
+      ...period.areas,
+      ...period.areas.map(areaLabel),
+      ...periodSessions.map((s) => s.session_date),
+      ...periodSessions.map((s) => formatDate(s.session_date)),
+    ]
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(q);
+  };
+
+  const filteredPeriods = periods.filter(periodMatchesSearch);
+  const periodTotalPages = Math.max(1, Math.ceil(filteredPeriods.length / PERIOD_PAGE_SIZE));
+  const safePeriodPage = Math.min(periodPage, periodTotalPages);
+  const periodPageStart = (safePeriodPage - 1) * PERIOD_PAGE_SIZE;
+  const paginatedPeriods = filteredPeriods.slice(
+    periodPageStart,
+    periodPageStart + PERIOD_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setPeriodPage(1);
+  }, [periodSearch]);
+
+  useEffect(() => {
+    if (periodPage !== safePeriodPage) setPeriodPage(safePeriodPage);
+  }, [periodPage, safePeriodPage]);
+
+  useEffect(() => {
+    if (!expandedPeriod) return;
+    const start = (safePeriodPage - 1) * PERIOD_PAGE_SIZE;
+    const onPage = filteredPeriods
+      .slice(start, start + PERIOD_PAGE_SIZE)
+      .some((p) => p.id === expandedPeriod);
+    if (!onPage) {
+      setExpandedPeriod(null);
+      setExpandedSession(null);
+    }
+  }, [safePeriodPage, filteredPeriods, expandedPeriod]);
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
@@ -306,15 +368,34 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
         </div>
       ) : (
         <div className="card overflow-hidden flex flex-col max-h-[min(70vh,calc(100dvh-14rem))]">
-          <div className="shrink-0 px-5 py-3 border-b border-slate-100 bg-slate-50/80">
-            <h3 className="text-sm font-semibold text-slate-700">دوره‌های درمان</h3>
-            <p className="text-xs text-slate-400 mt-0.5">باز و بسته کردن جلسات داخل همین ناحیه اسکرول می‌شود</p>
+          <div className="shrink-0 px-5 py-3 border-b border-slate-100 bg-slate-50/80 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700">دوره‌های درمان</h3>
+              <p className="text-xs text-slate-400 mt-0.5">باز و بسته کردن جلسات داخل همین ناحیه اسکرول می‌شود</p>
+            </div>
+            <div className="relative">
+              <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                className="input pr-9 text-sm py-2"
+                placeholder="جستجو: شماره دوره، دندان، ناحیه، تاریخ جلسه…"
+                value={periodSearch}
+                onChange={(e) => setPeriodSearch(e.target.value)}
+              />
+            </div>
           </div>
           <div
             ref={periodsScrollRef}
-            className="overflow-y-auto overscroll-contain p-3 space-y-3"
+            className="overflow-y-auto overscroll-contain p-3 space-y-3 min-h-0 flex-1"
           >
-          {periods.map((period, idx) => {
+          {filteredPeriods.length === 0 ? (
+            <EmptyState
+              icon={<Layers size={40} />}
+              title="دوره‌ای یافت نشد"
+              description="عبارت جستجو را تغییر دهید یا فیلتر را پاک کنید."
+            />
+          ) : (
+          paginatedPeriods.map((period) => {
+            const displayNum = periodDisplayNum(period.id);
             const periodSess = sessions.filter((s) => s.period_id === period.id);
             const expanded = expandedPeriod === period.id;
             const total = periodTotal(period.id);
@@ -338,7 +419,7 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
                     )}
                     <div>
                       <div className="font-semibold text-slate-900">
-                        دوره درمان {toFaDigits(idx + 1)}
+                        دوره درمان {toFaDigits(displayNum)}
                       </div>
                       <div className="text-xs text-slate-400 mt-0.5">
                         {periodSess.length} جلسه · {actCount} اقدام
@@ -435,7 +516,7 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
                           setConfirmDelete({
                             type: 'period',
                             id: period.id,
-                            label: `دوره درمان ${toFaDigits(idx + 1)}`,
+                            label: `دوره درمان ${toFaDigits(displayNum)}`,
                           })
                         }
                         className="btn-danger text-xs"
@@ -712,8 +793,40 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
                 )}
               </div>
             );
-          })}
+          })
+          )}
           </div>
+          {periodTotalPages > 1 && (
+            <div className="shrink-0 px-4 py-3 border-t border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs text-slate-500">
+                صفحه {toFaDigits(safePeriodPage)} از {toFaDigits(periodTotalPages)}
+                <span className="text-slate-400 mx-1">·</span>
+                {toFaDigits(filteredPeriods.length)} دوره
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPeriodPage((p) => Math.max(1, p - 1))}
+                  disabled={safePeriodPage <= 1}
+                  className="btn-secondary text-xs py-1.5 px-2.5 disabled:opacity-40"
+                  aria-label="صفحه قبل"
+                >
+                  <ChevronRight size={14} />
+                  قبلی
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPeriodPage((p) => Math.min(periodTotalPages, p + 1))}
+                  disabled={safePeriodPage >= periodTotalPages}
+                  className="btn-secondary text-xs py-1.5 px-2.5 disabled:opacity-40"
+                  aria-label="صفحه بعد"
+                >
+                  بعدی
+                  <ChevronLeft size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
