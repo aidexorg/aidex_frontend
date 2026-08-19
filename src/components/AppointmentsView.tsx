@@ -19,6 +19,7 @@ import {
 import type { Profile } from '@/types';
 import { LoadingState, EmptyState, ConfirmDialog } from './ui';
 import { AppointmentForm } from './AppointmentForm';
+import { DailyCalendar } from './DailyCalendar';
 
 interface AppointmentRow extends Appointment {
   profile: Profile | null;
@@ -67,6 +68,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AppointmentRow | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,6 +134,35 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         </button>
       </div>
 
+      {/* View toggle */}
+      <div className="flex gap-1 rounded-xl border border-slate-200 p-0.5 bg-white w-fit">
+        <button
+          onClick={() => setViewMode('calendar')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
+            viewMode === 'calendar'
+              ? 'bg-teal-600 text-white'
+              : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          <CalendarDays size={14} />
+          تقویم
+        </button>
+        <button
+          onClick={() => setViewMode('list')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
+            viewMode === 'list'
+              ? 'bg-teal-600 text-white'
+              : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          لیست
+        </button>
+      </div>
+
+      {viewMode === 'calendar' ? (
+        <DailyCalendar onOpenProfile={onOpenProfile} />
+      ) : (
+      <>
       {/* Filter chips */}
       <div className="flex flex-wrap gap-2">
         {[
@@ -275,6 +306,8 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
             </div>
           ))}
         </div>
+      )}
+      </>
       )}
 
       {/* Form */}
