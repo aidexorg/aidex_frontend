@@ -23,6 +23,7 @@ import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import { AREA_OPTIONS } from '@/types';
 import { LoadingState, EmptyState, ErrorBanner, ConfirmDialog } from './ui';
 import { useToast } from './ToastProvider';
+import { useFollowupCount } from './FollowupCountProvider';
 import { PeriodForm } from './PeriodForm';
 import { ActionForm } from './ActionForm';
 import { PaymentForm } from './PaymentForm';
@@ -39,6 +40,7 @@ const PERIOD_PAGE_SIZE = 6;
 export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailProps) {
   const data = useData();
   const { showToast } = useToast();
+  const { refresh: refreshFollowupCount } = useFollowupCount();
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -238,6 +240,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
       else await data.deletePayment(id);
       showToast({ message: deleteSuccessMessage[type], variant: 'success' });
       setConfirmDelete(null);
+      refreshFollowupCount();
       loadAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در حذف.');

@@ -9,6 +9,8 @@ import {
   LogOut,
 } from 'lucide-react';
 import type { Account } from '@/types';
+import { toFaDigits } from '@/lib/format';
+import { useFollowupCount } from './FollowupCountProvider';
 
 export type View =
   | 'profiles'
@@ -46,8 +48,19 @@ function initials(account: Account): string {
   return source.slice(0, 1).toUpperCase();
 }
 
+function NavFollowupBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  const label = count > 99 ? `${toFaDigits(99)}+` : toFaDigits(count);
+  return (
+    <span className="absolute -top-1.5 -left-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center shadow-sm">
+      {label}
+    </span>
+  );
+}
+
 export function Layout({ current, onNavigate, children, account, onLogout }: LayoutProps) {
   const authed = account !== null;
+  const { count: followupCount } = useFollowupCount();
   const pageLabel = NAV_ITEMS.find((item) => item.key === current)?.label ?? 'ایدکس';
 
   return (
@@ -79,7 +92,10 @@ export function Layout({ current, onNavigate, children, account, onLogout }: Lay
                       : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
                   }`}
                 >
-                  <Icon size={18} className={active ? 'text-teal-300' : 'text-slate-500'} />
+                  <span className="relative shrink-0">
+                    <Icon size={18} className={active ? 'text-teal-300' : 'text-slate-500'} />
+                    {item.key === 'followups' && <NavFollowupBadge count={followupCount} />}
+                  </span>
                   {item.label}
                 </button>
               );
@@ -171,11 +187,14 @@ export function Layout({ current, onNavigate, children, account, onLogout }: Lay
                 key={item.key}
                 type="button"
                 onClick={() => onNavigate(item.key)}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2.5 transition ${
+                className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 transition ${
                   active ? 'text-teal-300' : 'text-slate-500'
                 }`}
               >
-                <Icon size={20} />
+                <span className="relative">
+                  <Icon size={20} />
+                  {item.key === 'followups' && <NavFollowupBadge count={followupCount} />}
+                </span>
                 <span className="text-[10px] font-medium">{item.label}</span>
               </button>
             );

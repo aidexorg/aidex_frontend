@@ -1,17 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AlertCircle, Clock, User, ArrowLeft } from 'lucide-react';
 import { useData } from '@/data';
+import { loadFollowupItems, type FollowupItem } from '@/lib/followups';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
-import type { Action, Part, Session, Period, Profile } from '@/types';
+import type { Profile } from '@/types';
 import { LoadingState, EmptyState } from './ui';
-
-interface FollowupItem {
-  action: Action;
-  part: Part;
-  session: Session;
-  period: Period;
-  profile: Profile;
-}
 
 interface FollowupsViewProps {
   onOpenProfile: (profile: Profile) => void;
@@ -26,38 +19,7 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [actions, parts, sessions, periods, profiles] = await Promise.all([
-        data.listActions(),
-        data.listParts(),
-        data.listSessions(),
-        data.listPeriods(),
-        data.listProfiles(),
-      ]);
-
-      const partMap = new Map(parts.map((p) => [p.id, p]));
-      const sessionMap = new Map(sessions.map((s) => [s.id, s]));
-      const periodMap = new Map(periods.map((p) => [p.id, p]));
-      const profileMap = new Map(profiles.map((p) => [p.id, p]));
-
-      const joined: FollowupItem[] = [];
-      for (const action of actions) {
-        const part = partMap.get(action.part_id);
-        if (!part) continue;
-        const session = sessionMap.get(part.session_id);
-        if (!session) continue;
-        const period = periodMap.get(session.period_id);
-        if (!period) continue;
-        const profile = profileMap.get(period.profile_id);
-        if (!profile) continue;
-        if (action.status === 'incomplete' || action.needs_followup) {
-          joined.push({ action, part, session, period, profile });
-        }
-      }
-      joined.sort(
-        (a, b) =>
-          new Date(a.session.session_date).getTime() - new Date(b.session.session_date).getTime()
-      );
-      setItems(joined);
+      setItems(await loadFollowupItems(data));
     } catch {
       setItems([]);
     } finally {

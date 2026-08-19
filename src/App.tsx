@@ -11,6 +11,7 @@ import { RegisterView } from '@/components/RegisterView';
 import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
 import { ToastProvider } from '@/components/ToastProvider';
+import { FollowupCountProvider } from '@/components/FollowupCountProvider';
 import { useData } from '@/data';
 import type { Account, Profile } from '@/types';
 
@@ -166,16 +167,18 @@ function App() {
 
   return (
     <ToastProvider>
-      <Layout
-        current={view}
-        onNavigate={navigate}
-        account={account}
-        onLogout={() => {
-          void handleLogout();
-        }}
-      >
-        {renderView()}
-      </Layout>
+      <FollowupCountProvider view={view}>
+        <Layout
+          current={view}
+          onNavigate={navigate}
+          account={account}
+          onLogout={() => {
+            void handleLogout();
+          }}
+        >
+          {renderView()}
+        </Layout>
+      </FollowupCountProvider>
     </ToastProvider>
   );
 }
