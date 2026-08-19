@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
 import {
   ArrowRight,
   Plus,
@@ -55,6 +55,42 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
     label: string;
   } | null>(null);
   const [profileFormOpen, setProfileFormOpen] = useState(false);
+
+  /** BR-UX-01: keep viewport stable when accordion height changes */
+  const periodsScrollRef = useRef<HTMLDivElement>(null);
+  const scrollSnapshotRef = useRef<{ windowY: number; containerY: number } | null>(null);
+
+  const captureScrollSnapshot = () => {
+    scrollSnapshotRef.current = {
+      windowY: window.scrollY,
+      containerY: periodsScrollRef.current?.scrollTop ?? 0,
+    };
+  };
+
+  const togglePeriod = (periodId: string) => {
+    captureScrollSnapshot();
+    if (expandedPeriod === periodId) {
+      setExpandedSession(null);
+      setExpandedPeriod(null);
+    } else {
+      setExpandedPeriod(periodId);
+    }
+  };
+
+  const toggleSession = (sessionId: string) => {
+    captureScrollSnapshot();
+    setExpandedSession((current) => (current === sessionId ? null : sessionId));
+  };
+
+  useLayoutEffect(() => {
+    const snap = scrollSnapshotRef.current;
+    if (!snap) return;
+    if (periodsScrollRef.current) {
+      periodsScrollRef.current.scrollTop = snap.containerY;
+    }
+    window.scrollTo({ top: snap.windowY, left: 0, behavior: 'instant' });
+    scrollSnapshotRef.current = null;
+  }, [expandedPeriod, expandedSession]);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -269,7 +305,15 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
           />
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="card overflow-hidden flex flex-col max-h-[min(70vh,calc(100dvh-14rem))]">
+          <div className="shrink-0 px-5 py-3 border-b border-slate-100 bg-slate-50/80">
+            <h3 className="text-sm font-semibold text-slate-700">دوره‌های درمان</h3>
+            <p className="text-xs text-slate-400 mt-0.5">باز و بسته کردن جلسات داخل همین ناحیه اسکرول می‌شود</p>
+          </div>
+          <div
+            ref={periodsScrollRef}
+            className="overflow-y-auto overscroll-contain p-3 space-y-3"
+          >
           {periods.map((period, idx) => {
             const periodSess = sessions.filter((s) => s.period_id === period.id);
             const expanded = expandedPeriod === period.id;
@@ -282,7 +326,8 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
               <div key={period.id} className="card overflow-hidden">
                 {/* Period header */}
                 <button
-                  onClick={() => setExpandedPeriod(expanded ? null : period.id)}
+                  type="button"
+                  onClick={() => togglePeriod(period.id)}
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition text-right"
                 >
                   <div className="flex items-center gap-3">
@@ -413,9 +458,8 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
                           return (
                             <div key={session.id} className="rounded-lg border border-slate-200">
                               <button
-                                onClick={() =>
-                                  setExpandedSession(sessExpanded ? null : session.id)
-                                }
+                                type="button"
+                                onClick={() => toggleSession(session.id)}
                                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition text-right"
                               >
                                 <div className="flex items-center gap-2.5">
@@ -669,6 +713,7 @@ export function ProfileDetail({ profile, onBack }: ProfileDetailProps) {
               </div>
             );
           })}
+          </div>
         </div>
       )}
 
