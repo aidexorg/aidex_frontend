@@ -1,8 +1,18 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
-import { supabase } from '@/lib/supabase';
-import { ACTION_TITLES, INCOMPLETE_REASONS, type Action, type ActionStatus } from '@/types';
+import { useData } from '@/data';
+import {
+  ACTION_FAMILIES,
+  ACTION_PARAM_VALUES,
+  INCOMPLETE_REASONS,
+  buildActionTitle,
+  isValidActionTitle,
+  isValidIncompleteReason,
+  parseActionTitle,
+  type Action,
+  type ActionStatus,
+} from '@/types';
 
 interface ActionFormProps {
   open: boolean;
@@ -12,26 +22,44 @@ interface ActionFormProps {
   editing?: Action | null;
 }
 
-export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFormProps) {
-  const [form, setForm] = useState({
-    title: editing?.title ?? '',
+function initialFromEditing(editing?: Action | null) {
+  const parsed = editing?.title ? parseActionTitle(editing.title) : null;
+  return {
+    familyId: parsed?.familyId ?? '',
+    param: parsed?.param ?? '1',
     price: editing?.price != null ? String(editing.price) : '',
     discount: editing?.discount != null ? String(editing.discount) : '0',
     description: editing?.description ?? '',
     status: (editing?.status ?? 'incomplete') as ActionStatus,
-    incomplete_reason: editing?.incomplete_reason ?? '',
+    incomplete_reason:
+      editing?.incomplete_reason && isValidIncompleteReason(editing.incomplete_reason)
+        ? editing.incomplete_reason
+        : '',
     needs_followup: editing?.needs_followup ?? false,
-  });
+  };
+}
+
+export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFormProps) {
+  const data = useData();
+  const [form, setForm] = useState(() => initialFromEditing(editing));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const family = ACTION_FAMILIES.find((f) => f.id === form.familyId);
+  const needsParam = family != null && family.kind !== 'fixed';
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.title.trim()) {
-      setError('عنوان اقدام الزامی است.');
+    const title = buildActionTitle(form.familyId, form.param);
+    if (!title || !isValidActionTitle(title)) {
+      setError('عنوان اقدام باید از فهرست استاندارد انتخاب شود.');
+      return;
+    }
+    if (form.status === 'incomplete' && !isValidIncompleteReason(form.incomplete_reason)) {
+      setError('دلیل ناقص بودن را از فهرست انتخاب کنید.');
       return;
     }
     setSaving(true);
@@ -39,28 +67,18 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
     try {
       const payload = {
         part_id: partId,
-        title: form.title.trim(),
+        title,
         price: Number(form.price) || 0,
         discount: Number(form.discount) || 0,
         description: form.description.trim() || null,
         status: form.status,
-        incomplete_reason:
-          form.status === 'incomplete' ? form.incomplete_reason.trim() || null : null,
+        incomplete_reason: form.status === 'incomplete' ? form.incomplete_reason : null,
         needs_followup: form.needs_followup,
       };
-      let result;
-      if (editing) {
-        result = await supabase
-          .from('actions')
-          .update(payload)
-          .eq('id', editing.id)
-          .select()
-          .maybeSingle();
-      } else {
-        result = await supabase.from('actions').insert(payload).select().maybeSingle();
-      }
-      if (result.error) throw result.error;
-      if (result.data) onSaved(result.data as Action);
+      const row = editing
+        ? await data.updateAction(editing.id, payload)
+        : await data.createAction(payload);
+      onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
     } finally {
@@ -82,17 +100,36 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
           <label className="label">عنوان اقدام *</label>
           <select
             className="input"
-            value={form.title}
-            onChange={(e) => update('title', e.target.value)}
+            value={form.familyId}
+            onChange={(e) => update('familyId', e.target.value)}
           >
             <option value="">انتخاب کنید…</option>
-            {ACTION_TITLES.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            {ACTION_FAMILIES.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
               </option>
             ))}
           </select>
         </div>
+
+        {needsParam && (
+          <div>
+            <label className="label">
+              {family?.kind === 'aml' || family?.kind === 'com' ? 'کلاس ترمیم (1–6) *' : 'تعداد کانال (1–6) *'}
+            </label>
+            <select
+              className="input"
+              value={form.param}
+              onChange={(e) => update('param', e.target.value)}
+            >
+              {ACTION_PARAM_VALUES.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -143,7 +180,9 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
             </button>
             <button
               type="button"
-              onClick={() => update('status', 'complete')}
+              onClick={() => {
+                setForm((f) => ({ ...f, status: 'complete', incomplete_reason: '' }));
+              }}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${
                 form.status === 'complete'
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
@@ -157,7 +196,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
 
         {form.status === 'incomplete' && (
           <div>
-            <label className="label">دلیل ناقص بودن</label>
+            <label className="label">دلیل ناقص بودن *</label>
             <select
               className="input"
               value={form.incomplete_reason}
@@ -165,8 +204,8 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
             >
               <option value="">انتخاب کنید…</option>
               {INCOMPLETE_REASONS.map((r) => (
-                <option key={r} value={r}>
-                  {r}
+                <option key={r.value} value={r.value}>
+                  {r.label}
                 </option>
               ))}
             </select>

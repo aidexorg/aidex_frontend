@@ -79,6 +79,14 @@ export interface Appointment {
   updated_at: string;
 }
 
+/** Operator login account — distinct from patient `Profile` (CLM-005). Password is write-only. */
+export interface Account {
+  id: string;
+  email: string;
+  display_name: string | null;
+  created_at: string;
+}
+
 // Tooth notation: quadrant + number, e.g. UR1, UL8, LR3, LL7
 export const TOOTH_QUADRANTS = [
   { value: 'UR', label: 'فکی بالا - راست' },
@@ -95,23 +103,92 @@ export const AREA_OPTIONS = [
   { value: 'Full Mouth', label: 'کل دهان' },
 ] as const;
 
-export const ACTION_TITLES = [
-  'معاینه و تشخیص',
-  'جرم‌گیری',
-  'پر کردن',
-  'عصب‌کشی',
-  'کشیدن دندان',
-  'روکش',
-  'ایمپلنت',
-  'ارتودنسی',
-  'بلیچینگ',
-  'سایر',
-] as const;
+/** X / class n ∈ [1..6] for parameterized action titles (entities/action.md). */
+export const ACTION_PARAM_VALUES = ['1', '2', '3', '4', '5', '6'] as const;
+
+export type ActionFamilyKind = 'endo' | 'reEndo' | 'aml' | 'com' | 'fixed';
+
+export interface ActionFamily {
+  id: string;
+  kind: ActionFamilyKind;
+  label: string;
+  /** Used when kind === 'fixed' */
+  title?: string;
+}
+
+export const ACTION_FAMILIES: ActionFamily[] = [
+  { id: 'endo', kind: 'endo', label: 'عصب‌کشی (Endo)' },
+  { id: 'reEndo', kind: 'reEndo', label: 'عصب‌کشی مجدد (reEndo)' },
+  { id: 'aml', kind: 'aml', label: 'ترمیم آمالگام' },
+  { id: 'com', kind: 'com', label: 'ترمیم کامپوزیت' },
+  { id: 'Crown PFZ', kind: 'fixed', label: 'روکش فلزی', title: 'Crown PFZ' },
+  { id: 'Crown PFM', kind: 'fixed', label: 'روکش سرامیکی', title: 'Crown PFM' },
+  { id: 'Manual SRP', kind: 'fixed', label: 'جرم‌گیری دستی', title: 'Manual SRP' },
+  { id: 'Ultrsonic SRP', kind: 'fixed', label: 'جرم‌گیری اولتراسونیک', title: 'Ultrsonic SRP' },
+  { id: 'Prophylaxis Polish', kind: 'fixed', label: 'بروساژ', title: 'Prophylaxis Polish' },
+  { id: 'Fluoride therapy', kind: 'fixed', label: 'فلورایدتراپی', title: 'Fluoride therapy' },
+  { id: 'CL.SoftTissue', kind: 'fixed', label: 'افزایش طول تاج — بافت نرم', title: 'CL.SoftTissue' },
+  { id: 'CL.hardTissue', kind: 'fixed', label: 'افزایش طول تاج — بافت سخت', title: 'CL.hardTissue' },
+  {
+    id: 'EXT.SurgicalSoftTissue',
+    kind: 'fixed',
+    label: 'خارج کردن جراحی — بافت نرم',
+    title: 'EXT.SurgicalSoftTissue',
+  },
+  {
+    id: 'EXT.SurgicalHardTissue',
+    kind: 'fixed',
+    label: 'خارج کردن جراحی — بافت سخت',
+    title: 'EXT.SurgicalHardTissue',
+  },
+  { id: 'EXT.NonSurgical', kind: 'fixed', label: 'خارج کردن بدون جراحی', title: 'EXT.NonSurgical' },
+  { id: 'PostCore (crco)', kind: 'fixed', label: 'پست و کور کروم‌کبالت', title: 'PostCore (crco)' },
+  { id: 'PostCore (npg)', kind: 'fixed', label: 'پست و کور NPG', title: 'PostCore (npg)' },
+];
+
+const FIXED_TITLES = new Set(
+  ACTION_FAMILIES.filter((f) => f.kind === 'fixed' && f.title).map((f) => f.title as string),
+);
+
+export function buildActionTitle(familyId: string, param: string): string | null {
+  const family = ACTION_FAMILIES.find((f) => f.id === familyId);
+  if (!family) return null;
+  if (family.kind === 'fixed') return family.title ?? null;
+  if (!ACTION_PARAM_VALUES.includes(param as (typeof ACTION_PARAM_VALUES)[number])) return null;
+  if (family.kind === 'endo') return `Endo.${param}-Canal`;
+  if (family.kind === 'reEndo') return `reEndo.${param}-Canal`;
+  if (family.kind === 'aml') return `Aml.Filling for Class ${param}`;
+  if (family.kind === 'com') return `Com.Filling for Class ${param}`;
+  return null;
+}
+
+export function parseActionTitle(title: string): { familyId: string; param: string } | null {
+  const endo = title.match(/^Endo\.([1-6])-Canal$/);
+  if (endo) return { familyId: 'endo', param: endo[1] };
+  const reEndo = title.match(/^reEndo\.([1-6])-Canal$/);
+  if (reEndo) return { familyId: 'reEndo', param: reEndo[1] };
+  const aml = title.match(/^Aml\.Filling for Class ([1-6])$/);
+  if (aml) return { familyId: 'aml', param: aml[1] };
+  const com = title.match(/^Com\.Filling for Class ([1-6])$/);
+  if (com) return { familyId: 'com', param: com[1] };
+  if (FIXED_TITLES.has(title)) return { familyId: title, param: '1' };
+  return null;
+}
+
+export function isValidActionTitle(title: string): boolean {
+  return parseActionTitle(title) !== null;
+}
 
 export const INCOMPLETE_REASONS = [
-  'درد بیمار',
-  'زمان ناکافی',
-  'نیاز به مراجعه مجدد',
-  'نقص تجهیزات',
-  'سایر',
+  { value: 'contact_patient', label: 'تماس با بیمار' },
+  { value: 'future_followup', label: 'نیاز به پیگیری آینده' },
+  { value: 'awaiting_lab', label: 'در انتظار لابراتوار' },
+  { value: 'patient_noncooperation', label: 'عدم همکاری بیمار' },
+  { value: 'patient_inaction', label: 'عدم اقدام بیمار' },
 ] as const;
+
+export type IncompleteReasonValue = (typeof INCOMPLETE_REASONS)[number]['value'];
+
+export function isValidIncompleteReason(value: string): boolean {
+  return INCOMPLETE_REASONS.some((r) => r.value === value);
+}
