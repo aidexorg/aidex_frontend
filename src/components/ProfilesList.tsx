@@ -14,6 +14,8 @@ import {
   ArrowLeft,
   CreditCard,
   Cake,
+  ChevronRight,
+  ChevronLeft,
 } from 'lucide-react';
 import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
@@ -33,6 +35,9 @@ interface ProfileSummary {
   lastActivity: string | null;
 }
 
+/** BR-UX-04: bounded profiles per page */
+const PAGE_SIZE = 10;
+
 export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
   const data = useData();
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -43,6 +48,7 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summary, setSummary] = useState<ProfileSummary | null>(null);
+  const [page, setPage] = useState(1);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -71,13 +77,47 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
     );
   });
 
-  const selectedProfile = filtered.find((p) => p.id === selectedId) ?? null;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageStart = (safePage - 1) * PAGE_SIZE;
+  const paginatedProfiles = filtered.slice(pageStart, pageStart + PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
+
+  const selectedProfile =
+    profiles.find((p) => p.id === selectedId) ??
+    filtered.find((p) => p.id === selectedId) ??
+    null;
 
   useEffect(() => {
     if (selectedId && !filtered.some((p) => p.id === selectedId)) {
       setSelectedId(null);
     }
   }, [filtered, selectedId]);
+
+  /** Clear selection when selected patient is not on the active page */
+  useEffect(() => {
+    if (!selectedId) return;
+    const start = (safePage - 1) * PAGE_SIZE;
+    const onPage = filtered
+      .slice(start, start + PAGE_SIZE)
+      .some((p) => p.id === selectedId);
+    if (!onPage) setSelectedId(null);
+  }, [safePage, filtered, selectedId]);
+
+  const selectProfile = (profile: Profile) => {
+    const idx = filtered.findIndex((p) => p.id === profile.id);
+    if (idx >= 0) {
+      setPage(Math.floor(idx / PAGE_SIZE) + 1);
+    }
+    setSelectedId(profile.id);
+  };
 
   useEffect(() => {
     if (!selectedProfile) {
@@ -241,19 +281,20 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
               />
             </div>
           ) : (
+            <div className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filtered.map((profile) => {
+              {paginatedProfiles.map((profile) => {
                 const isSelected = selectedId === profile.id;
                 return (
                   <div
                     key={profile.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => setSelectedId(profile.id)}
+                    onClick={() => selectProfile(profile)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        setSelectedId(profile.id);
+                        selectProfile(profile);
                       }
                     }}
                     className={`card p-4 text-right transition-all group cursor-pointer ${
@@ -309,6 +350,39 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
                   </div>
                 );
               })}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="card px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-slate-500">
+                  صفحه {toFaDigits(safePage)} از {toFaDigits(totalPages)}
+                  <span className="text-slate-400 mx-1">·</span>
+                  {toFaDigits(filtered.length)} پرونده
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="btn-secondary text-xs py-2 px-3 disabled:opacity-40"
+                    aria-label="صفحه قبل"
+                  >
+                    <ChevronRight size={16} />
+                    قبلی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="btn-secondary text-xs py-2 px-3 disabled:opacity-40"
+                    aria-label="صفحه بعد"
+                  >
+                    بعدی
+                    <ChevronLeft size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
             </div>
           )}
         </div>
@@ -480,7 +554,7 @@ export function ProfilesList({ onOpenProfile }: ProfilesListProps) {
                   <button
                     key={profile.id}
                     type="button"
-                    onClick={() => setSelectedId(profile.id)}
+                    onClick={() => selectProfile(profile)}
                     className={`w-full text-right rounded-xl border px-3 py-2 transition ${
                       selectedId === profile.id
                         ? 'border-teal-300 bg-teal-50'
