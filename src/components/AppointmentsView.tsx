@@ -13,6 +13,8 @@ import { formatDate, toFaDigits } from '@/lib/format';
 import {
   APPOINTMENT_TYPES,
   APPOINTMENT_STATUSES,
+  getNextStatuses,
+  getStatusLabel,
   type Appointment,
   type AppointmentStatus,
 } from '@/types';
@@ -106,6 +108,15 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       load();
     } catch {
       setConfirmDelete(null);
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: AppointmentStatus) => {
+    try {
+      await data.updateAppointment(id, { status: newStatus });
+      load();
+    } catch {
+      // toast error would go here
     }
   };
 
@@ -303,6 +314,21 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
                   <Trash2 size={14} />
                 </button>
               </div>
+
+              {/* Status action buttons */}
+              {getNextStatuses(row.status).length > 0 && (
+                <div className="flex gap-1.5 mt-2 pt-2 border-t border-slate-100">
+                  {getNextStatuses(row.status).map((trans) => (
+                    <button
+                      key={trans.status}
+                      onClick={() => handleStatusChange(row.id, trans.status)}
+                      className={`text-[11px] font-medium px-2.5 py-1 rounded-lg transition ${trans.color}`}
+                    >
+                      {trans.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
         </div>

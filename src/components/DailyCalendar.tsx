@@ -4,6 +4,7 @@ import { useData } from '@/data';
 import { formatDate, toFaDigits } from '@/lib/format';
 import {
   APPOINTMENT_TYPES,
+  getNextStatuses,
   type Appointment,
   type AppointmentType,
   type AppointmentStatus,
@@ -223,6 +224,15 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
     setFormOpen(true);
   };
 
+  const handleStatusChange = async (appt: Appointment, newStatus: AppointmentStatus) => {
+    try {
+      await data.updateAppointment(appt.id, { status: newStatus });
+      load();
+    } catch {
+      // error handled silently
+    }
+  };
+
   const navigateDate = (delta: number) => {
     const d = new Date(selectedDate + 'T12:00:00');
     d.setDate(d.getDate() + delta);
@@ -400,6 +410,22 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
                             <span className="text-[9px] opacity-60">
                               {typeCfg.label}
                             </span>
+                          )}
+                          {height > 60 && getNextStatuses(appt.status).length > 0 && (
+                            <div className="flex gap-0.5 mt-0.5">
+                              {getNextStatuses(appt.status).slice(0, 2).map((trans) => (
+                                <button
+                                  key={trans.status}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusChange(appt, trans.status);
+                                  }}
+                                  className="text-[8px] font-medium px-1 py-0.5 rounded bg-white/70 hover:bg-white text-slate-700 border border-white/50"
+                                >
+                                  {trans.label}
+                                </button>
+                              ))}
+                            </div>
                           )}
                         </div>
                       );

@@ -109,6 +109,42 @@ export const APPOINTMENT_STATUSES: { value: AppointmentStatus; label: string }[]
   { value: 'cancelled', label: 'لغو شده' },
 ];
 
+export interface StatusTransition {
+  status: AppointmentStatus;
+  label: string;
+  color: string;
+}
+
+const STATUS_TRANSITIONS: Record<AppointmentStatus, StatusTransition[]> = {
+  scheduled: [
+    { status: 'confirmed', label: 'تأیید', color: 'bg-sky-600 text-white hover:bg-sky-700' },
+    { status: 'cancelled', label: 'لغو', color: 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' },
+  ],
+  confirmed: [
+    { status: 'arrived', label: 'حاضر شدن', color: 'bg-amber-600 text-white hover:bg-amber-700' },
+    { status: 'cancelled', label: 'لغو', color: 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' },
+  ],
+  arrived: [
+    { status: 'in_progress', label: 'شروع درمان', color: 'bg-teal-600 text-white hover:bg-teal-700' },
+    { status: 'no_show', label: 'عدم حضور', color: 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' },
+  ],
+  in_progress: [
+    { status: 'completed', label: 'تکمیل', color: 'bg-emerald-600 text-white hover:bg-emerald-700' },
+    { status: 'cancelled', label: 'لغو', color: 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100' },
+  ],
+  completed: [],
+  no_show: [],
+  cancelled: [],
+};
+
+export function getNextStatuses(current: AppointmentStatus): StatusTransition[] {
+  return STATUS_TRANSITIONS[current] ?? [];
+}
+
+export function getStatusLabel(s: AppointmentStatus): string {
+  return APPOINTMENT_STATUSES.find((st) => st.value === s)?.label ?? s;
+}
+
 /** Operator login account — distinct from patient `Profile` (CLM-005). Password is write-only. */
 export interface Account {
   id: string;
