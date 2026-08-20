@@ -11,7 +11,7 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { useData } from '@/data';
-import { formatDate, toFaDigits } from '@/lib/format';
+import { formatDate, formatPrice, toFaDigits } from '@/lib/format';
 import type { Profile, Appointment, AppointmentStatus } from '@/types';
 import { APPOINTMENT_STATUSES, APPOINTMENT_TYPES } from '@/types';
 import { SkeletonProfileList } from './Skeleton';
@@ -25,6 +25,11 @@ interface DashboardViewProps {
 
 interface AppointmentWithProfile extends Appointment {
   profile: Profile | null;
+}
+
+interface FinancialMetrics {
+  production: number;
+  collections: number;
 }
 
 // ── Constants ──
@@ -118,6 +123,7 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
   const [appointments, setAppointments] = useState<AppointmentWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [account, setAccount] = useState<{ display_name: string | null } | null>(null);
+  const [financial, setFinancial] = useState<FinancialMetrics>({ production: 0, collections: 0 });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -138,8 +144,34 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
         }))
         .sort((a, b) => a.start_time.localeCompare(b.start_time));
 
+      // Compute financial metrics
+      let production = 0;
+      let collections = 0;
+
+      // Get today's payments
+      const allPayments = await data.listPayments();
+      const todayPayments = allPayments.filter((p) => p.payment_date === today);
+      collections = todayPayments.reduce((sum, p) => sum + p.amount, 0);
+
+      // Get production from completed actions on today's appointments
+      if (todayAppts.length > 0) {
+        const periods = await data.listPeriods();
+        const periodIds = periods.map((p) => p.id);
+        const sessions = periodIds.length > 0 ? await data.listSessions(periodIds) : [];
+        const sessionIds = sessions.map((s) => s.id);
+        const parts = sessionIds.length > 0 ? await data.listParts(sessionIds) : [];
+        const partIds = parts.map((p) => p.id);
+        const allActions = partIds.length > 0 ? await data.listActions(partIds) : [];
+
+        // Sum completed actions
+        production = allActions
+          .filter((a) => a.status === 'complete')
+          .reduce((sum, a) => sum + (a.price - a.discount), 0);
+      }
+
       setAppointments(todayAppts);
       setAccount(currentAccount);
+      setFinancial({ production, collections });
     } catch {
       setAppointments([]);
     } finally {
@@ -283,6 +315,63 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
           })}
         </div>
       </div>
+
+      {/* Financial metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-xs text-slate-500">تولید امروز</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">
+                {formatPrice(financial.production)}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
+              <Activity size={18} className="text-teal-600" />
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-400">ارزش کل درمان‌های تکمیل شده</p>
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-xs text-slate-500">وصول امروز</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-1">
+                {formatPrice(financial.collections)}
+              </p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 size={18} className="text-emerald-600" />
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-400">مبلغ واریزی دریافت شده</p>
+        </div>
+      </div>
+
+      {/* Collection rate progress bar */}
+      {financial.production > 0 && (
+        <div className="card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-slate-700">نرخ وصول</h3>
+            <span className="text-sm font-bold text-teal-600">
+              {toFaDigits(Math.round((financial.collections / financial.production) * 100))}%
+            </span>
+          </div>
+          <div className="w-full bg-slate-100 rounded-full h-2.5">
+            <div
+              className="bg-teal-500 h-2.5 rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min(100, (financial.collections / financial.production) * 100)}%`,
+              }}
+            />
+          </div>
+          <div className="flex justify-between mt-2 text-[10px] text-slate-400">
+            <span>وصول: {formatPrice(financial.collections)}</span>
+            <span>تولید: {formatPrice(financial.production)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Today's appointments list */}
       <div className="card overflow-hidden">
