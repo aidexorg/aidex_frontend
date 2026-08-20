@@ -417,3 +417,101 @@ export function validateAction(
 
   return { valid: true };
 }
+
+// ── Consistency validation (FR-09 / BR-REC-13) ──
+
+export interface ConsistencyWarning {
+  level: 'error' | 'warning';
+  message: string;
+  periodId?: string;
+  sessionId?: string;
+}
+
+/**
+ * Validate accounting/session consistency across a profile.
+ * FR-09 / BR-REC-13: session dates, payments, and accounting must align.
+ */
+export function validateAccountingConsistency(
+  periods: Period[],
+  sessions: Session[],
+  parts: Part[],
+  actions: Action[],
+  payments: Payment[]
+): ConsistencyWarning[] {
+  const warnings: ConsistencyWarning[] = [];
+
+  for (const period of periods) {
+    const pSessions = sessions
+      .filter((s) => s.period_id === period.id)
+      .sort((a, b) => a.session_number - b.session_number);
+    const pPayments = payments.filter((p) => p.period_id === period.id);
+    const pParts = parts.filter((p) => {
+      const sess = sessions.find((s) => s.id === p.session_id);
+      return sess && sess.period_id === period.id;
+    });
+    const pActions = actions.filter((a) => {
+      const part = parts.find((pp) => pp.id === a.part_id);
+      const sess = part && sessions.find((s) => s.id === part.session_id);
+      return sess && sess.period_id === period.id;
+    });
+
+    // Check 1: Session numbers should be sequential
+    for (let i = 0; i < pSessions.length; i++) {
+      if (pSessions[i].session_number !== i + 1) {
+        warnings.push({
+          level: 'warning',
+          message: `شماره جلسه ${i + 1} وجود ندارد (دوره ${periods.indexOf(period) + 1})`,
+          periodId: period.id,
+          sessionId: pSessions[i].id,
+        });
+      }
+    }
+
+    // Check 2: Session dates should be in order
+    for (let i = 1; i < pSessions.length; i++) {
+      const prev = new Date(pSessions[i - 1].session_date).getTime();
+      const curr = new Date(pSessions[i].session_date).getTime();
+      if (curr < prev) {
+        warnings.push({
+          level: 'warning',
+          message: `جلسه ${pSessions[i].session_number} تاریخ قبل از جلسه ${pSessions[i - 1].session_number} دارد`,
+          periodId: period.id,
+          sessionId: pSessions[i].id,
+        });
+      }
+    }
+
+    // Check 3: Part tooth/area validity
+    for (const part of pParts) {
+      if (part.tooth && !isValidToothAddress(part.tooth)) {
+        warnings.push({
+          level: 'error',
+          message: `بخش ${part.part_number} دندان نامعتبر «${part.tooth}» دارد`,
+          periodId: period.id,
+          sessionId: part.session_id,
+        });
+      }
+      if (part.area && !isValidArea(part.area)) {
+        warnings.push({
+          level: 'error',
+          message: `بخش ${part.part_number} ناحیه نامعتبر «${part.area}» دارد`,
+          periodId: period.id,
+          sessionId: part.session_id,
+        });
+      }
+    }
+
+    // Check 4: Period balance consistency
+    const totalBilled = pActions.reduce((s, a) => s + (a.price - a.discount), 0);
+    const totalPaid = pPayments.reduce((s, p) => s + p.amount, 0);
+    if (pActions.length > 0 && totalPaid > 0 && totalBilled !== totalPaid) {
+      warnings.push({
+        level: 'warning',
+        message: `مانده دوره ${periods.indexOf(period) + 1}: ${totalBilled - totalPaid > 0 ? 'بدهکار' : 'بستانکار'} ${Math.abs(totalBilled - totalPaid).toLocaleString('fa-IR')} تومان`,
+        periodId: period.id,
+      });
+    }
+  }
+
+  return warnings;
+}

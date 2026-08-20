@@ -20,7 +20,7 @@ import {
 import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits, todayISO } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment, Appointment } from '@/types';
-import { APPOINTMENT_TYPES, getStatusLabel } from '@/types';
+import { APPOINTMENT_TYPES, getStatusLabel, validateAccountingConsistency, type ConsistencyWarning } from '@/types';
 import { AREA_OPTIONS } from '@/types';
 import { EmptyState, ErrorBanner, ConfirmDialog } from './ui';
 import { SkeletonProfileDetail } from './Skeleton';
@@ -247,6 +247,12 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
       setExpandedSession(null);
     }
   }, [safePeriodPage, filteredPeriods, expandedPeriod]);
+
+  // Consistency warnings (FR-09 / BR-REC-13)
+  const consistencyWarnings: ConsistencyWarning[] =
+    periods.length > 0
+      ? validateAccountingConsistency(periods, sessions, parts, actions, payments)
+      : [];
 
   const deleteSuccessMessage: Record<
     NonNullable<typeof confirmDelete>['type'],
@@ -1095,6 +1101,43 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
           />
         )}
       </div>
+
+      {/* Consistency Warnings (FR-09 / BR-REC-13) */}
+      {consistencyWarnings.length > 0 && (
+        <div className="card p-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <AlertCircle size={16} className="text-amber-500" />
+            اعتبارسنجی حسابداری و جلسات
+          </h3>
+          <div className="space-y-2">
+            {consistencyWarnings.map((w, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-2 text-sm rounded-lg px-3 py-2 ${
+                  w.level === 'error'
+                    ? 'bg-red-50 text-red-700'
+                    : 'bg-amber-50 text-amber-700'
+                }`}
+              >
+                {w.level === 'error' ? (
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                ) : (
+                  <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                )}
+                <span>{w.message}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {consistencyWarnings.length === 0 && periods.length > 0 && (
+        <div className="card p-4">
+          <div className="flex items-center gap-2 text-sm text-emerald-600">
+            <CheckCircle2 size={16} />
+            <span className="font-medium">اعتبارسنجی حسابداری و جلسات — بدون ناسازگاری</span>
+          </div>
+        </div>
+      )}
 
       {/* Forms */}
       {periodFormOpen && (
