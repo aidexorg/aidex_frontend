@@ -600,6 +600,91 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
     void loadDentistProd();
   }, [data]);
 
+  // ── Production by procedure type ──
+
+  interface TypeProd {
+    type: string;
+    label: string;
+    production: number;
+  }
+
+  const TYPE_LABELS: Record<string, string> = {
+    consultation: 'مشاوره',
+    treatment: 'درمان',
+    followup: 'پیگیری',
+    hygiene: 'بهداشت',
+    emergency: 'اورژانس',
+  };
+
+  const [typeProd, setTypeProd] = useState<TypeProd[]>([]);
+
+  useEffect(() => {
+    const loadTypeProd = async () => {
+      try {
+        const today = new Date();
+        const currentMonth = today.toISOString().slice(0, 7);
+
+        const allAppts = await data.listAppointments();
+        const monthAppts = allAppts.filter(
+          (a) => a.start_time.slice(0, 7) === currentMonth
+        );
+
+        // Get periods for these appointments
+        const patientIds = [...new Set(monthAppts.map((a) => a.profile_id))];
+        const periods = await data.listPeriods();
+        const relevantPeriods = periods.filter((p) => patientIds.includes(p.profile_id));
+        const relevantPeriodIds = relevantPeriods.map((p) => p.id);
+        const sessions = relevantPeriodIds.length > 0 ? await data.listSessions(relevantPeriodIds) : [];
+        const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+        const sessionIds = sessions.map((s) => s.id);
+        const parts = sessionIds.length > 0 ? await data.listParts(sessionIds) : [];
+        const partMap = new Map(parts.map((p) => [p.id, p]));
+        const partIds = parts.map((p) => p.id);
+        const actions = partIds.length > 0 ? await data.listActions(partIds) : [];
+
+        // Map period → profile → appointment type
+        const periodMap = new Map(relevantPeriods.map((p) => [p.id, p]));
+        const profileToType = new Map<string, string>();
+        for (const appt of monthAppts) {
+          const key = appt.profile_id;
+          if (!profileToType.has(key)) {
+            profileToType.set(key, appt.type);
+          }
+        }
+
+        // Compute production per type
+        const prodByType = new Map<string, number>();
+        for (const action of actions) {
+          if (action.status !== 'complete') continue;
+          const part = partMap.get(action.part_id);
+          if (!part) continue;
+          const session = sessionMap.get(part.session_id);
+          if (!session) continue;
+          const period = periodMap.get(session.period_id);
+          if (!period) continue;
+          const type = profileToType.get(period.profile_id);
+          if (!type) continue;
+          prodByType.set(type, (prodByType.get(type) ?? 0) + (action.price - action.discount));
+        }
+
+        const result: TypeProd[] = [];
+        for (const [type, production] of prodByType) {
+          result.push({
+            type,
+            label: TYPE_LABELS[type] ?? type,
+            production,
+          });
+        }
+        result.sort((a, b) => b.production - a.production);
+        setTypeProd(result);
+      } catch {
+        setTypeProd([]);
+      }
+    };
+
+    void loadTypeProd();
+  }, [data]);
+
   // ── Current time indicator ──
 
   const now = new Date();
@@ -1147,6 +1232,69 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
                     <div className="w-full bg-slate-100 rounded-full h-1.5">
                       <div
                         className="bg-teal-400 h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        )}
+      </div>
+
+      {/* Production by procedure type */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-700 mb-3">تولید به تفکیک نوع خدمت</h3>
+        {typeProd.length === 0 ? (
+          <div className="card p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                <AlertCircle size={18} className="text-slate-400" />
+              </div>
+              <p className="text-sm text-slate-500">داده‌ای موجود نیست</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(() => {
+              const totalProd = typeProd.reduce((s, d) => s + d.production, 0);
+              const barColors: Record<string, string> = {
+                consultation: 'bg-sky-400',
+                treatment: 'bg-teal-400',
+                followup: 'bg-amber-400',
+                hygiene: 'bg-emerald-400',
+                emergency: 'bg-red-400',
+              };
+              return typeProd.map((d) => {
+                const pct = totalProd > 0 ? Math.round((d.production / totalProd) * 100) : 0;
+                return (
+                  <div key={d.type} className="card p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          TYPE_COLORS[d.type] ?? 'bg-slate-100'
+                        }`}>
+                          <span className="text-xs font-bold">
+                            {d.label.charAt(0)}
+                          </span>
+                        </div>
+                        <span className="text-sm font-medium text-slate-800">
+                          {d.label}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-teal-600">
+                          {formatPrice(d.production)}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {toFaDigits(pct)}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5">
+                      <div
+                        className={`${barColors[d.type] ?? 'bg-slate-400'} h-1.5 rounded-full transition-all duration-500`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
