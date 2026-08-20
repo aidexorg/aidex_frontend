@@ -379,6 +379,138 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
     void loadAR();
   }, [data]);
 
+  // ── Monthly summary ──
+
+  interface DailyTotal {
+    date: string;
+    production: number;
+    collections: number;
+  }
+
+  interface MonthlySummary {
+    production: number;
+    collections: number;
+    rate: number;
+    prevProduction: number;
+    prevCollections: number;
+    dailyTotals: DailyTotal[];
+  }
+
+  const [monthly, setMonthly] = useState<MonthlySummary>({
+    production: 0,
+    collections: 0,
+    rate: 0,
+    prevProduction: 0,
+    prevCollections: 0,
+    dailyTotals: [],
+  });
+
+  useEffect(() => {
+    const loadMonthly = async () => {
+      try {
+        const today = new Date();
+        const currentMonth = today.toISOString().slice(0, 7); // YYYY-MM
+        const prevDate = new Date(today);
+        prevDate.setMonth(prevDate.getMonth() - 1);
+        const prevMonth = prevDate.toISOString().slice(0, 7);
+
+        const [periods, payments] = await Promise.all([
+          data.listPeriods(),
+          data.listPayments(),
+        ]);
+
+        // Get sessions and parts
+        const periodIds = periods.map((p) => p.id);
+        const sessions = periodIds.length > 0 ? await data.listSessions(periodIds) : [];
+        const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+        const sessionIds = sessions.map((s) => s.id);
+        const parts = sessionIds.length > 0 ? await data.listParts(sessionIds) : [];
+        const partMap = new Map(parts.map((p) => [p.id, p]));
+        const partIds = parts.map((p) => p.id);
+        const actions = partIds.length > 0 ? await data.listActions(partIds) : [];
+
+        // Build period map for profile lookup
+        const periodMap = new Map(periods.map((p) => [p.id, p]));
+
+        // Compute current month totals
+        let currentProduction = 0;
+        let prevProduction = 0;
+        const dailyProd = new Map<string, number>();
+
+        for (const action of actions) {
+          if (action.status !== 'complete') continue;
+          const part = partMap.get(action.part_id);
+          if (!part) continue;
+          const session = sessionMap.get(part.session_id);
+          if (!session) continue;
+          const period = periodMap.get(session.period_id);
+          if (!period) continue;
+
+          const amount = action.price - action.discount;
+          const actionDate = action.updated_at ?? session.session_date;
+          if (!actionDate) continue;
+
+          const month = actionDate.slice(0, 7);
+          const day = actionDate.slice(0, 10);
+
+          if (month === currentMonth) {
+            currentProduction += amount;
+            dailyProd.set(day, (dailyProd.get(day) ?? 0) + amount);
+          } else if (month === prevMonth) {
+            prevProduction += amount;
+          }
+        }
+
+        // Compute collections
+        let currentCollections = 0;
+        let prevCollections = 0;
+        const dailyColl = new Map<string, number>();
+
+        for (const payment of payments) {
+          const month = payment.payment_date.slice(0, 7);
+          const day = payment.payment_date.slice(0, 10);
+
+          if (month === currentMonth) {
+            currentCollections += payment.amount;
+            dailyColl.set(day, (dailyColl.get(day) ?? 0) + payment.amount);
+          } else if (month === prevMonth) {
+            prevCollections += payment.amount;
+          }
+        }
+
+        // Build daily totals for last 7 days
+        const dailyTotals: DailyTotal[] = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date(today);
+          d.setDate(d.getDate() - i);
+          const dateStr = d.toISOString().slice(0, 10);
+          dailyTotals.push({
+            date: dateStr,
+            production: dailyProd.get(dateStr) ?? 0,
+            collections: dailyColl.get(dateStr) ?? 0,
+          });
+        }
+
+        const rate = currentProduction > 0
+          ? Math.round((currentCollections / currentProduction) * 100)
+          : 0;
+
+        setMonthly({
+          production: currentProduction,
+          collections: currentCollections,
+          rate,
+          prevProduction,
+          prevCollections,
+          dailyTotals,
+        });
+      } catch {
+        // silent
+      }
+    };
+
+    void loadMonthly();
+  }, [data]);
+
   // ── Current time indicator ──
 
   const now = new Date();
@@ -790,6 +922,97 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Monthly summary */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-700 mb-3">خلاصه مالی ماهانه</h3>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="card p-3 text-center">
+            <p className="text-[10px] text-slate-500 mb-1">تولید</p>
+            <p className="text-lg font-bold text-teal-600">
+              {formatPrice(monthly.production)}
+            </p>
+            {monthly.prevProduction > 0 && (
+              <p className="text-[10px] text-slate-400 mt-1">
+                {monthly.production >= monthly.prevProduction ? '↑' : '↓'}{' '}
+                {toFaDigits(Math.abs(Math.round(((monthly.production - monthly.prevProduction) / monthly.prevProduction) * 100)))}%
+              </p>
+            )}
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-[10px] text-slate-500 mb-1">وصول</p>
+            <p className="text-lg font-bold text-emerald-600">
+              {formatPrice(monthly.collections)}
+            </p>
+            {monthly.prevCollections > 0 && (
+              <p className="text-[10px] text-slate-400 mt-1">
+                {monthly.collections >= monthly.prevCollections ? '↑' : '↓'}{' '}
+                {toFaDigits(Math.abs(Math.round(((monthly.collections - monthly.prevCollections) / monthly.prevCollections) * 100)))}%
+              </p>
+            )}
+          </div>
+          <div className="card p-3 text-center">
+            <p className="text-[10px] text-slate-500 mb-1">نرخ وصول</p>
+            <p className="text-lg font-bold text-slate-800">
+              {toFaDigits(monthly.rate)}%
+            </p>
+            <div className="mt-2 w-full bg-slate-100 rounded-full h-1.5">
+              <div
+                className="bg-teal-500 h-1.5 rounded-full"
+                style={{ width: `${Math.min(100, monthly.rate)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bar chart - last 7 days */}
+        {monthly.dailyTotals.length > 0 && (
+          <div className="card p-4">
+            <h4 className="text-xs font-semibold text-slate-600 mb-3">۷ روز اخیر</h4>
+            <div className="flex items-end gap-2 h-32">
+              {monthly.dailyTotals.map((day) => {
+                const maxVal = Math.max(
+                  ...monthly.dailyTotals.map((d) => Math.max(d.production, d.collections)),
+                  1
+                );
+                const prodHeight = (day.production / maxVal) * 100;
+                const collHeight = (day.collections / maxVal) * 100;
+                const dayLabel = day.date.slice(8, 10);
+
+                return (
+                  <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+                    <div className="flex items-end gap-0.5 h-24">
+                      <div
+                        className="w-3 bg-teal-400 rounded-t"
+                        style={{ height: `${prodHeight}%` }}
+                        title={`تولید: ${formatPrice(day.production)}`}
+                      />
+                      <div
+                        className="w-3 bg-emerald-400 rounded-t"
+                        style={{ height: `${collHeight}%` }}
+                        title={`وصول: ${formatPrice(day.collections)}`}
+                      />
+                    </div>
+                    <span className="text-[9px] text-slate-400">
+                      {toFaDigits(parseInt(dayLabel))}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-center gap-4 mt-3">
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-2 bg-teal-400 rounded" />
+                <span className="text-[10px] text-slate-500">تولید</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-3 h-2 bg-emerald-400 rounded" />
+                <span className="text-[10px] text-slate-500">وصول</span>
+              </div>
+            </div>
           </div>
         )}
       </div>
