@@ -5,6 +5,73 @@ import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import { LoadingState, EmptyState } from './ui';
 
+// --- Template helpers (text.txt §2_3_1) ---
+
+const SUP: Record<string, string> = {
+  '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+  '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+  '/': '·', '.': '·',
+};
+const toSuperscript = (s: string) => s.split('').map((c) => SUP[c] ?? c).join('');
+
+const toPersianDigits = (s: string) =>
+  s.replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[+d]);
+
+/** Convert action title to template short form per text.txt §2_3_1 */
+function toTemplateShortForm(title: string): string {
+  const endo = title.match(/^Endo\.([1-6])-Canal$/);
+  if (endo) return `Endo.${endo[1]}-Canal`;
+  const reEndo = title.match(/^reEndo\.([1-6])-Canal$/);
+  if (reEndo) return `reEndo.${reEndo[1]}-Can`;
+  const aml = title.match(/^Aml\.Filling for Class ([1-6])$/);
+  if (aml) return `Aml.FillingCl${toSuperscript(aml[1])}`;
+  const com = title.match(/^Com\.Filling for Class ([1-6])$/);
+  if (com) return `Com.FillingCl${toSuperscript(com[1])}`;
+  const crownPFM = title.match(/^Crown PFM(.+)?$/);
+  if (crownPFM) return `Crown.PFM${crownPFM[1] ? toSuperscript(crownPFM[1]) : ''}`;
+  const crownPFZ = title.match(/^Crown PFZ(.+)?$/);
+  if (crownPFZ) return `Crown.Zrcn${crownPFZ[1] ? toSuperscript(crownPFZ[1]) : ''}`;
+  if (title === 'Manual SRP') return 'SRP.ManTool';
+  if (title === 'Ultrsonic SRP') return 'SRP.Ultrsonic';
+  if (title === 'Prophylaxis Polish') return 'Prophy.Polish';
+  if (title === 'Fluoride therapy') return 'Prophy.Fluor';
+  if (title === 'CL.SoftTissue') return 'CL.SoftTissu';
+  if (title === 'CL.hardTissue') return 'CL.hardTissu';
+  if (title === 'EXT.SurgicalSoftTissue' || title === 'EXT.SurgicalHardTissue') return 'EXT.Surgical';
+  if (title === 'EXT.NonSurgical') return 'EXT.NonSurg';
+  const postCrco = title.match(/^PostCore \(crco\)(.+)?$/);
+  if (postCrco) return `PostCoreᶜʳᶜᵒ`;
+  const postNpg = title.match(/^PostCore \(npg\)(.+)?$/);
+  if (postNpg) return `PostCoreᴺᴾᴳ`;
+  return title;
+}
+
+/** Ordinal suffix for treatment course */
+function ordinalSuffix(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+}
+
+/** Format date as superscript: ¹²·¹¹·¹۴۰۴ */
+function toSuperscriptDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = d.getDate();
+  const month = d.getMonth() + 1;
+  const year = d.getFullYear();
+  return `${toSuperscript(String(day))}·${toSuperscript(String(month))}·${toSuperscript(String(year))}`;
+}
+
+/** Tooth position label: UR→Upper Right, etc. */
+function toothPositionLabel(tooth: string): string {
+  const pos = tooth.slice(0, 2);
+  const labels: Record<string, string> = {
+    UR: 'Upper Right', UL: 'Upper Left',
+    LR: 'Lower Right', LL: 'Lower Left',
+  };
+  return labels[pos] ?? pos;
+}
+
 interface OutputsViewProps {
   onOpenProfile: (profile: Profile) => void;
 }
@@ -74,26 +141,90 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
       const divider = '━━━━━━━━━━━━━━━━━━━━━━━━';
 
       if (outputType === 'profile') {
-        lines.push(divider);
-        lines.push('پرونده بیمار');
-        lines.push(divider);
-        lines.push(`نام: ${profile.first_name} ${profile.last_name}`);
-        if (profile.file_number) lines.push(`شماره پرونده: ${toFaDigits(profile.file_number)}`);
-        if (profile.birth_year) lines.push(`سال تولد: ${toFaDigits(profile.birth_year)}`);
-        if (profile.national_id) lines.push(`کد ملی: ${toFaDigits(profile.national_id)}`);
-        if (profile.phone) lines.push(`تلفن: ${toFaDigits(profile.phone)}`);
-        if (profile.address) lines.push(`نشانی: ${profile.address}`);
-        if (profile.file_description) lines.push(`شرح پرونده: ${profile.file_description}`);
-        if (profile.clinical_notes) lines.push(`یادداشت بالینی: ${profile.clinical_notes}`);
+        // === Profile output per text.txt §2_3_1 ===
+        // Header
+        lines.push('**〇** 𝗣𝗿𝗼𝗳𝗶𝗹𝗲');
+        lines.push(`🅘#**${profile.file_number ? `No${profile.file_number}` : 'No???'}**`);
+        lines.push(`🅝#**${profile.first_name}_${profile.last_name}**`);
+        if (profile.birth_year) lines.push(`**Ⓨ** ${toPersianDigits(profile.birth_year)}`);
+        if (profile.phone) lines.push(`**Ⓣ** ${profile.phone}`);
+        lines.push(`**Ⓐ** ${profile.address || 'خمینی‌شهر'}`);
+        lines.push(`**Ⓗ** ${profile.clinical_notes || 'فاقد ملاحظات خاص پزشکی'}`);
         lines.push('');
-        lines.push(`تعداد دوره‌های درمان: ${toFaDigits(periods.length)}`);
-        lines.push(`تعداد جلسات: ${toFaDigits(sessions.length)}`);
-        lines.push(`تعداد اقدامات: ${toFaDigits(actions.length)}`);
-        const totalBilled = actions.reduce((s, a) => s + (a.price - a.discount), 0);
-        const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
-        lines.push(`کل هزینه: ${formatPrice(totalBilled)}`);
-        lines.push(`کل پرداخت: ${formatPrice(totalPaid)}`);
-        lines.push(`باقی‌مانده: ${formatPrice(totalBilled - totalPaid)}`);
+
+        // Per period: Treatment Course
+        periods.forEach((period, pIdx) => {
+          const pSessions = sessions
+            .filter((s) => s.period_id === period.id)
+            .sort((a, b) => a.session_number - b.session_number);
+          const periodActions = actions.filter((a) => {
+            const part = parts.find((pp) => pp.id === a.part_id);
+            const sess = part && sessions.find((s) => s.id === part.session_id);
+            return sess && sess.period_id === period.id;
+          });
+          const periodPayments = payments.filter((p) => p.period_id === period.id);
+
+          lines.push(`💠 「**${toFaDigits(pIdx + 1)}${ordinalSuffix(pIdx + 1)}** 𝗧𝗿𝗲𝗮𝘁𝗺𝗲𝗻𝘁 𝗖𝗼𝘂𝗿𝘀𝗲」`);
+          lines.push('');
+
+          // Group parts by tooth+area to group actions
+          const partGroups = new Map<string, { tooth: string; area: string | null; actions: Action[] }>();
+          const periodParts = parts.filter((p) => {
+            const sess = sessions.find((s) => s.id === p.session_id);
+            return sess && sess.period_id === period.id;
+          });
+          for (const part of periodParts) {
+            const key = `${part.tooth || ''}|${part.area || ''}`;
+            if (!partGroups.has(key)) {
+              partGroups.set(key, { tooth: part.tooth || '', area: part.area || null, actions: [] });
+            }
+            const group = partGroups.get(key)!;
+            group.actions.push(...actions.filter((a) => a.part_id === part.id));
+          }
+
+          // Tooth lines with actions
+          for (const [, group] of partGroups) {
+            const toothNum = group.tooth ? group.tooth.slice(2) : '?';
+            const pos = group.tooth ? group.tooth.slice(0, 2) : '';
+            const sessionCount = new Set(
+              periodParts
+                .filter((pp) => (pp.tooth === group.tooth && pp.area === group.area))
+                .map((pp) => pp.session_id)
+            ).size;
+            const loc = group.area === 'LJ' ? 'LL' : group.area === 'UJ' ? 'UL' : pos;
+            lines.push(`**❖ ${toothNum}|${loc}** |${toSuperscript(sessionCount > 1 ? `1-${sessionCount}` : String(sessionCount))}|`);
+            for (const action of group.actions) {
+              lines.push(`${action.price - action.discount ? (action.price - action.discount).toFixed(1) : '0.0'} ${toTemplateShortForm(action.title)}`);
+            }
+            lines.push('');
+          }
+
+          // Session lines
+          for (const session of pSessions) {
+            const sessPayments = periodPayments.filter((p) => {
+              const sessDate = new Date(p.payment_date).toDateString();
+              const sessionDate = new Date(session.session_date).toDateString();
+              return sessDate === sessionDate;
+            });
+            const sessAmount = sessPayments.reduce((s, p) => s + p.amount, 0);
+            lines.push(`① ${sessAmount.toFixed(1)} ${toSuperscriptDate(session.session_date)}`);
+          }
+          // Additional payments on different dates
+          const sessionDates = new Set(pSessions.map((s) => new Date(s.session_date).toDateString()));
+          const otherPayments = periodPayments.filter((p) => !sessionDates.has(new Date(p.payment_date).toDateString()));
+          for (const pay of otherPayments) {
+            lines.push(`② ${pay.amount.toFixed(1)} ${toSuperscriptDate(pay.payment_date)}`);
+          }
+
+          // Accounting line
+          const totalBilled = periodActions.reduce((s, a) => s + a.price, 0);
+          const totalDiscount = periodActions.reduce((s, a) => s + a.discount, 0);
+          const totalPaid = periodPayments.reduce((s, p) => s + p.amount, 0);
+          const balance = totalBilled - totalDiscount - totalPaid;
+          lines.push('');
+          lines.push(`🅣 **${totalBilled.toFixed(1)}** ➖ ${totalDiscount.toFixed(1)}ᵒᶠᶠ ➖ ${totalPaid.toFixed(1)}ᵖᵃʸ 🟰 **${balance.toFixed(1)}**`);
+          lines.push('');
+        });
       } else {
         // Review output — full treatment history
         lines.push(divider);
