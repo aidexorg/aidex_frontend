@@ -9,7 +9,7 @@ import { ReportsView } from '@/components/ReportsView';
 import { OutputsView } from '@/components/OutputsView';
 import { AppointmentsView } from '@/components/AppointmentsView';
 import { ArrivalsView } from '@/components/ArrivalsView';
-import { DashboardView } from '@/components/DashboardView';
+import { DashboardView } from '@/components/dashboard';
 import { RegisterView } from '@/components/RegisterView';
 import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
