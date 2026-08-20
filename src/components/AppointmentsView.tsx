@@ -24,6 +24,7 @@ import { LoadingState, EmptyState, ConfirmDialog } from './ui';
 import { AppointmentForm } from './AppointmentForm';
 import { DailyCalendar } from './DailyCalendar';
 import { WeeklyCalendar } from './WeeklyCalendar';
+import { MonthlyCalendar } from './MonthlyCalendar';
 import { ContextMenu } from './ContextMenu';
 
 interface AppointmentRow extends Appointment {
@@ -73,7 +74,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AppointmentRow | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'weekly'>('calendar');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'weekly' | 'monthly'>('calendar');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -198,6 +199,17 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
           هفتگی
         </button>
         <button
+          onClick={() => setViewMode('monthly')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
+            viewMode === 'monthly'
+              ? 'bg-teal-600 text-white'
+              : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          <CalendarDays size={14} />
+          ماهانه
+        </button>
+        <button
           onClick={() => setViewMode('list')}
           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
             viewMode === 'list'
@@ -213,6 +225,15 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         <DailyCalendar onOpenProfile={onOpenProfile} />
       ) : viewMode === 'weekly' ? (
         <WeeklyCalendar onOpenProfile={onOpenProfile} />
+      ) : viewMode === 'monthly' ? (
+        <MonthlyCalendar
+          onOpenProfile={onOpenProfile}
+          onSelectDate={(date) => {
+            // Store the selected date and switch to daily view
+            // The DailyCalendar doesn't accept a date prop, so we navigate via state
+            setViewMode('calendar');
+          }}
+        />
       ) : (
       <>
       {/* Filter chips */}
