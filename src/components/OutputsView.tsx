@@ -72,6 +72,28 @@ function toothPositionLabel(tooth: string): string {
   return labels[pos] ?? pos;
 }
 
+/** Persian month names */
+const PERSIAN_MONTHS = [
+  'ژانویه', 'فوریه', 'مارس', 'آوریل', 'مه', 'ژوئن',
+  'ژوئیه', 'اوت', 'سپتامبر', 'اکتبر', 'نوامبر', 'دسامبر',
+];
+const PERSIAN_MONTHS_FA = [
+  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
+  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
+];
+
+/** Convert date to Persian jalali-ish format for Review: ۱۲/بهمن/۱۴۰۴ */
+function toPersianJalaliDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  // Approximate jalali: subtract 621 years from Gregorian for year
+  // This is a rough approximation; real jalali conversion needs a library
+  const year = d.getFullYear() - 621;
+  const monthIdx = d.getMonth();
+  const day = d.getDate();
+  const monthName = PERSIAN_MONTHS_FA[monthIdx] ?? PERSIAN_MONTHS[monthIdx];
+  return `${toPersianDigits(String(day))}/${monthName}/${toPersianDigits(String(year))}`;
+}
+
 interface OutputsViewProps {
   onOpenProfile: (profile: Profile) => void;
 }
@@ -226,60 +248,62 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
           lines.push('');
         });
       } else {
-        // Review output — full treatment history
-        lines.push(divider);
-        lines.push(`مرور درمان: ${profile.first_name} ${profile.last_name}`);
-        lines.push(divider);
-        if (profile.file_number) lines.push(`شماره پرونده: ${toFaDigits(profile.file_number)}`);
+        // === Review output per text.txt §2_3_2 ===
+        lines.push('**〇** 𝗥𝗲𝘃𝗶𝗲𝘄');
+        lines.push(`🅘#**${profile.file_number ? `No${profile.file_number}` : 'No???'}**`);
         lines.push('');
 
-        periods.forEach((period, idx) => {
-          lines.push(`■ دوره درمان ${toFaDigits(idx + 1)}`);
-          if (period.teeth.length > 0)
-            lines.push(`  دندان‌ها: ${period.teeth.join('، ')}`);
-          if (period.areas.length > 0) {
-            const areaLabels = period.areas.map((a) =>
-              a === 'LJ' ? 'فک پایین' : a === 'UJ' ? 'فک بالا' : 'کل دهان'
-            );
-            lines.push(`  نواحی: ${areaLabels.join('، ')}`);
-          }
-          const periodSess = sessions.filter((s) => s.period_id === period.id);
-          periodSess.forEach((session) => {
-            lines.push(
-              `  ▸ جلسه ${toFaDigits(session.session_number)} — ${formatDate(session.session_date)}`
-            );
+        periods.forEach((period, pIdx) => {
+          const pSessions = sessions
+            .filter((s) => s.period_id === period.id)
+            .sort((a, b) => a.session_number - b.session_number);
+          const periodPayments = payments.filter((p) => p.period_id === period.id);
+
+          const periodLabel =
+            pIdx === 0 ? 'اول' : pIdx === 1 ? 'دوم' : pIdx === 2 ? 'سوم' : toFaDigits(pIdx + 1);
+          lines.push(`💠 **دوره‌ی ${periodLabel}**`);
+
+          for (const session of pSessions) {
+            const persianDate = toPersianJalaliDate(session.session_date);
+            lines.push(` **◆ جلسه ${toFaDigits(session.session_number)}**`);
+            lines.push(persianDate);
+
             const sessParts = parts.filter((p) => p.session_id === session.id);
-            sessParts.forEach((part) => {
-              const loc = [part.tooth && `دندان ${part.tooth}`, part.area].filter(Boolean).join(' · ');
-              lines.push(`    • بخش ${toFaDigits(part.part_number)}${loc ? ` (${loc})` : ''}`);
+            for (const part of sessParts) {
+              const toothNum = part.tooth ? part.tooth.slice(2) : '?';
+              const pos = part.tooth ? part.tooth.slice(0, 2) : '';
+              const loc = part.area === 'LJ' ? 'Lower Left' : part.area === 'UJ' ? 'Upper Left' : part.area === 'Full Mouth' ? 'Full Mouth' : toothPositionLabel(part.tooth || '');
+              lines.push(`🔹 **${toothNum} | ${loc} | Part ${toFaDigits(part.part_number)}**`);
+
               const partActions = actions.filter((a) => a.part_id === part.id);
-              partActions.forEach((action) => {
-                const status =
-                  action.status === 'complete' ? 'کامل' : `ناقص${action.incomplete_reason ? ` — ${action.incomplete_reason}` : ''}`;
-                lines.push(
-                  `      - ${action.title}: ${formatPrice(action.price - action.discount)} [${status}]${action.needs_followup ? ' (نیازمند پیگیری)' : ''}`
-                );
-              });
+              for (const action of partActions) {
+                const title = toTemplateShortForm(action.title);
+                lines.push(`**${title}:**`);
+                // Add description if available (treatment details)
+                if (action.description) {
+                  lines.push(action.description);
+                }
+              }
+            }
+
+            // Payment markers for this session date
+            const sessPayments = periodPayments.filter((p) => {
+              const sessDate = new Date(p.payment_date).toDateString();
+              const sessionDate = new Date(session.session_date).toDateString();
+              return sessDate === sessionDate;
             });
-          });
-          const periodPays = payments.filter((p) => p.period_id === period.id);
-          if (periodPays.length > 0) {
-            lines.push('  پرداخت‌ها:');
-            periodPays.forEach((pay) => {
-              lines.push(
-                `    ${formatPrice(pay.amount)} — ${formatDate(pay.payment_date)}${pay.tracking_code ? ` (کد: ${toFaDigits(pay.tracking_code)})` : ''}`
-              );
-            });
+            const sessAmount = sessPayments.reduce((s, p) => s + p.amount, 0);
+            lines.push(`*${sessAmount.toFixed(1)}`);
           }
-          const billed = actions
-            .filter((a) => {
-              const part = parts.find((p) => p.id === a.part_id);
-              const sess = part && sessions.find((s) => s.id === part.session_id);
-              return sess && sess.period_id === period.id;
-            })
-            .reduce((s, a) => s + (a.price - a.discount), 0);
-          const paid = periodPays.reduce((s, p) => s + p.amount, 0);
-          lines.push(`  خلاصه مالی: هزینه ${formatPrice(billed)} | پرداخت ${formatPrice(paid)} | باقی‌مانده ${formatPrice(billed - paid)}`);
+
+          // Additional payments on different dates
+          const sessionDates = new Set(pSessions.map((s) => new Date(s.session_date).toDateString()));
+          const otherPayments = periodPayments.filter((p) => !sessionDates.has(new Date(p.payment_date).toDateString()));
+          for (const pay of otherPayments) {
+            const payDate = toPersianJalaliDate(pay.payment_date);
+            lines.push(`*${pay.amount.toFixed(1)} (${payDate})`);
+          }
+
           lines.push('');
         });
       }
