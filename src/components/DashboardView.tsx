@@ -685,6 +685,114 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
     void loadTypeProd();
   }, [data]);
 
+  // ── Today's balance alerts ──
+
+  interface BalanceAlert {
+    appointment: AppointmentWithProfile;
+    balance: number;
+    daysOverdue: number;
+  }
+
+  const [balanceAlerts, setBalanceAlerts] = useState<BalanceAlert[]>([]);
+
+  useEffect(() => {
+    const loadBalanceAlerts = async () => {
+      try {
+        const today = todayISODate();
+        const [allAppts, profiles, periods, payments] = await Promise.all([
+          data.listAppointments(),
+          data.listProfiles(),
+          data.listPeriods(),
+          data.listPayments(),
+        ]);
+
+        const profileMap = new Map(profiles.map((p) => [p.id, p]));
+        const todayAppts = allAppts
+          .filter((a) => a.start_time.slice(0, 10) === today)
+          .map((a) => ({
+            ...a,
+            profile: profileMap.get(a.profile_id) ?? null,
+          }));
+
+        // Get unique patient IDs from today's appointments
+        const patientIds = [...new Set(todayAppts.map((a) => a.profile_id))];
+        const relevantPeriods = periods.filter((p) => patientIds.includes(p.profile_id));
+        const relevantPeriodIds = relevantPeriods.map((p) => p.id);
+        const sessions = relevantPeriodIds.length > 0 ? await data.listSessions(relevantPeriodIds) : [];
+        const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+        const sessionIds = sessions.map((s) => s.id);
+        const parts = sessionIds.length > 0 ? await data.listParts(sessionIds) : [];
+        const partMap = new Map(parts.map((p) => [p.id, p]));
+        const partIds = parts.map((p) => p.id);
+        const actions = partIds.length > 0 ? await data.listActions(partIds) : [];
+
+        // Compute balance per patient
+        const balanceByProfile = new Map<string, number>();
+        const lastActivityByProfile = new Map<string, string>();
+
+        for (const action of actions) {
+          const part = partMap.get(action.part_id);
+          if (!part) continue;
+          const session = sessionMap.get(part.session_id);
+          if (!session) continue;
+          const period = periodMap.get(session.period_id);
+          if (!period) continue;
+
+          const profileId = period.profile_id;
+          const current = balanceByProfile.get(profileId) ?? 0;
+          balanceByProfile.set(profileId, current + (action.price - action.discount));
+
+          const activityDate = action.updated_at ?? session.session_date;
+          if (activityDate) {
+            const last = lastActivityByProfile.get(profileId);
+            if (!last || activityDate > last) {
+              lastActivityByProfile.set(profileId, activityDate);
+            }
+          }
+        }
+
+        // Subtract payments
+        for (const payment of payments) {
+          const current = balanceByProfile.get(payment.profile_id) ?? 0;
+          balanceByProfile.set(payment.profile_id, current - payment.amount);
+        }
+
+        // Build alerts for today's patients with balances
+        const now = new Date();
+        const alerts: BalanceAlert[] = [];
+
+        for (const appt of todayAppts) {
+          const balance = balanceByProfile.get(appt.profile_id) ?? 0;
+          if (balance <= 0) continue;
+
+          const lastActivity = lastActivityByProfile.get(appt.profile_id);
+          const daysOverdue = lastActivity
+            ? Math.floor((now.getTime() - new Date(lastActivity).getTime()) / 86400000)
+            : 0;
+
+          alerts.push({ appointment: appt, balance, daysOverdue });
+        }
+
+        // Sort by balance descending
+        alerts.sort((a, b) => b.balance - a.balance);
+        setBalanceAlerts(alerts);
+      } catch {
+        setBalanceAlerts([]);
+      }
+    };
+
+    void loadBalanceAlerts();
+  }, [data]);
+
+  // Build a map of profile_id → balance for quick lookup on appointment cards
+  const balanceByProfileId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const alert of balanceAlerts) {
+      map.set(alert.appointment.profile_id, alert.balance);
+    }
+    return map;
+  }, [balanceAlerts]);
+
   // ── Current time indicator ──
 
   const now = new Date();
@@ -961,6 +1069,75 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Today's balance alerts */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-700">بدهی‌های امروز</h3>
+            {balanceAlerts.length > 0 && (
+              <span className="inline-flex items-center justify-center px-2 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+                {toFaDigits(balanceAlerts.length)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {balanceAlerts.length === 0 ? (
+          <div className="card p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                <CheckCircle2 size={18} className="text-emerald-400" />
+              </div>
+              <p className="text-sm text-slate-500">بیمار امروز با بدهی معوق وجود ندارد</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {balanceAlerts.map((alert) => (
+              <div
+                key={alert.appointment.id}
+                className="card p-3 flex items-center gap-3 border border-red-200 bg-red-50/50"
+              >
+                <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-slate-800">
+                    {alert.appointment.profile
+                      ? `${alert.appointment.profile.first_name} ${alert.appointment.profile.last_name}`
+                      : 'بیمار ناشناس'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="text-xs text-slate-500">
+                      {formatTime(alert.appointment.start_time)}
+                    </span>
+                    {alert.daysOverdue > 0 && (
+                      <>
+                        <span className="text-[10px] text-slate-400">•</span>
+                        <span className="text-[10px] text-red-500">
+                          {toFaDigits(alert.daysOverdue)} روز معوق
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-red-600">
+                    {formatPrice(alert.balance)}
+                  </span>
+                  {onNavigate && (
+                    <button
+                      onClick={() => onNavigate('payments')}
+                      className="px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-[10px] font-medium rounded-lg transition"
+                    >
+                      ثبت پرداخت
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -1414,6 +1591,17 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
                       )}
                     </div>
                   </div>
+
+                  {/* Balance badge */}
+                  {(() => {
+                    const balance = balanceByProfileId.get(appt.profile_id);
+                    if (!balance || balance <= 0) return null;
+                    return (
+                      <div className="px-2 py-1 rounded-lg text-[10px] font-bold text-white bg-red-500">
+                        {formatPrice(balance)}
+                      </div>
+                    );
+                  })()}
 
                   {/* Status badge */}
                   <div
