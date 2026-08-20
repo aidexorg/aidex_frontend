@@ -20,6 +20,7 @@ export type View =
   | 'reports'
   | 'outputs'
   | 'appointments'
+  | 'arrivals'
   | 'register'
   | 'login';
 
@@ -32,6 +33,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { key: 'profiles', label: 'پرونده‌ها', icon: Users },
   { key: 'appointments', label: 'نوبت‌ها', icon: CalendarDays },
+  { key: 'arrivals', label: 'ورودی‌ها', icon: Users },
   { key: 'followups', label: 'پیگیری‌ها', icon: AlertCircle },
   { key: 'payments', label: 'پرداخت‌ها', icon: Wallet },
   { key: 'reports', label: 'گزارش درآمد', icon: BarChart3 },

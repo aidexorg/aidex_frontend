@@ -8,6 +8,7 @@ import { PaymentsView } from '@/components/PaymentsView';
 import { ReportsView } from '@/components/ReportsView';
 import { OutputsView } from '@/components/OutputsView';
 import { AppointmentsView } from '@/components/AppointmentsView';
+import { ArrivalsView } from '@/components/ArrivalsView';
 import { RegisterView } from '@/components/RegisterView';
 import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
@@ -156,6 +157,7 @@ function App() {
     if (view === 'reports') return <ReportsView />;
     if (view === 'outputs') return <OutputsView onOpenProfile={openProfile} />;
     if (view === 'appointments') return <AppointmentsView onOpenProfile={openProfile} />;
+    if (view === 'arrivals') return <ArrivalsView onOpenProfile={openProfile} />;
     return (
       <ProfilesList
         onOpenProfile={openProfile}
