@@ -3,6 +3,7 @@ import { AlertCircle, Clock, User, ArrowLeft } from 'lucide-react';
 import { useData } from '@/data';
 import { loadFollowupItems, type FollowupItem } from '@/lib/followups';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
+import { INCOMPLETE_REASONS } from '@/types';
 import type { Profile } from '@/types';
 import { LoadingState, EmptyState } from './ui';
 
@@ -119,7 +120,7 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
                 </div>
                 {action.incomplete_reason && (
                   <div className="text-xs text-amber-600 mt-1">
-                    دلیل: {action.incomplete_reason}
+                    دلیل: {INCOMPLETE_REASONS.find(r => r.value === action.incomplete_reason)?.label ?? action.incomplete_reason}
                   </div>
                 )}
               </div>
