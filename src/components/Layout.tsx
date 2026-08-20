@@ -9,6 +9,7 @@ import {
   Stethoscope,
   LogOut,
   Search,
+  LayoutDashboard,
 } from 'lucide-react';
 import type { Account, Profile } from '@/types';
 import { toFaDigits } from '@/lib/format';
@@ -16,6 +17,7 @@ import { useFollowupCount } from './FollowupCountProvider';
 import { CommandPalette } from './CommandPalette';
 
 export type View =
+  | 'dashboard'
   | 'profiles'
   | 'followups'
   | 'payments'
@@ -33,6 +35,7 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { key: 'dashboard', label: 'داشبورد', icon: LayoutDashboard },
   { key: 'profiles', label: 'پرونده‌ها', icon: Users },
   { key: 'appointments', label: 'نوبت‌ها', icon: CalendarDays },
   { key: 'arrivals', label: 'ورودی‌ها', icon: Users },

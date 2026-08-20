@@ -1,0 +1,417 @@
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import {
+  CalendarDays,
+  Clock,
+  Users,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  Activity,
+  ArrowLeft,
+  Stethoscope,
+} from 'lucide-react';
+import { useData } from '@/data';
+import { formatDate, toFaDigits } from '@/lib/format';
+import type { Profile, Appointment, AppointmentStatus } from '@/types';
+import { APPOINTMENT_STATUSES, APPOINTMENT_TYPES } from '@/types';
+import { SkeletonProfileList } from './Skeleton';
+
+// ── Types ──
+
+interface DashboardViewProps {
+  onOpenProfile?: (profile: Profile) => void;
+  onNavigate?: (view: 'profiles' | 'appointments' | 'payments' | 'followups' | 'reports' | 'outputs' | 'arrivals' | 'dashboard') => void;
+}
+
+interface AppointmentWithProfile extends Appointment {
+  profile: Profile | null;
+}
+
+// ── Constants ──
+
+const STATUS_CONFIG: Record<
+  AppointmentStatus,
+  { label: string; color: string; bg: string; icon: typeof CheckCircle2 }
+> = {
+  scheduled: {
+    label: 'برنامه‌ریزی شده',
+    color: 'text-slate-600',
+    bg: 'bg-slate-100',
+    icon: Clock,
+  },
+  confirmed: {
+    label: 'تأیید شده',
+    color: 'text-sky-600',
+    bg: 'bg-sky-100',
+    icon: CheckCircle2,
+  },
+  arrived: {
+    label: 'حاضر شده',
+    color: 'text-amber-600',
+    bg: 'bg-amber-100',
+    icon: Users,
+  },
+  in_progress: {
+    label: 'در حال درمان',
+    color: 'text-teal-600',
+    bg: 'bg-teal-100',
+    icon: Activity,
+  },
+  completed: {
+    label: 'تکمیل شده',
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-100',
+    icon: CheckCircle2,
+  },
+  no_show: {
+    label: 'عدم حضور',
+    color: 'text-red-600',
+    bg: 'bg-red-100',
+    icon: XCircle,
+  },
+  cancelled: {
+    label: 'لغو شده',
+    color: 'text-slate-400',
+    bg: 'bg-slate-50',
+    icon: XCircle,
+  },
+};
+
+const TYPE_COLORS: Record<string, string> = {
+  consultation: 'bg-sky-50 text-sky-700 border-sky-200',
+  treatment: 'bg-teal-50 text-teal-700 border-teal-200',
+  followup: 'bg-amber-50 text-amber-700 border-amber-200',
+  emergency: 'bg-red-50 text-red-700 border-red-200',
+  hygiene: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+};
+
+// ── Helpers ──
+
+function todayISODate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function formatTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+  } catch {
+    return '';
+  }
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'صبح بخیر';
+  if (hour < 17) return 'عصر بخیر';
+  return 'شب بخیر';
+}
+
+// ── Component ──
+
+export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps) {
+  const data = useData();
+  const [appointments, setAppointments] = useState<AppointmentWithProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [account, setAccount] = useState<{ display_name: string | null } | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const today = todayISODate();
+      const [allAppts, profiles, currentAccount] = await Promise.all([
+        data.listAppointments(),
+        data.listProfiles(),
+        data.getCurrentAccount(),
+      ]);
+
+      const profileMap = new Map(profiles.map((p) => [p.id, p]));
+      const todayAppts = allAppts
+        .filter((a) => a.start_time.slice(0, 10) === today)
+        .map((a) => ({
+          ...a,
+          profile: profileMap.get(a.profile_id) ?? null,
+        }))
+        .sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+      setAppointments(todayAppts);
+      setAccount(currentAccount);
+    } catch {
+      setAppointments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // ── Statistics ──
+
+  const stats = useMemo(() => {
+    const counts: Record<AppointmentStatus, number> = {
+      scheduled: 0,
+      confirmed: 0,
+      arrived: 0,
+      in_progress: 0,
+      completed: 0,
+      no_show: 0,
+      cancelled: 0,
+    };
+
+    for (const appt of appointments) {
+      counts[appt.status]++;
+    }
+
+    return {
+      total: appointments.length,
+      ...counts,
+      upcoming: counts.scheduled + counts.confirmed,
+      active: counts.arrived + counts.in_progress,
+    };
+  }, [appointments]);
+
+  // ── Current time indicator ──
+
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <SkeletonProfileList count={3} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header with greeting */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">
+            {getGreeting()} {account?.display_name ?? ''}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            {formatDate(todayISODate())} — ساعت {toFaDigits(currentTime)}
+          </p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2">
+          <div className="icon-well bg-teal-50 text-teal-700">
+            <Stethoscope size={20} />
+          </div>
+        </div>
+      </div>
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+              <CalendarDays size={18} className="text-slate-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-900">{toFaDigits(stats.total)}</p>
+              <p className="text-xs text-slate-500">کل نوبت‌ها</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center">
+              <Clock size={18} className="text-sky-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-sky-700">{toFaDigits(stats.upcoming)}</p>
+              <p className="text-xs text-slate-500">در انتظار</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-100 flex items-center justify-center">
+              <Activity size={18} className="text-teal-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-teal-700">{toFaDigits(stats.active)}</p>
+              <p className="text-xs text-slate-500">فعال</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="card p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <CheckCircle2 size={18} className="text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-emerald-700">{toFaDigits(stats.completed)}</p>
+              <p className="text-xs text-slate-500">تکمیل شده</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Status breakdown */}
+      <div className="card p-4">
+        <h3 className="text-sm font-semibold text-slate-700 mb-3">وضعیت نوبت‌ها</h3>
+        <div className="flex flex-wrap gap-2">
+          {APPOINTMENT_STATUSES.map((status) => {
+            const config = STATUS_CONFIG[status.value];
+            const count = stats[status.value];
+            if (count === 0) return null;
+            const Icon = config.icon;
+            return (
+              <div
+                key={status.value}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg ${config.bg}`}
+              >
+                <Icon size={14} className={config.color} />
+                <span className={`text-sm font-medium ${config.color}`}>
+                  {toFaDigits(count)}
+                </span>
+                <span className="text-xs text-slate-500">{status.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Today's appointments list */}
+      <div className="card overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700">نوبت‌های امروز</h3>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {toFaDigits(appointments.length)} نوبت
+            </p>
+          </div>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate('appointments')}
+              className="text-xs text-teal-600 hover:text-teal-700 flex items-center gap-1"
+            >
+              مشاهده همه
+              <ArrowLeft size={12} />
+            </button>
+          )}
+        </div>
+
+        {appointments.length === 0 ? (
+          <div className="p-8 text-center">
+            <CalendarDays size={40} className="mx-auto text-slate-200 mb-3" />
+            <p className="text-sm text-slate-500">نوبتی برای امروز ثبت نشده</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {appointments.map((appt) => {
+              const statusConfig = STATUS_CONFIG[appt.status];
+              const typeConfig = APPOINTMENT_TYPES.find((t) => t.value === appt.type);
+              const isPast = new Date(appt.start_time).getTime() < Date.now();
+              const isActive = appt.status === 'in_progress' || appt.status === 'arrived';
+
+              return (
+                <div
+                  key={appt.id}
+                  className={`px-5 py-3 flex items-center gap-4 hover:bg-slate-50 transition ${
+                    isActive ? 'bg-teal-50/50' : ''
+                  } ${isPast ? 'opacity-60' : ''}`}
+                >
+                  {/* Time */}
+                  <div className="w-16 text-center shrink-0">
+                    <p className="text-sm font-semibold text-slate-800">
+                      {toFaDigits(formatTime(appt.start_time))}
+                    </p>
+                    <p className="text-[10px] text-slate-400">
+                      {toFaDigits(appt.duration_minutes)} دقیقه
+                    </p>
+                  </div>
+
+                  {/* Status dot */}
+                  <div
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      isActive ? 'bg-teal-500 animate-pulse' : statusConfig.bg
+                    }`}
+                  />
+
+                  {/* Patient info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">
+                      {appt.profile
+                        ? `${appt.profile.first_name} ${appt.profile.last_name}`
+                        : 'بیمار ناشناس'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      {typeConfig && (
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                            TYPE_COLORS[appt.type] ?? 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {typeConfig.label}
+                        </span>
+                      )}
+                      {appt.notes && (
+                        <span className="text-[10px] text-slate-400 truncate max-w-[150px]">
+                          {appt.notes}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status badge */}
+                  <div
+                    className={`px-2 py-1 rounded-lg text-[10px] font-medium ${statusConfig.bg} ${statusConfig.color}`}
+                  >
+                    {statusConfig.label}
+                  </div>
+
+                  {/* Profile link */}
+                  {appt.profile && onOpenProfile && (
+                    <button
+                      onClick={() => onOpenProfile(appt.profile!)}
+                      className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-100 transition"
+                    >
+                      <ArrowLeft size={14} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Quick stats footer */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="card p-4 text-center">
+          <p className="text-2xl font-bold text-slate-900">
+            {toFaDigits(stats.no_show)}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">عدم حضور</p>
+        </div>
+        <div className="card p-4 text-center">
+          <p className="text-2xl font-bold text-slate-900">
+            {toFaDigits(stats.cancelled)}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">لغو شده</p>
+        </div>
+        <div className="card p-4 text-center md:col-span-1 col-span-2">
+          <p className="text-2xl font-bold text-teal-600">
+            {stats.total > 0
+              ? `${toFaDigits(Math.round((stats.completed / stats.total) * 100))}%`
+              : '—'}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">نرخ تکمیل</p>
+        </div>
+      </div>
+    </div>
+  );
+}

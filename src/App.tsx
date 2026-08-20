@@ -9,6 +9,7 @@ import { ReportsView } from '@/components/ReportsView';
 import { OutputsView } from '@/components/OutputsView';
 import { AppointmentsView } from '@/components/AppointmentsView';
 import { ArrivalsView } from '@/components/ArrivalsView';
+import { DashboardView } from '@/components/DashboardView';
 import { RegisterView } from '@/components/RegisterView';
 import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
@@ -36,7 +37,7 @@ function App() {
     const apply = (current: Account | null) => {
       if (cancelled) return;
       setAccount(current);
-      setView(current ? 'profiles' : 'login');
+      setView(current ? 'dashboard' : 'login');
     };
 
     void data
@@ -110,6 +111,7 @@ function App() {
   }
 
   const renderView = () => {
+    if (view === 'dashboard') return <DashboardView onOpenProfile={openProfile} onNavigate={navigate} />;
     if (view === 'profiles') {
       if (activeProfile && editingProfile) {
         return (
