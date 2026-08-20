@@ -515,3 +515,86 @@ export function validateAccountingConsistency(
 
   return warnings;
 }
+
+// ── Fill-gap detection (FR-10 / BR-REC-14) ──
+
+export interface FillGapSuggestion {
+  id: string;
+  type: 'session_date' | 'payment_tracking' | 'action_description' | 'part_tooth';
+  message: string;
+  entity_type: 'session' | 'payment' | 'action' | 'part';
+  entity_id: string;
+  apply_fn?: () => Promise<void>;
+}
+
+/**
+ * Detect fill-gap opportunities across Profile/Review data.
+ * FR-10 / BR-REC-14: incomplete data from one view should be completed from the other.
+ */
+export function detectFillGaps(
+  sessions: Session[],
+  parts: Part[],
+  actions: Action[],
+  payments: Payment[]
+): Omit<FillGapSuggestion, 'apply_fn'>[] {
+  const suggestions: Omit<FillGapSuggestion, 'apply_fn'>[] = [];
+
+  // Check sessions for missing dates
+  for (const session of sessions) {
+    if (!session.session_date) {
+      // Find another session in same period for suggestion
+      const otherSessions = sessions.filter(
+        (s) => s.period_id === session.period_id && s.id !== session.id && s.session_date
+      );
+      const suggestion = otherSessions.length > 0 ? ` (از جلسه ${otherSessions[0].session_number} پیشنهاد می‌شود)` : '';
+      suggestions.push({
+        id: `gap-session-date-${session.id}`,
+        type: 'session_date',
+        message: `جلسه ${session.session_number} تاریخ ندارد${suggestion}`,
+        entity_type: 'session',
+        entity_id: session.id,
+      });
+    }
+  }
+
+  // Check payments for missing tracking codes
+  for (const payment of payments) {
+    if (!payment.tracking_code) {
+      suggestions.push({
+        id: `gap-payment-tracking-${payment.id}`,
+        type: 'payment_tracking',
+        message: `پرداخت ${formatPrice(payment.amount)} کد رهگیری ندارد`,
+        entity_type: 'payment',
+        entity_id: payment.id,
+      });
+    }
+  }
+
+  // Check actions for missing descriptions
+  for (const action of actions) {
+    if (!action.description || action.description.trim() === '') {
+      suggestions.push({
+        id: `gap-action-desc-${action.id}`,
+        type: 'action_description',
+        message: `شرح درمان «${action.title}» خالی است`,
+        entity_type: 'action',
+        entity_id: action.id,
+      });
+    }
+  }
+
+  // Check parts for missing tooth/area
+  for (const part of parts) {
+    if (!part.tooth && !part.area) {
+      suggestions.push({
+        id: `gap-part-tooth-${part.id}`,
+        type: 'part_tooth',
+        message: `بخش ${part.part_number} دندان/ناحیه ندارد`,
+        entity_type: 'part',
+        entity_id: part.id,
+      });
+    }
+  }
+
+  return suggestions;
+}

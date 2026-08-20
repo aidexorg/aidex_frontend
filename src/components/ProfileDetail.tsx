@@ -20,7 +20,7 @@ import {
 import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits, todayISO } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment, Appointment } from '@/types';
-import { APPOINTMENT_TYPES, getStatusLabel, validateAccountingConsistency, type ConsistencyWarning } from '@/types';
+import { APPOINTMENT_TYPES, getStatusLabel, validateAccountingConsistency, detectFillGaps, type ConsistencyWarning, type FillGapSuggestion } from '@/types';
 import { AREA_OPTIONS } from '@/types';
 import { EmptyState, ErrorBanner, ConfirmDialog } from './ui';
 import { SkeletonProfileDetail } from './Skeleton';
@@ -253,6 +253,48 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     periods.length > 0
       ? validateAccountingConsistency(periods, sessions, parts, actions, payments)
       : [];
+
+  // Fill-gap suggestions (FR-10 / BR-REC-14)
+  const fillGaps: FillGapSuggestion[] =
+    sessions.length > 0 ? detectFillGaps(sessions, parts, actions, payments) : [];
+  const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(new Set());
+  const [applyingGap, setApplyingGap] = useState<string | null>(null);
+
+  const visibleGaps = fillGaps.filter((g) => !dismissedGaps.has(g.id));
+
+  const dismissGap = (gapId: string) => {
+    setDismissedGaps((prev) => new Set(prev).add(gapId));
+  };
+
+  const applyGap = async (gap: FillGapSuggestion) => {
+    setApplyingGap(gap.id);
+    try {
+      if (gap.type === 'session_date') {
+        // Find a session in the same period with a date to copy from
+        const session = sessions.find((s) => s.id === gap.entity_id);
+        if (session) {
+          const source = sessions.find(
+            (s) => s.period_id === session.period_id && s.id !== session.id && s.session_date
+          );
+          if (source) {
+            await data.updateSession(session.id, { session_date: source.session_date });
+          }
+        }
+      } else if (gap.type === 'part_tooth') {
+        // For missing tooth, we can't auto-fill — just dismiss
+        dismissGap(gap.id);
+        return;
+      }
+      // Refresh data
+      await loadAll();
+      dismissGap(gap.id);
+      showToast({ type: 'success', message: 'تکمیل شد.' });
+    } catch {
+      showToast({ type: 'error', message: 'خطا در اعمال تغییر.' });
+    } finally {
+      setApplyingGap(null);
+    }
+  };
 
   const deleteSuccessMessage: Record<
     NonNullable<typeof confirmDelete>['type'],
@@ -1135,6 +1177,43 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
           <div className="flex items-center gap-2 text-sm text-emerald-600">
             <CheckCircle2 size={16} />
             <span className="font-medium">اعتبارسنجی حسابداری و جلسات — بدون ناسازگاری</span>
+          </div>
+        </div>
+      )}
+
+      {/* Fill-Gap Suggestions (FR-10 / BR-REC-14) */}
+      {visibleGaps.length > 0 && (
+        <div className="card p-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-blue-500" />
+            تکمیل متقابل داده‌ها ({visibleGaps.length})
+          </h3>
+          <div className="space-y-2">
+            {visibleGaps.map((gap) => (
+              <div
+                key={gap.id}
+                className="flex items-center justify-between gap-3 rounded-lg bg-blue-50 px-3 py-2.5 text-sm"
+              >
+                <span className="text-blue-700 flex-1">{gap.message}</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {gap.type !== 'part_tooth' && (
+                    <button
+                      onClick={() => void applyGap(gap)}
+                      disabled={applyingGap === gap.id}
+                      className="px-2.5 py-1 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50"
+                    >
+                      {applyingGap === gap.id ? '…' : 'اعمال'}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => dismissGap(gap.id)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 transition"
+                  >
+                    رد
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
