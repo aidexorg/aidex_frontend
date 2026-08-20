@@ -20,7 +20,8 @@ import {
 import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
-import { LoadingState, EmptyState } from './ui';
+import { EmptyState } from './ui';
+import { SkeletonProfileList } from './Skeleton';
 
 interface ProfilesListProps {
   onOpenProfile: (profile: Profile) => void;
@@ -245,7 +246,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
           </div>
 
           {loading ? (
-            <LoadingState />
+            <SkeletonProfileList count={5} />
           ) : filtered.length === 0 ? (
             <div className="card">
               <EmptyState

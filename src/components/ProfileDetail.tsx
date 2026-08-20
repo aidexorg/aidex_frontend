@@ -22,7 +22,8 @@ import { formatPrice, formatDate, toFaDigits, todayISO } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment, Appointment } from '@/types';
 import { APPOINTMENT_TYPES, getStatusLabel } from '@/types';
 import { AREA_OPTIONS } from '@/types';
-import { LoadingState, EmptyState, ErrorBanner, ConfirmDialog } from './ui';
+import { EmptyState, ErrorBanner, ConfirmDialog } from './ui';
+import { SkeletonProfileDetail } from './Skeleton';
 import { useToast } from './ToastProvider';
 import { useFollowupCount } from './FollowupCountProvider';
 import { PeriodForm } from './PeriodForm';
@@ -343,7 +344,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     }
   };
 
-  if (loading) return <LoadingState />;
+  if (loading) return <SkeletonProfileDetail />;
 
   return (
     <div className="space-y-5">
