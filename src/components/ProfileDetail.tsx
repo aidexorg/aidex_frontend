@@ -19,7 +19,8 @@ import {
 } from 'lucide-react';
 import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits, todayISO } from '@/lib/format';
-import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
+import type { Profile, Period, Session, Part, Action, Payment, Appointment } from '@/types';
+import { APPOINTMENT_TYPES, getStatusLabel } from '@/types';
 import { AREA_OPTIONS } from '@/types';
 import { LoadingState, EmptyState, ErrorBanner, ConfirmDialog } from './ui';
 import { useToast } from './ToastProvider';
@@ -50,6 +51,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
   const [parts, setParts] = useState<Part[]>([]);
   const [actions, setActions] = useState<Action[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +71,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
     label: string;
   } | null>(null);
   const [appointmentFormOpen, setAppointmentFormOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
   /** BR-POL-03: hide until undo window expires */
@@ -154,6 +157,9 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
         setActions([]);
         setPayments([]);
       }
+
+      // Load appointments for this patient
+      setAppointments(await data.listAppointments({ profileId: profile.id }));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در بارگذاری داده‌ها.');
     } finally {
@@ -915,6 +921,160 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
         </div>
       )}
 
+      {/* Appointments section */}
+      <div className="card p-5">
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="icon-well bg-sky-50 text-sky-600">
+              <CalendarDays size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">نوبت‌ها</h3>
+              <p className="text-xs text-slate-400">
+                {appointments.length > 0
+                  ? `${toFaDigits(appointments.length)} نوبت`
+                  : 'هنوز نوبتی ثبت نشده'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setAppointmentFormOpen(true)}
+            className="btn-primary text-xs"
+          >
+            <Plus size={14} />
+            نوبت جدید
+          </button>
+        </div>
+
+        {appointments.length > 0 && (
+          <>
+            {/* Stats */}
+            <div className="flex flex-wrap gap-3 mb-4">
+              <div className="rounded-lg bg-slate-50 px-3 py-2 text-center">
+                <p className="text-[10px] text-slate-400">کل نوبت‌ها</p>
+                <p className="text-sm font-bold text-slate-700">{toFaDigits(appointments.length)}</p>
+              </div>
+              <div className="rounded-lg bg-emerald-50 px-3 py-2 text-center">
+                <p className="text-[10px] text-emerald-600">تکمیل شده</p>
+                <p className="text-sm font-bold text-emerald-700">
+                  {toFaDigits(appointments.filter((a) => a.status === 'completed').length)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-red-50 px-3 py-2 text-center">
+                <p className="text-[10px] text-red-600">عدم حضور</p>
+                <p className="text-sm font-bold text-red-700">
+                  {toFaDigits(appointments.filter((a) => a.status === 'no_show').length)}
+                </p>
+              </div>
+              <div className="rounded-lg bg-sky-50 px-3 py-2 text-center">
+                <p className="text-[10px] text-sky-600">نرخ تکمیل</p>
+                <p className="text-sm font-bold text-sky-700">
+                  {(() => {
+                    const completed = appointments.filter((a) => a.status === 'completed').length;
+                    const terminal = appointments.filter(
+                      (a) => a.status === 'completed' || a.status === 'no_show'
+                    ).length;
+                    return terminal > 0
+                      ? `${toFaDigits(Math.round((completed / terminal) * 100))}%`
+                      : '—';
+                  })()}
+                </p>
+              </div>
+            </div>
+
+            {/* List */}
+            <div className="space-y-2">
+              {[...appointments]
+                .sort(
+                  (a, b) =>
+                    new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+                )
+                .map((appt) => {
+                  const typeCfg = APPOINTMENT_TYPES.find((t) => t.value === appt.type);
+                  const isPast = new Date(appt.start_time).getTime() < Date.now();
+                  return (
+                    <div
+                      key={appt.id}
+                      className={`flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5 hover:bg-slate-50 transition ${
+                        isPast ? 'opacity-60' : ''
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-slate-800">
+                            {formatDate(appt.start_time)}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {(() => {
+                              const d = new Date(appt.start_time);
+                              return d.toLocaleTimeString('fa-IR', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: false,
+                              });
+                            })()}
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            {toFaDigits(appt.duration_minutes)} دقیقه
+                          </span>
+                          <span
+                            className={`badge text-[10px] ${
+                              typeCfg ? `bg-${typeCfg.color}-50 text-${typeCfg.color}-700 border border-${typeCfg.color}-200` : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {typeCfg?.label ?? appt.type}
+                          </span>
+                          <span
+                            className={`badge text-[10px] ${
+                              appt.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : appt.status === 'no_show'
+                                ? 'bg-red-100 text-red-700'
+                                : appt.status === 'cancelled'
+                                ? 'bg-slate-100 text-slate-400 line-through'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {getStatusLabel(appt.status)}
+                          </span>
+                          {appt.series_id && (
+                            <span className="badge text-[10px] bg-purple-50 text-purple-600 border border-purple-200">
+                              تکراری
+                            </span>
+                          )}
+                        </div>
+                        {appt.notes && (
+                          <p className="text-xs text-slate-400 mt-1 truncate">
+                            {appt.notes}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEditingAppointment(appt);
+                          setAppointmentFormOpen(true);
+                        }}
+                        className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50"
+                        title="ویرایش"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          </>
+        )}
+
+        {appointments.length === 0 && (
+          <EmptyState
+            icon={<CalendarDays size={32} />}
+            title="هنوز نوبتی ثبت نشده"
+            description="اولین نوبت بیمار را ایجاد کنید."
+          />
+        )}
+      </div>
+
       {/* Forms */}
       {periodFormOpen && (
         <PeriodForm
@@ -972,12 +1132,17 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
       {appointmentFormOpen && (
         <AppointmentForm
           open={appointmentFormOpen}
-          onClose={() => setAppointmentFormOpen(false)}
+          onClose={() => {
+            setAppointmentFormOpen(false);
+            setEditingAppointment(null);
+          }}
           onSaved={() => {
             setAppointmentFormOpen(false);
+            setEditingAppointment(null);
             loadAll();
           }}
-          prefillProfileId={profile.id}
+          prefillProfileId={editingAppointment ? undefined : profile.id}
+          editing={editingAppointment}
         />
       )}
 
