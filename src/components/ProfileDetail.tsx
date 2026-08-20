@@ -696,6 +696,16 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
                                                 + بخش
                                               </button>
                                               <button
+                                                onClick={() => {
+                                                  // TODO: Open part edit form
+                                                  showToast({ message: 'ویرایش بخش به‌زودی اضافه می‌شود.', variant: 'info' });
+                                                }}
+                                                className="text-slate-400 hover:text-teal-600 p-1 rounded"
+                                                title="ویرایش بخش"
+                                              >
+                                                <Pencil size={13} />
+                                              </button>
+                                              <button
                                                 onClick={() =>
                                                   setConfirmDelete({
                                                     type: 'part',
@@ -808,6 +818,16 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
                                       + بخش جدید
                                     </button>
                                   )}
+                                  <button
+                                    onClick={() => {
+                                      // TODO: Open session edit form
+                                      showToast({ message: 'ویرایش جلسه به‌زودی اضافه می‌شود.', variant: 'info' });
+                                    }}
+                                    className="text-xs text-slate-500 hover:text-teal-600 hover:bg-teal-50 px-2 py-1 rounded"
+                                  >
+                                    <Pencil size={12} className="inline" />
+                                    ویرایش
+                                  </button>
                                   <button
                                     onClick={() =>
                                       setConfirmDelete({

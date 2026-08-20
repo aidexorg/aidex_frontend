@@ -317,3 +317,59 @@ export function validatePeriodTeethAreas(
 
   return { valid: true };
 }
+
+// ── Session/Part validation (BR-REC-05, BR-REC-06) ──
+
+/** BR-REC-05: Session must have session number and date */
+export function validateSession(
+  sessionNumber: number,
+  sessionDate: string
+): { valid: boolean; error?: string } {
+  if (!sessionNumber || sessionNumber < 1) {
+    return {
+      valid: false,
+      error: 'شماره جلسه باید حداقل ۱ باشد.',
+    };
+  }
+
+  if (!sessionDate || sessionDate.trim() === '') {
+    return {
+      valid: false,
+      error: 'تاریخ جلسه الزامی است.',
+    };
+  }
+
+  return { valid: true };
+}
+
+/** BR-REC-06: Part must have tooth and/or area */
+export function validatePart(
+  tooth: string | null,
+  area: string | null
+): { valid: boolean; error?: string } {
+  // Check tooth format if provided
+  if (tooth !== null && !isValidToothAddress(tooth)) {
+    return {
+      valid: false,
+      error: `آدرس دندان نامعتبر: ${tooth}`,
+    };
+  }
+
+  // Check area format if provided
+  if (area !== null && !isValidArea(area)) {
+    return {
+      valid: false,
+      error: `ناحیه نامعتبر: ${area}`,
+    };
+  }
+
+  // At least one must be provided
+  if (tooth === null && area === null) {
+    return {
+      valid: false,
+      error: 'حداقل یک دندان یا ناحیه انتخاب کنید.',
+    };
+  }
+
+  return { valid: true };
+}

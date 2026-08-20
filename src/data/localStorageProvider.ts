@@ -226,6 +226,16 @@ export class LocalStorageDataProvider implements DataProvider {
     });
   }
 
+  async updateSession(id: string, data: Partial<SessionWrite>): Promise<Session> {
+    return this.mutate((store) => {
+      const idx = store.sessions.findIndex((s) => s.id === id);
+      const current = requireFound(store.sessions[idx], 'جلسه');
+      const row: Session = { ...current, ...data, id, updated_at: nowIso() };
+      store.sessions[idx] = row;
+      return row;
+    });
+  }
+
   async listParts(sessionIds?: string[]): Promise<Part[]> {
     const rows = inFilter(load().parts, sessionIds, (p) => p.session_id);
     return rows.sort((a, b) => a.part_number - b.part_number);
@@ -243,6 +253,23 @@ export class LocalStorageDataProvider implements DataProvider {
         updated_at: ts,
       };
       store.parts.push(row);
+      return row;
+    });
+  }
+
+  async updatePart(id: string, data: Partial<PartWrite>): Promise<Part> {
+    return this.mutate((store) => {
+      const idx = store.parts.findIndex((p) => p.id === id);
+      const current = requireFound(store.parts[idx], 'بخش');
+      const row: Part = {
+        ...current,
+        ...data,
+        tooth: data.tooth !== undefined ? data.tooth : current.tooth,
+        area: data.area !== undefined ? data.area : current.area,
+        id,
+        updated_at: nowIso(),
+      };
+      store.parts[idx] = row;
       return row;
     });
   }

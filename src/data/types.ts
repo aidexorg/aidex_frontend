@@ -55,9 +55,11 @@ export interface DataProvider {
 
   listSessions(periodIds?: string[]): Promise<Session[]>;
   createSession(data: SessionWrite): Promise<Session>;
+  updateSession(id: string, data: Partial<SessionWrite>): Promise<Session>;
 
   listParts(sessionIds?: string[]): Promise<Part[]>;
   createPart(data: PartWrite): Promise<Part>;
+  updatePart(id: string, data: Partial<PartWrite>): Promise<Part>;
 
   listActions(partIds?: string[]): Promise<Action[]>;
   createAction(data: ActionWrite): Promise<Action>;
