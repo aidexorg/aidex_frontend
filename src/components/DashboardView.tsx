@@ -511,6 +511,95 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
     void loadMonthly();
   }, [data]);
 
+  // ── Production by dentist ──
+
+  interface DentistProd {
+    dentistId: string;
+    name: string;
+    production: number;
+  }
+
+  const [dentistProd, setDentistProd] = useState<DentistProd[]>([]);
+
+  useEffect(() => {
+    const loadDentistProd = async () => {
+      try {
+        const today = new Date();
+        const currentMonth = today.toISOString().slice(0, 7);
+
+        const [allAppts, profiles, periods, payments] = await Promise.all([
+          data.listAppointments(),
+          data.listProfiles(),
+          data.listPeriods(),
+          data.listPayments(),
+        ]);
+
+        // Get current month appointments with a dentist
+        const monthAppts = allAppts.filter(
+          (a) => a.start_time.slice(0, 7) === currentMonth && a.dentist_id
+        );
+
+        // Get unique patient IDs from those appointments
+        const patientIds = [...new Set(monthAppts.map((a) => a.profile_id))];
+        const relevantPeriods = periods.filter((p) => patientIds.includes(p.profile_id));
+        const relevantPeriodIds = relevantPeriods.map((p) => p.id);
+        const sessions = relevantPeriodIds.length > 0 ? await data.listSessions(relevantPeriodIds) : [];
+        const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+        const sessionIds = sessions.map((s) => s.id);
+        const parts = sessionIds.length > 0 ? await data.listParts(sessionIds) : [];
+        const partMap = new Map(parts.map((p) => [p.id, p]));
+        const partIds = parts.map((p) => p.id);
+        const actions = partIds.length > 0 ? await data.listActions(partIds) : [];
+
+        // Map actions to periods
+        const periodMap = new Map(relevantPeriods.map((p) => [p.id, p]));
+
+        // For each action, find the period and get the profile_id
+        // Then find the appointment(s) for that profile + dentist
+        const profileToDentist = new Map<string, string>();
+        for (const appt of monthAppts) {
+          const key = appt.profile_id;
+          if (!profileToDentist.has(key)) {
+            profileToDentist.set(key, appt.dentist_id!);
+          }
+        }
+
+        // Compute production per dentist
+        const prodByDentist = new Map<string, number>();
+        for (const action of actions) {
+          if (action.status !== 'complete') continue;
+          const part = partMap.get(action.part_id);
+          if (!part) continue;
+          const session = sessionMap.get(part.session_id);
+          if (!session) continue;
+          const period = periodMap.get(session.period_id);
+          if (!period) continue;
+          const dentistId = profileToDentist.get(period.profile_id);
+          if (!dentistId) continue;
+          prodByDentist.set(dentistId, (prodByDentist.get(dentistId) ?? 0) + (action.price - action.discount));
+        }
+
+        // Build dentist production list
+        const profileMap = new Map(profiles.map((p) => [p.id, p]));
+        const result: DentistProd[] = [];
+        for (const [dentistId, production] of prodByDentist) {
+          const profile = profileMap.get(dentistId);
+          result.push({
+            dentistId,
+            name: profile ? `${profile.first_name} ${profile.last_name}` : 'ناشناس',
+            production,
+          });
+        }
+        result.sort((a, b) => b.production - a.production);
+        setDentistProd(result);
+      } catch {
+        setDentistProd([]);
+      }
+    };
+
+    void loadDentistProd();
+  }, [data]);
+
   // ── Current time indicator ──
 
   const now = new Date();
@@ -1013,6 +1102,58 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
                 <span className="text-[10px] text-slate-500">وصول</span>
               </div>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Production by dentist */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-700 mb-3">تولید به تفکیک دندانپزشک</h3>
+        {dentistProd.length === 0 ? (
+          <div className="card p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                <Users size={18} className="text-slate-400" />
+              </div>
+              <p className="text-sm text-slate-500">داده‌ای موجود نیست</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {(() => {
+              const totalProd = dentistProd.reduce((s, d) => s + d.production, 0);
+              return dentistProd.map((d) => {
+                const pct = totalProd > 0 ? Math.round((d.production / totalProd) * 100) : 0;
+                return (
+                  <div key={d.dentistId} className="card p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center">
+                          <Stethoscope size={14} className="text-teal-600" />
+                        </div>
+                        <span className="text-sm font-medium text-slate-800">
+                          {d.name}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-teal-600">
+                          {formatPrice(d.production)}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {toFaDigits(pct)}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-1.5">
+                      <div
+                        className="bg-teal-400 h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              });
+            })()}
           </div>
         )}
       </div>
