@@ -23,6 +23,7 @@ import type { Profile } from '@/types';
 import { LoadingState, EmptyState, ConfirmDialog } from './ui';
 import { AppointmentForm } from './AppointmentForm';
 import { DailyCalendar } from './DailyCalendar';
+import { WeeklyCalendar } from './WeeklyCalendar';
 import { ContextMenu } from './ContextMenu';
 
 interface AppointmentRow extends Appointment {
@@ -72,7 +73,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AppointmentRow | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'weekly'>('calendar');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -183,7 +184,18 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
           }`}
         >
           <CalendarDays size={14} />
-          تقویم
+          روزانه
+        </button>
+        <button
+          onClick={() => setViewMode('weekly')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
+            viewMode === 'weekly'
+              ? 'bg-teal-600 text-white'
+              : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          <CalendarDays size={14} />
+          هفتگی
         </button>
         <button
           onClick={() => setViewMode('list')}
@@ -199,6 +211,8 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
 
       {viewMode === 'calendar' ? (
         <DailyCalendar onOpenProfile={onOpenProfile} />
+      ) : viewMode === 'weekly' ? (
+        <WeeklyCalendar onOpenProfile={onOpenProfile} />
       ) : (
       <>
       {/* Filter chips */}
