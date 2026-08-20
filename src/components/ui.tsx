@@ -37,11 +37,25 @@ export function EmptyState({
   );
 }
 
-export function ErrorBanner({ message }: { message: string }) {
+export function ErrorBanner({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry?: () => void;
+}) {
   return (
     <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
       <XCircle size={18} className="shrink-0" />
-      <span>{message}</span>
+      <span className="flex-1">{message}</span>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition shrink-0"
+        >
+          تلاش مجدد
+        </button>
+      )}
     </div>
   );
 }

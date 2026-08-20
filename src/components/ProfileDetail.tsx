@@ -442,7 +442,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
         )}
       </div>
 
-      {error && <ErrorBanner message={error} />}
+      {error && <ErrorBanner message={error} onRetry={loadAll} />}
 
       {/* Periods */}
       {periods.length === 0 ? (
