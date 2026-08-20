@@ -90,6 +90,19 @@ const TYPE_COLORS: Record<string, string> = {
   hygiene: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
+const CHAIRS = [
+  { id: 'chair_1', label: 'صندلی ۱' },
+  { id: 'chair_2', label: 'صندلی ۲' },
+];
+
+interface ChairStatus {
+  id: string;
+  label: string;
+  current: AppointmentWithProfile | null;
+  upcoming: AppointmentWithProfile | null;
+  status: 'occupied' | 'next_up' | 'empty';
+}
+
 // ── Helpers ──
 
 function todayISODate(): string {
@@ -183,6 +196,14 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
     load();
   }, [load]);
 
+  // ── Auto-refresh every 30 seconds ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      load();
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [load]);
+
   // ── Statistics ──
 
   const stats = useMemo(() => {
@@ -206,6 +227,40 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
       upcoming: counts.scheduled + counts.confirmed,
       active: counts.arrived + counts.in_progress,
     };
+  }, [appointments]);
+
+  // ── Chair status ──
+
+  const chairStatuses = useMemo((): ChairStatus[] => {
+    return CHAIRS.map((chair) => {
+      const chairAppts = appointments.filter((a) => a.chair_id === chair.id);
+
+      // Find currently active appointment (in_progress or arrived)
+      const current = chairAppts.find(
+        (a) => a.status === 'in_progress' || a.status === 'arrived'
+      );
+
+      // Find next upcoming appointment (scheduled or confirmed)
+      const upcoming = !current
+        ? chairAppts.find(
+            (a) => a.status === 'scheduled' || a.status === 'confirmed'
+          )
+        : null;
+
+      const status: ChairStatus['status'] = current
+        ? 'occupied'
+        : upcoming
+          ? 'next_up'
+          : 'empty';
+
+      return {
+        id: chair.id,
+        label: chair.label,
+        current,
+        upcoming,
+        status,
+      };
+    });
   }, [appointments]);
 
   // ── Current time indicator ──
@@ -310,6 +365,101 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
                   {toFaDigits(count)}
                 </span>
                 <span className="text-xs text-slate-500">{status.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Chair status board */}
+      <div>
+        <h3 className="text-sm font-semibold text-slate-700 mb-3">وضعیت صندلی‌ها</h3>
+        <div className="grid grid-cols-2 gap-3">
+          {chairStatuses.map((chair) => {
+            const borderColor =
+              chair.status === 'occupied'
+                ? 'border-teal-300 bg-teal-50'
+                : chair.status === 'next_up'
+                  ? 'border-amber-300 bg-amber-50'
+                  : 'border-slate-200 bg-slate-50';
+
+            const statusLabel =
+              chair.status === 'occupied'
+                ? 'در حال درمان'
+                : chair.status === 'next_up'
+                  ? 'نوبت بعدی'
+                  : 'خالی';
+
+            const statusColor =
+              chair.status === 'occupied'
+                ? 'text-teal-600'
+                : chair.status === 'next_up'
+                  ? 'text-amber-600'
+                  : 'text-slate-400';
+
+            const activeAppt = chair.current ?? chair.upcoming;
+
+            return (
+              <div
+                key={chair.id}
+                className={`border-2 rounded-xl p-4 transition-all ${borderColor}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-3 h-3 rounded-full ${
+                        chair.status === 'occupied'
+                          ? 'bg-teal-500 animate-pulse'
+                          : chair.status === 'next_up'
+                            ? 'bg-amber-400'
+                            : 'bg-slate-300'
+                      }`}
+                    />
+                    <span className="text-sm font-semibold text-slate-800">
+                      {chair.label}
+                    </span>
+                  </div>
+                  <span className={`text-[10px] font-medium ${statusColor}`}>
+                    {statusLabel}
+                  </span>
+                </div>
+
+                {activeAppt ? (
+                  <div className="mt-2 space-y-1">
+                    <p className="text-sm font-medium text-slate-800">
+                      {activeAppt.profile
+                        ? `${activeAppt.profile.first_name} ${activeAppt.profile.last_name}`
+                        : 'بیمار ناشناس'}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500">
+                        {formatTime(activeAppt.start_time)}
+                      </span>
+                      {(() => {
+                        const typeConfig = APPOINTMENT_TYPES.find(
+                          (t) => t.value === activeAppt.type
+                        );
+                        if (!typeConfig) return null;
+                        return (
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                              TYPE_COLORS[activeAppt.type] ??
+                              'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {typeConfig.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-2">
+                    <p className="text-xs text-slate-400">
+                      نوبتی ثبت نشده
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
