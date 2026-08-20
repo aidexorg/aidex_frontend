@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   CalendarDays,
   Plus,
@@ -23,6 +23,7 @@ import type { Profile } from '@/types';
 import { LoadingState, EmptyState, ConfirmDialog } from './ui';
 import { AppointmentForm } from './AppointmentForm';
 import { DailyCalendar } from './DailyCalendar';
+import { ContextMenu } from './ContextMenu';
 
 interface AppointmentRow extends Appointment {
   profile: Profile | null;
@@ -72,6 +73,12 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AppointmentRow | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    appointment: Appointment;
+  } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -118,6 +125,25 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       load();
     } catch {
       // toast error would go here
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, appt: Appointment) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, appointment: appt });
+  };
+
+  const handleTouchStart = (e: React.TouchEvent, appt: Appointment) => {
+    const touch = e.touches[0];
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenu({ x: touch.clientX, y: touch.clientY, appointment: appt });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
   };
 
@@ -232,6 +258,10 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
             <div
               key={row.id}
               className="card p-4 flex items-center gap-3 hover:shadow-lg transition-all"
+              onContextMenu={(e) => handleContextMenu(e, row)}
+              onTouchStart={(e) => handleTouchStart(e, row)}
+              onTouchEnd={handleTouchEnd}
+              onTouchMove={handleTouchEnd}
             >
               {/* Type icon */}
               <div
@@ -374,6 +404,23 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          appointment={contextMenu.appointment}
+          onClose={() => setContextMenu(null)}
+          onStatusChange={(appt, status) =>
+            handleStatusChange(appt.id, status as AppointmentStatus)
+          }
+          onEdit={(appt) => {
+            setEditing(appt);
+            setFormOpen(true);
+          }}
+          onOpenProfile={onOpenProfile}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   type AppointmentStatus,
 } from '@/types';
 import { AppointmentForm } from './AppointmentForm';
+import { ContextMenu } from './ContextMenu';
 import { LoadingState } from './ui';
 
 // ── Constants ──
@@ -112,8 +113,14 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
     dentistId?: string;
   }>({});
   const [editingAppt, setEditingAppt] = useState<Appointment | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    appointment: Appointment;
+  } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [nowLine, setNowLine] = useState<number | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -230,6 +237,26 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
       load();
     } catch {
       // error handled silently
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, appt: Appointment) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, appointment: appt });
+  };
+
+  const handleTouchStart = (e: React.TouchEvent, appt: Appointment) => {
+    const touch = e.touches[0];
+    longPressTimerRef.current = setTimeout(() => {
+      setContextMenu({ x: touch.clientX, y: touch.clientY, appointment: appt });
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
   };
 
@@ -382,6 +409,10 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
                             e.stopPropagation();
                             handleCardClick(appt);
                           }}
+                          onContextMenu={(e) => handleContextMenu(e, appt)}
+                          onTouchStart={(e) => handleTouchStart(e, appt)}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchMove={handleTouchEnd}
                         >
                           <div className="flex items-center gap-1">
                             <span
@@ -468,6 +499,24 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
           }}
           editing={editingAppt}
           prefillProfileId={formPrefill.profileId}
+        />
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          appointment={contextMenu.appointment}
+          onClose={() => setContextMenu(null)}
+          onStatusChange={(appt, status) =>
+            handleStatusChange(appt, status as AppointmentStatus)
+          }
+          onEdit={(appt) => {
+            setEditingAppt(appt);
+            setFormPrefill({});
+            setFormOpen(true);
+          }}
+          onOpenProfile={onOpenProfile}
         />
       )}
     </div>
