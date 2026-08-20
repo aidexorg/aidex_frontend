@@ -4,7 +4,7 @@ import { ErrorBanner, Spinner } from './ui';
 import { useToast } from './ToastProvider';
 import { DentalChart } from './DentalChart';
 import { useData } from '@/data';
-import { AREA_OPTIONS } from '@/types';
+import { AREA_OPTIONS, validatePeriodTeethAreas } from '@/types';
 import type { Period } from '@/types';
 
 interface PeriodFormProps {
@@ -54,8 +54,11 @@ export function PeriodForm({
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (teeth.length === 0 && areas.length === 0) {
-      setError('حداقل یک دندان یا ناحیه انتخاب کنید.');
+    
+    // BR-REC-02, BR-REC-03, BR-REC-04: Validate teeth and areas
+    const validation = validatePeriodTeethAreas(teeth, areas);
+    if (!validation.valid) {
+      setError(validation.error ?? 'داده‌های نامعتبر.');
       return;
     }
     setSaving(true);

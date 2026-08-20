@@ -271,3 +271,49 @@ export type IncompleteReasonValue = (typeof INCOMPLETE_REASONS)[number]['value']
 export function isValidIncompleteReason(value: string): boolean {
   return INCOMPLETE_REASONS.some((r) => r.value === value);
 }
+
+// ── Period teeth/area validation (BR-REC-02, BR-REC-03, BR-REC-04) ──
+
+/** BR-REC-03: Tooth address must be {UR|UL|LR|LL}{1..8} */
+export function isValidToothAddress(code: string): boolean {
+  return /^(UR|UL|LR|LL)[1-8]$/.test(code);
+}
+
+/** BR-REC-04: Area must be LJ, UJ, or Full Mouth */
+export function isValidArea(code: string): boolean {
+  return AREA_OPTIONS.some((a) => a.value === code);
+}
+
+/** BR-REC-02: Period requires at least one valid tooth or area */
+export function validatePeriodTeethAreas(
+  teeth: string[],
+  areas: string[]
+): { valid: boolean; error?: string } {
+  // Check for invalid teeth
+  const invalidTeeth = teeth.filter((t) => !isValidToothAddress(t));
+  if (invalidTeeth.length > 0) {
+    return {
+      valid: false,
+      error: `آدرس دندان نامعتبر: ${invalidTeeth.join(', ')}`,
+    };
+  }
+
+  // Check for invalid areas
+  const invalidAreas = areas.filter((a) => !isValidArea(a));
+  if (invalidAreas.length > 0) {
+    return {
+      valid: false,
+      error: `ناحیه نامعتبر: ${invalidAreas.join(', ')}`,
+    };
+  }
+
+  // BR-REC-02: At least one tooth or area required
+  if (teeth.length === 0 && areas.length === 0) {
+    return {
+      valid: false,
+      error: 'حداقل یک دندان یا ناحیه انتخاب کنید.',
+    };
+  }
+
+  return { valid: true };
+}
