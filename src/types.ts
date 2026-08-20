@@ -373,3 +373,47 @@ export function validatePart(
 
   return { valid: true };
 }
+
+// ── Action validation (BR-REC-10, BR-REC-11) ──
+
+/** BR-REC-10: Action price >= 0, discount >= 0 and <= price */
+export function validateAction(
+  price: number,
+  discount: number,
+  status: ActionStatus,
+  incompleteReason: string | null
+): { valid: boolean; error?: string } {
+  // Price must be >= 0
+  if (price < 0) {
+    return {
+      valid: false,
+      error: 'قیمت نمی‌تواند منفی باشد.',
+    };
+  }
+
+  // Discount must be >= 0
+  if (discount < 0) {
+    return {
+      valid: false,
+      error: 'تخفیف نمی‌تواند منفی باشد.',
+    };
+  }
+
+  // Discount cannot exceed price
+  if (discount > price) {
+    return {
+      valid: false,
+      error: 'تخفیف نمی‌تواند بیشتر از قیمت باشد.',
+    };
+  }
+
+  // BR-REC-11: Incomplete status requires a reason
+  if (status === 'incomplete' && !incompleteReason) {
+    return {
+      valid: false,
+      error: 'وضعیت ناقص نیاز به دلیل دارد.',
+    };
+  }
+
+  return { valid: true };
+}

@@ -12,6 +12,7 @@ import {
   isValidActionTitle,
   isValidIncompleteReason,
   parseActionTitle,
+  validateAction,
   type Action,
   type ActionStatus,
 } from '@/types';
@@ -64,6 +65,14 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
     }
     if (form.status === 'incomplete' && !isValidIncompleteReason(form.incomplete_reason)) {
       setError('دلیل ناقص بودن را از فهرست انتخاب کنید.');
+      return;
+    }
+    // BR-REC-10: Validate price and discount
+    const priceNum = Number(form.price) || 0;
+    const discountNum = Number(form.discount) || 0;
+    const validation = validateAction(priceNum, discountNum, form.status, form.incomplete_reason || null);
+    if (!validation.valid) {
+      setError(validation.error ?? 'داده‌های نامعتبر.');
       return;
     }
     setSaving(true);
