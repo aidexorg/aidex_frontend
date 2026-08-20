@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState, useEffect, useCallback } from 'react';
 import {
   Users,
   Wallet,
@@ -8,10 +8,12 @@ import {
   CalendarDays,
   Stethoscope,
   LogOut,
+  Search,
 } from 'lucide-react';
-import type { Account } from '@/types';
+import type { Account, Profile } from '@/types';
 import { toFaDigits } from '@/lib/format';
 import { useFollowupCount } from './FollowupCountProvider';
+import { CommandPalette } from './CommandPalette';
 
 export type View =
   | 'profiles'
@@ -46,6 +48,7 @@ interface LayoutProps {
   children: ReactNode;
   account: Account | null;
   onLogout: () => void;
+  onSelectProfile?: (profile: Profile) => void;
 }
 
 function initials(account: Account): string {
@@ -63,10 +66,25 @@ function NavFollowupBadge({ count }: { count: number }) {
   );
 }
 
-export function Layout({ current, onNavigate, children, account, onLogout }: LayoutProps) {
+export function Layout({ current, onNavigate, children, account, onLogout, onSelectProfile }: LayoutProps) {
   const authed = account !== null;
   const { count: followupCount } = useFollowupCount();
   const pageLabel = NAV_ITEMS.find((item) => item.key === current)?.label ?? 'ایدکس';
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  // Ctrl+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        if (authed) {
+          setPaletteOpen((prev) => !prev);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [authed]);
 
   return (
     <div className="min-h-screen bg-[#F3F5F8] flex flex-col md:flex-row">
@@ -144,6 +162,17 @@ export function Layout({ current, onNavigate, children, account, onLogout }: Lay
           <div className="flex-1" />
           {authed && (
             <div className="flex items-center gap-3">
+              {/* Search button */}
+              <button
+                onClick={() => setPaletteOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition"
+              >
+                <Search size={14} />
+                <span className="hidden lg:inline">جستجو...</span>
+                <kbd className="hidden lg:inline px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono">
+                  Ctrl+K
+                </kbd>
+              </button>
               <div className="text-left">
                 <p className="text-sm font-medium text-slate-800 truncate max-w-[180px]">
                   {account.display_name || account.email}
@@ -205,6 +234,18 @@ export function Layout({ current, onNavigate, children, account, onLogout }: Lay
             );
           })}
         </nav>
+      )}
+      {/* Command Palette */}
+      {authed && (
+        <CommandPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          onSelectProfile={(profile) => {
+            if (onSelectProfile) {
+              onSelectProfile(profile);
+            }
+          }}
+        />
       )}
     </div>
   );

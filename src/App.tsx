@@ -179,6 +179,7 @@ function App() {
           onLogout={() => {
             void handleLogout();
           }}
+          onSelectProfile={openProfile}
         >
           {renderView()}
         </Layout>
