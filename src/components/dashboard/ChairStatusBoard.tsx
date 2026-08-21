@@ -11,7 +11,7 @@ export function ChairStatusBoard({ chairStatuses }: ChairStatusBoardProps) {
   return (
     <div>
       <h3 className="text-sm font-semibold text-slate-700 mb-3">وضعیت صندلی‌ها</h3>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-wrap gap-3">
         {chairStatuses.map((chair) => {
           const borderColor =
             chair.status === 'occupied'
@@ -39,7 +39,7 @@ export function ChairStatusBoard({ chairStatuses }: ChairStatusBoardProps) {
           return (
             <div
               key={chair.id}
-              className={`border-2 rounded-xl p-4 transition-all ${borderColor}`}
+              className={`border-2 rounded-xl p-3 transition-all flex-1 min-w-[180px] max-w-[280px] ${borderColor}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">

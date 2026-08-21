@@ -8,7 +8,7 @@ interface FinancialMetricsProps {
 
 export function FinancialMetricsCard({ financial }: FinancialMetricsProps) {
   return (
-    <>
+    <div className="space-y-3">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="card p-4">
           <div className="flex items-center justify-between mb-3">
@@ -63,6 +63,6 @@ export function FinancialMetricsCard({ financial }: FinancialMetricsProps) {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

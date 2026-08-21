@@ -10,6 +10,7 @@ interface TodayAppointmentsProps {
   balanceByProfileId: Map<string, number>;
   onOpenProfile?: (profile: Profile) => void;
   onNavigate?: () => void;
+  maxItems?: number;
 }
 
 export function TodayAppointments({
@@ -17,7 +18,9 @@ export function TodayAppointments({
   balanceByProfileId,
   onOpenProfile,
   onNavigate,
+  maxItems,
 }: TodayAppointmentsProps) {
+  const displayed = maxItems ? appointments.slice(0, maxItems) : appointments;
   return (
     <div className="card overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -45,7 +48,7 @@ export function TodayAppointments({
         </div>
       ) : (
         <div className="divide-y divide-slate-100">
-          {appointments.map((appt) => {
+          {displayed.map((appt) => {
             const statusConfig = STATUS_CONFIG[appt.status];
             const typeConfig = APPOINTMENT_TYPES.find((t) => t.value === appt.type);
             const isPast = new Date(appt.start_time).getTime() < Date.now();
