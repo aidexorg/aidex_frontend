@@ -26,20 +26,18 @@ jobs:
         with:
           node-version: 20
           cache: npm
-          cache-dependency-path: aidex_frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        working-directory: aidex_frontend
         run: npm ci
 
       - name: Build
-        working-directory: aidex_frontend
         run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: aidex_frontend/dist
+          path: dist
 
   deploy:
     needs: build
