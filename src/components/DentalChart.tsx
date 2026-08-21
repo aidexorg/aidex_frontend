@@ -45,8 +45,11 @@ function ToothButton({
       title={code}
       aria-label={code}
       aria-pressed={selected}
-      onClick={() => onToggle(code)}
-      className={`relative shrink-0 w-8 h-10 sm:w-9 sm:h-11 text-[10px] sm:text-[11px] font-semibold transition-all duration-150 border ${
+      onClick={(e) => {
+        e.stopPropagation();
+        onToggle(code);
+      }}
+      className={`relative shrink-0 w-8 h-10 sm:w-9 sm:h-11 text-[10px] sm:text-[11px] font-semibold transition-all duration-150 border cursor-pointer ${
         arch === 'upper'
           ? 'rounded-t-[14px] rounded-b-[6px]'
           : 'rounded-b-[14px] rounded-t-[6px]'
@@ -57,7 +60,7 @@ function ToothButton({
       }`}
     >
       <span
-        className={`absolute left-1/2 -translate-x-1/2 w-3.5 h-1.5 rounded-full ${
+        className={`absolute left-1/2 -translate-x-1/2 w-3.5 h-1.5 rounded-full pointer-events-none ${
           selected ? 'bg-white/30' : 'bg-slate-200'
         } ${arch === 'upper' ? 'top-1' : 'bottom-1'}`}
       />
@@ -81,12 +84,15 @@ function Arch({
   const align = arch === 'upper' ? 'items-end' : 'items-start';
   const padKey = arch === 'upper' ? 'paddingTop' : 'paddingBottom';
 
+  const leftHalf = all.slice(0, 8);
+  const rightHalf = all.slice(8);
+
   return (
     <div className={`flex ${align} justify-center gap-1 min-h-[4.25rem]`}>
-      {all.map((code, i) => (
-        <div key={code} className="contents">
-          {i === 8 && <div className="w-px self-stretch bg-slate-200 mx-1 my-1" />}
-          <div style={{ [padKey]: archLift(i, 16) }}>
+      {/* Right side (patient's right = viewer's left) */}
+      <div className={`flex ${align} gap-1`}>
+        {leftHalf.map((code, i) => (
+          <div key={code} style={{ [padKey]: archLift(i, 16) }}>
             <ToothButton
               code={code}
               selected={selected.includes(code)}
@@ -94,8 +100,25 @@ function Arch({
               arch={arch}
             />
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+
+      {/* Center divider */}
+      <div className="w-px self-stretch bg-slate-200 mx-0.5" />
+
+      {/* Left side (patient's left = viewer's right) */}
+      <div className={`flex ${align} gap-1`}>
+        {rightHalf.map((code, i) => (
+          <div key={code} style={{ [padKey]: archLift(i + 8, 16) }}>
+            <ToothButton
+              code={code}
+              selected={selected.includes(code)}
+              onToggle={onToggle}
+              arch={arch}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

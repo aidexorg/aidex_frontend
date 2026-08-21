@@ -11,6 +11,7 @@ import {
 } from '@/types';
 import { toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
+import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AppointmentFormProps {
   open: boolean;
@@ -77,6 +78,7 @@ export function AppointmentForm({
   const [conflictWarnings, setConflictWarnings] = useState<
     { message: string; severity: 'red' | 'amber' }[]
   >([]);
+  const [showRecurrence, setShowRecurrence] = useState(false);
   const conflictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -101,6 +103,7 @@ export function AppointmentForm({
       setNotes(editing.notes ?? '');
       setRecurrencePattern(editing.recurrence_pattern ?? 'none');
       setProfileSearch('');
+      setShowRecurrence(false);
     } else {
       setSelectedProfileId(prefillProfileId ?? '');
       setType('treatment');
@@ -113,6 +116,7 @@ export function AppointmentForm({
       setRecurrenceEndDate('');
       setRecurrenceCount('6');
       setProfileSearch('');
+      setShowRecurrence(false);
     }
     setError(null);
   }, [open, editing, prefillProfileId]);
@@ -156,7 +160,6 @@ export function AppointmentForm({
           });
           const timeRange = `${existTime}–${existTimeEnd}`;
 
-          // Chair conflict (if both have chair_id and match)
           const chairId = editing?.chair_id ?? null;
           if (
             chairId &&
@@ -169,7 +172,6 @@ export function AppointmentForm({
             });
           }
 
-          // Dentist conflict (if both have dentist_id and match)
           const dentistId = editing?.dentist_id ?? null;
           if (
             dentistId &&
@@ -182,7 +184,6 @@ export function AppointmentForm({
             });
           }
 
-          // Generic overlap (no chair/dentist match — still warn)
           if (
             !chairId &&
             !dentistId &&
@@ -253,7 +254,6 @@ export function AppointmentForm({
       const startIso = new Date(`${date}T${time}:00`).toISOString();
 
       if (editing || recurrencePattern === 'none') {
-        // Single appointment (create or edit)
         const payload = {
           profile_id: selectedProfileId,
           dentist_id: editing?.dentist_id ?? null,
@@ -272,7 +272,6 @@ export function AppointmentForm({
           : await data.createAppointment(payload);
         onSaved(row);
       } else {
-        // Recurring series — create multiple appointments
         const startDate = new Date(`${date}T${time}:00`);
         const dates: Date[] = [startDate];
         const seriesId = crypto.randomUUID();
@@ -356,47 +355,60 @@ export function AppointmentForm({
       open={open}
       onClose={onClose}
       title={editing ? 'ویرایش نوبت' : 'نوبت جدید'}
-      size="lg"
+      size="xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Patient preview */}
         {selectedProfile && (
-          <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-4 text-white flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-lg font-bold">
+          <div className="rounded-xl bg-gradient-to-br from-teal-600 to-teal-700 p-3 text-white flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center text-base font-bold">
               {selectedProfile.first_name.charAt(0)}
             </div>
-            <div>
-              <p className="text-[11px] text-teal-100">
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-teal-100">
                 {editing ? 'ویرایش نوبت بیمار' : 'نوبت جدید برای'}
               </p>
-              <p className="text-lg font-bold">{displayName}</p>
+              <p className="text-base font-bold truncate">{displayName}</p>
               {selectedProfile.file_number && (
-                <p className="text-xs text-teal-100">
+                <p className="text-[10px] text-teal-100">
                   پرونده {toFaDigits(selectedProfile.file_number)}
                 </p>
               )}
             </div>
+            {!editing && !prefillProfileId && (
+              <button
+                type="button"
+                onClick={() => setSelectedProfileId('')}
+                className="text-teal-200 hover:text-white text-xs px-2 py-1 rounded-lg hover:bg-white/10"
+              >
+                تغییر
+              </button>
+            )}
           </div>
         )}
 
         {error && <ErrorBanner message={error} />}
 
-        {/* Patient search */}
-        {!prefillProfileId && !editing && (
-          <div>
-            <label className="label">بیمار *</label>
-            <input
-              className="input"
-              placeholder="جستجو بر اساس نام یا شماره پرونده…"
-              value={profileSearch || (selectedProfile ? displayName : '')}
-              onChange={(e) => {
-                setProfileSearch(e.target.value);
-                if (selectedProfileId) setSelectedProfileId('');
-              }}
-            />
-            {profileSearch && filteredProfiles.length > 0 && !selectedProfileId && (
-              <div className="mt-1 max-h-40 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-                {filteredProfiles.slice(0, 8).map((p) => (
+        {/* Patient selection — compact grid */}
+        {!prefillProfileId && !editing && !selectedProfileId && (
+          <div className="space-y-2">
+            <label className="label text-xs">انتخاب بیمار *</label>
+            <div className="relative">
+              <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                className="input text-sm py-2 pr-8"
+                placeholder="جستجو بر اساس نام یا شماره پرونده…"
+                value={profileSearch}
+                onChange={(e) => setProfileSearch(e.target.value)}
+              />
+            </div>
+            <div className="max-h-[180px] overflow-y-auto rounded-xl border border-slate-200 divide-y divide-slate-100">
+              {filteredProfiles.length === 0 ? (
+                <p className="text-xs text-slate-400 text-center py-4">
+                  بیماری یافت نشد
+                </p>
+              ) : (
+                filteredProfiles.slice(0, 10).map((p) => (
                   <button
                     key={p.id}
                     type="button"
@@ -404,155 +416,187 @@ export function AppointmentForm({
                       setSelectedProfileId(p.id);
                       setProfileSearch('');
                     }}
-                    className="w-full text-right px-3 py-2 hover:bg-slate-50 text-sm flex items-center gap-2"
+                    className="w-full text-right px-3 py-2.5 hover:bg-teal-50 transition flex items-center gap-3 group"
                   >
-                    <span className="font-medium text-slate-800">
-                      {p.first_name} {p.last_name}
-                    </span>
-                    {p.file_number && (
-                      <span className="text-xs text-slate-400">
-                        پرونده {toFaDigits(p.file_number)}
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-teal-100 flex items-center justify-center text-xs font-bold text-slate-600 group-hover:text-teal-700 shrink-0">
+                      {p.first_name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">
+                        {p.first_name} {p.last_name}
+                      </p>
+                      {p.file_number && (
+                        <p className="text-[10px] text-slate-400">
+                          پرونده {toFaDigits(p.file_number)}
+                        </p>
+                      )}
+                    </div>
+                    {p.phone && (
+                      <span className="text-[10px] text-slate-400 shrink-0">
+                        {toFaDigits(p.phone)}
                       </span>
                     )}
                   </button>
-                ))}
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </div>
         )}
 
-        {/* Appointment type */}
-        <div>
-          <label className="label">نوع نوبت *</label>
-          <div className="flex flex-wrap gap-2">
-            {APPOINTMENT_TYPES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => handleTypeChange(t.value)}
-                className={type === t.value ? 'chip-active' : 'chip'}
-              >
-                {t.label} ({toFaDigits(t.defaultDuration)} دقیقه)
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Date + Time */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="label">تاریخ *</label>
-            <input
-              className="input"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="label">ساعت *</label>
-            <input
-              className="input"
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Duration */}
-        <div>
-          <label className="label">مدت (دقیقه) *</label>
-          <input
-            className="input"
-            type="number"
-            min={5}
-            max={480}
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-          />
-          {typeConfig && (
-            <p className="text-xs text-slate-400 mt-1">
-              پیش‌فرض {typeConfig.label}: {toFaDigits(typeConfig.defaultDuration)} دقیقه
-            </p>
-          )}
-        </div>
-
-        {/* Notes */}
-        <div>
-          <label className="label">یادداشت</label>
-          <textarea
-            className="input min-h-[60px] resize-y"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="یادداشت اختیاری درباره نوبت…"
-          />
-        </div>
-
-        {/* Recurrence */}
-        <div className="border-t border-slate-100 pt-4 space-y-3">
-          <label className="label">تکرار</label>
-          <div className="flex flex-wrap gap-2">
-            {RECURRENCE_PATTERNS.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setRecurrencePattern(p.value)}
-                className={recurrencePattern === p.value ? 'chip-active' : 'chip'}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          {recurrencePattern !== 'none' && (
-            <div className="flex gap-3 items-end flex-wrap">
+        {/* Main form — two column layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Left column: Date, Time, Duration */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">پایان تکرار</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRecurrenceEndType('date')}
-                    className={`text-xs px-3 py-1.5 rounded-lg border transition ${
-                      recurrenceEndType === 'date'
-                        ? 'bg-teal-600 text-white border-teal-600'
-                        : 'bg-white text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    تا تاریخ
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRecurrenceEndType('count')}
-                    className={`text-xs px-3 py-1.5 rounded-lg border transition ${
-                      recurrenceEndType === 'count'
-                        ? 'bg-teal-600 text-white border-teal-600'
-                        : 'bg-white text-slate-600 border-slate-200'
-                    }`}
-                  >
-                    تا تعداد
-                  </button>
-                </div>
+                <label className="label text-xs">تاریخ *</label>
+                <input
+                  className="input text-sm py-2"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
               </div>
-              {recurrenceEndType === 'date' ? (
-                <div>
-                  <input
-                    className="input"
-                    type="date"
-                    value={recurrenceEndDate}
-                    onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                  />
-                </div>
-              ) : (
-                <div>
-                  <input
-                    className="input w-24"
-                    type="number"
-                    min={2}
-                    max={52}
-                    value={recurrenceCount}
-                    onChange={(e) => setRecurrenceCount(e.target.value)}
-                  />
-                  <p className="text-[10px] text-slate-400 mt-0.5">نوبت</p>
+              <div>
+                <label className="label text-xs">ساعت *</label>
+                <input
+                  className="input text-sm py-2"
+                  type="time"
+                  value={time}
+                  onChange={(e) => setTime(e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="label text-xs">مدت (دقیقه) *</label>
+              <input
+                className="input text-sm py-2"
+                type="number"
+                min={5}
+                max={480}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+              />
+              {typeConfig && (
+                <p className="text-[10px] text-slate-400 mt-0.5">
+                  پیش‌فرض {typeConfig.label}: {toFaDigits(typeConfig.defaultDuration)} دقیقه
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Right column: Type, Notes */}
+          <div className="space-y-3">
+            <div>
+              <label className="label text-xs">نوع نوبت *</label>
+              <div className="flex flex-wrap gap-1.5">
+                {APPOINTMENT_TYPES.map((t) => (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => handleTypeChange(t.value)}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
+                      type === t.value
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="label text-xs">یادداشت</label>
+              <textarea
+                className="input text-sm py-2 min-h-[50px] resize-y"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="یادداشت اختیاری…"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Recurrence — collapsible */}
+        <div className="border-t border-slate-100 pt-3">
+          <button
+            type="button"
+            onClick={() => setShowRecurrence(!showRecurrence)}
+            className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-teal-600 transition"
+          >
+            {showRecurrence ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            تکرار نوبت
+            {recurrencePattern !== 'none' && (
+              <span className="badge bg-teal-50 text-teal-700 border border-teal-200 text-[10px]">
+                فعال
+              </span>
+            )}
+          </button>
+          {showRecurrence && (
+            <div className="mt-2 space-y-2 animate-fade-in">
+              <div className="flex flex-wrap gap-1.5">
+                {RECURRENCE_PATTERNS.map((p) => (
+                  <button
+                    key={p.value}
+                    type="button"
+                    onClick={() => setRecurrencePattern(p.value)}
+                    className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
+                      recurrencePattern === p.value
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              {recurrencePattern !== 'none' && (
+                <div className="flex gap-2 items-end flex-wrap">
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setRecurrenceEndType('date')}
+                      className={`text-[10px] px-2 py-1 rounded-md border transition ${
+                        recurrenceEndType === 'date'
+                          ? 'bg-teal-600 text-white border-teal-600'
+                          : 'bg-white text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      تا تاریخ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRecurrenceEndType('count')}
+                      className={`text-[10px] px-2 py-1 rounded-md border transition ${
+                        recurrenceEndType === 'count'
+                          ? 'bg-teal-600 text-white border-teal-600'
+                          : 'bg-white text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      تا تعداد
+                    </button>
+                  </div>
+                  {recurrenceEndType === 'date' ? (
+                    <input
+                      className="input text-sm py-1.5 w-36"
+                      type="date"
+                      value={recurrenceEndDate}
+                      onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                    />
+                  ) : (
+                    <div>
+                      <input
+                        className="input text-sm py-1.5 w-20"
+                        type="number"
+                        min={2}
+                        max={52}
+                        value={recurrenceCount}
+                        onChange={(e) => setRecurrenceCount(e.target.value)}
+                      />
+                      <p className="text-[9px] text-slate-400 mt-0.5">نوبت</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -561,17 +605,17 @@ export function AppointmentForm({
 
         {/* Conflict warnings */}
         {conflictWarnings.length > 0 && (
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             {conflictWarnings.map((w, i) => (
               <div
                 key={i}
-                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
                   w.severity === 'red'
                     ? 'bg-red-50 border border-red-100 text-red-700'
                     : 'bg-amber-50 border border-amber-100 text-amber-700'
                 }`}
               >
-                <span className="text-lg">⚠️</span>
+                <span>⚠️</span>
                 <span>{w.message}</span>
               </div>
             ))}
@@ -580,11 +624,11 @@ export function AppointmentForm({
 
         {/* Submit */}
         <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
-          <button type="button" onClick={onClose} className="btn-secondary">
+          <button type="button" onClick={onClose} className="btn-secondary text-sm">
             انصراف
           </button>
-          <button type="submit" disabled={saving} className="btn-primary min-w-[140px]">
-            {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد نوبت'}
+          <button type="submit" disabled={saving} className="btn-primary min-w-[120px] text-sm">
+            {saving ? <Spinner /> : editing ? 'ذخیره' : 'ایجاد نوبت'}
           </button>
         </div>
       </form>

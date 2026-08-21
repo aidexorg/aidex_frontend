@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
 import { useToast } from './ToastProvider';
@@ -6,6 +6,7 @@ import { DentalChart } from './DentalChart';
 import { useData } from '@/data';
 import { AREA_OPTIONS, validatePeriodTeethAreas } from '@/types';
 import type { Period } from '@/types';
+import { CheckCircle2, Circle } from 'lucide-react';
 
 interface PeriodFormProps {
   open: boolean;
@@ -32,18 +33,24 @@ export function PeriodForm({
   const [areas, setAreas] = useState<string[]>(existingAreas);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState<1 | 2>(1);
+  const prevOpenRef = useRef(false);
 
-  /** BR-UX-02: re-sync chart when opening create vs edit */
+  /** BR-UX-02: re-sync chart ONLY when modal opens (not on every parent re-render) */
   useEffect(() => {
-    if (!open) return;
-    if (editing) {
-      setTeeth([...editing.teeth]);
-      setAreas([...editing.areas]);
-    } else {
-      setTeeth([...existingTeeth]);
-      setAreas([...existingAreas]);
+    if (open && !prevOpenRef.current) {
+      // Modal just opened — initialize state
+      if (editing) {
+        setTeeth([...editing.teeth]);
+        setAreas([...editing.areas]);
+      } else {
+        setTeeth([...existingTeeth]);
+        setAreas([...existingAreas]);
+      }
+      setStep(1);
+      setError(null);
     }
-    setError(null);
+    prevOpenRef.current = open;
   }, [open, editing, existingTeeth, existingAreas]);
 
   const toggleTooth = (t: string) =>
@@ -90,39 +97,100 @@ export function PeriodForm({
       <form onSubmit={handleSubmit} className="space-y-5">
         {error && <ErrorBanner message={error} />}
 
-        <div>
-          <div className="flex items-baseline justify-between gap-3 mb-1">
-            <label className="label mb-0">دندان‌های درگیر</label>
+        {/* Step indicator */}
+        {!editing && (
+          <div className="flex items-center gap-3 text-sm">
+            <div className="flex items-center gap-1.5">
+              {step >= 1 ? (
+                <CheckCircle2 size={18} className="text-teal-600" />
+              ) : (
+                <Circle size={18} className="text-slate-300" />
+              )}
+              <span className={step >= 1 ? 'text-teal-700 font-medium' : 'text-slate-400'}>
+                دندان‌ها
+              </span>
+            </div>
+            <div className="h-px flex-1 bg-slate-200" />
+            <div className="flex items-center gap-1.5">
+              {step >= 2 ? (
+                <CheckCircle2 size={18} className="text-teal-600" />
+              ) : (
+                <Circle size={18} className="text-slate-300" />
+              )}
+              <span className={step >= 2 ? 'text-teal-700 font-medium' : 'text-slate-400'}>
+                نواحی درمان
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Step 1: Teeth selection */}
+        <div className={`space-y-3 ${!editing && step > 1 ? 'hidden' : ''}`}>
+          <div className="flex items-baseline justify-between gap-3">
+            <div>
+              <label className="label mb-0 text-base font-semibold">
+                ۱. دندان‌های درگیر
+              </label>
+              <p className="text-xs text-slate-400 mt-1">
+                روی هر دندان در نمودار کلیک کنید
+              </p>
+            </div>
             {teeth.length > 0 && (
-              <span className="text-xs text-teal-700">
-                {teeth.length.toLocaleString('fa-IR')} دندان انتخاب شد
+              <span className="badge bg-teal-50 text-teal-700 border border-teal-200 text-sm">
+                {teeth.length} دندان
               </span>
             )}
           </div>
-          <p className="text-xs text-slate-400 mb-3">
-            روی هر دندان در نمودار کلیک کنید. شمارهٔ ۱ تا ۸ همان شمارهٔ دندان در هر ربع است.
-          </p>
-          <DentalChart selected={teeth} onToggle={toggleTooth} />
+          
+          <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+            <DentalChart selected={teeth} onToggle={toggleTooth} />
+          </div>
+
           {teeth.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5">
               {teeth.map((t) => (
                 <span
                   key={t}
-                  className="badge bg-teal-50 text-teal-700 border border-teal-100"
+                  className="badge bg-teal-50 text-teal-700 border border-teal-200 cursor-pointer hover:bg-teal-100"
+                  onClick={() => toggleTooth(t)}
                 >
                   {t}
-                  <button type="button" onClick={() => toggleTooth(t)} className="mr-0.5">
-                    ×
-                  </button>
+                  <span className="mr-1 text-teal-400">×</span>
                 </span>
               ))}
             </div>
           )}
+
+          {!editing && (
+            <button
+              type="button"
+              onClick={() => {
+                if (teeth.length === 0) {
+                  setError('حداقل یک دندان انتخاب کنید.');
+                  return;
+                }
+                setError(null);
+                setStep(2);
+              }}
+              className="btn-primary w-full"
+            >
+              مرحله بعد: انتخاب نواحی
+            </button>
+          )}
         </div>
 
-        <div className="border-t border-slate-100 pt-4">
-          <label className="label">نواحی درمان</label>
-          <div className="flex flex-wrap gap-2">
+        {/* Step 2: Area selection */}
+        <div className={`space-y-3 ${!editing && step < 2 ? 'hidden' : ''}`}>
+          <div>
+            <label className="label mb-0 text-base font-semibold">
+              {editing ? '۱. نواحی درمان' : '۲. نواحی درمان'}
+            </label>
+            <p className="text-xs text-slate-400 mt-1">
+              ناحیه‌ای که درمان در آن انجام می‌شود را انتخاب کنید
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-3">
             {AREA_OPTIONS.map((a) => {
               const selected = areas.includes(a.value);
               return (
@@ -130,23 +198,63 @@ export function PeriodForm({
                   key={a.value}
                   type="button"
                   onClick={() => toggleArea(a.value)}
-                  className={selected ? 'chip-active' : 'chip'}
+                  className={`rounded-xl border-2 p-4 text-center transition-all ${
+                    selected
+                      ? 'border-teal-500 bg-teal-50 shadow-sm'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
                 >
-                  {a.label}
+                  <div className="text-sm font-medium text-slate-800">{a.label}</div>
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
-          <button type="button" onClick={onClose} className="btn-secondary">
-            انصراف
-          </button>
-          <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد دوره'}
-          </button>
-        </div>
+        {/* Summary & actions */}
+        {(editing || step === 2) && (
+          <div className="border-t border-slate-100 pt-4 space-y-3">
+            {/* Preview */}
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
+              <div className="text-xs text-slate-400 mb-2">خلاصه دوره درمان:</div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <div>
+                  <span className="text-slate-500">دندان‌ها: </span>
+                  <span className="font-medium text-slate-800">
+                    {teeth.length > 0 ? teeth.join('، ') : '—'}
+                  </span>
+                </div>
+                <div className="text-slate-300">|</div>
+                <div>
+                  <span className="text-slate-500">نواحی: </span>
+                  <span className="font-medium text-slate-800">
+                    {areas.length > 0
+                      ? areas.map((a) => AREA_OPTIONS.find((o) => o.value === a)?.label ?? a).join('، ')
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              {!editing && (
+                <button type="button" onClick={() => setStep(1)} className="btn-secondary">
+                  بازگشت
+                </button>
+              )}
+              <button type="button" onClick={onClose} className="btn-secondary">
+                انصراف
+              </button>
+              <button
+                type="submit"
+                disabled={saving || teeth.length === 0 || areas.length === 0}
+                className="btn-primary min-w-[140px]"
+              >
+                {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد دوره'}
+              </button>
+            </div>
+          </div>
+        )}
       </form>
     </Modal>
   );

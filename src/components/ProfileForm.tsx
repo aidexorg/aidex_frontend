@@ -46,6 +46,29 @@ function Section({
   );
 }
 
+/** Compact section for page variant — no background, less padding */
+function CompactSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="space-y-2.5">
+      <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+        <span className="icon-well !w-6 !h-6 rounded-lg bg-teal-50 text-teal-600">
+          {icon}
+        </span>
+        {title}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function ProfileForm({
   variant = 'modal',
   open = true,
@@ -146,6 +169,7 @@ export function ProfileForm({
 
   const formBody = (
     <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Header card — same for both variants */}
       <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-4 text-white flex flex-wrap items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-xl font-bold">
           {initial}
@@ -165,115 +189,225 @@ export function ProfileForm({
 
       {error && <ErrorBanner message={error} />}
 
-      <Section title="اطلاعات هویتی" icon={<User size={16} />}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="label">نام *</label>
-            <input
-              className="input bg-white"
-              value={form.first_name}
-              onChange={(e) => update('first_name', e.target.value)}
-              placeholder="مثلاً: علی"
-              autoFocus={variant === 'page'}
-            />
-          </div>
-          <div>
-            <label className="label">نام خانوادگی *</label>
-            <input
-              className="input bg-white"
-              value={form.last_name}
-              onChange={(e) => update('last_name', e.target.value)}
-              placeholder="مثلاً: رضایی"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div>
-            <label className="label">سال تولد</label>
-            <input
-              className="input bg-white"
-              value={form.birth_year}
-              onChange={(e) => update('birth_year', e.target.value)}
-              placeholder="۱۳۷۰"
-            />
-          </div>
-          <div>
-            <label className="label">شماره پرونده *</label>
-            <input
-              className="input bg-white"
-              value={form.file_number}
-              onChange={(e) => update('file_number', e.target.value)}
-              placeholder="۱۰۲۳"
-            />
-          </div>
-          <div>
-            <label className="label">کد ملی</label>
-            <input
-              className="input bg-white"
-              value={form.national_id}
-              onChange={(e) => update('national_id', e.target.value)}
-              placeholder="———"
-            />
-          </div>
-        </div>
-      </Section>
+      {/* === MODAL VARIANT: original spacious layout === */}
+      {variant === 'modal' && (
+        <>
+          <Section title="اطلاعات هویتی" icon={<User size={16} />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">نام *</label>
+                <input
+                  className="input bg-white"
+                  value={form.first_name}
+                  onChange={(e) => update('first_name', e.target.value)}
+                  placeholder="مثلاً: علی"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="label">نام خانوادگی *</label>
+                <input
+                  className="input bg-white"
+                  value={form.last_name}
+                  onChange={(e) => update('last_name', e.target.value)}
+                  placeholder="مثلاً: رضایی"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="label">سال تولد</label>
+                <input
+                  className="input bg-white"
+                  value={form.birth_year}
+                  onChange={(e) => update('birth_year', e.target.value)}
+                  placeholder="۱۳۷۰"
+                />
+              </div>
+              <div>
+                <label className="label">شماره پرونده *</label>
+                <input
+                  className="input bg-white"
+                  value={form.file_number}
+                  onChange={(e) => update('file_number', e.target.value)}
+                  placeholder="۱۰۲۳"
+                />
+              </div>
+              <div>
+                <label className="label">کد ملی</label>
+                <input
+                  className="input bg-white"
+                  value={form.national_id}
+                  onChange={(e) => update('national_id', e.target.value)}
+                  placeholder="———"
+                />
+              </div>
+            </div>
+          </Section>
 
-      <Section title="تماس و نشانی" icon={<Phone size={16} />}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="label">شماره تماس</label>
-            <div className="relative">
-              <Phone size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                className="input bg-white pr-10"
-                value={form.phone}
-                onChange={(e) => update('phone', e.target.value)}
-                placeholder="۰۹۱۲———"
-                type="tel"
+          <Section title="تماس و نشانی" icon={<Phone size={16} />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="label">شماره تماس</label>
+                <div className="relative">
+                  <Phone size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    className="input bg-white pr-10"
+                    value={form.phone}
+                    onChange={(e) => update('phone', e.target.value)}
+                    placeholder="۰۹۱۲———"
+                    type="tel"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="label">نشانی</label>
+                <div className="relative">
+                  <MapPin size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    className="input bg-white pr-10"
+                    value={form.address}
+                    onChange={(e) => update('address', e.target.value)}
+                    placeholder="نشانی منزل یا محل کار"
+                  />
+                </div>
+              </div>
+            </div>
+          </Section>
+
+          <Section title="شرح و یادداشت بالینی" icon={<Stethoscope size={16} />}>
+            <div>
+              <label className="label flex items-center gap-1.5">
+                <FileText size={14} className="text-slate-400" />
+                شرح پرونده
+              </label>
+              <textarea
+                className="input min-h-[80px] bg-white resize-y"
+                value={form.file_description}
+                onChange={(e) => update('file_description', e.target.value)}
+                placeholder="شرح کلی وضعیت پرونده"
               />
             </div>
-          </div>
-          <div>
-            <label className="label">نشانی</label>
-            <div className="relative">
-              <MapPin size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                className="input bg-white pr-10"
-                value={form.address}
-                onChange={(e) => update('address', e.target.value)}
-                placeholder="نشانی منزل یا محل کار"
+            <div>
+              <label className="label flex items-center gap-1.5">
+                <ClipboardList size={14} className="text-slate-400" />
+                یادداشت‌های بالینی
+              </label>
+              <textarea
+                className="input min-h-[90px] bg-white resize-y"
+                value={form.clinical_notes}
+                onChange={(e) => update('clinical_notes', e.target.value)}
+                placeholder="یادداشت‌های بالینی، حساسیت‌ها، بیماری‌های زمینه‌ای…"
               />
             </div>
-          </div>
-        </div>
-      </Section>
+          </Section>
+        </>
+      )}
 
-      <Section title="شرح و یادداشت بالینی" icon={<Stethoscope size={16} />}>
-        <div>
-          <label className="label flex items-center gap-1.5">
-            <FileText size={14} className="text-slate-400" />
-            شرح پرونده
-          </label>
-          <textarea
-            className="input min-h-[80px] bg-white resize-y"
-            value={form.file_description}
-            onChange={(e) => update('file_description', e.target.value)}
-            placeholder="شرح کلی وضعیت پرونده"
-          />
-        </div>
-        <div>
-          <label className="label flex items-center gap-1.5">
-            <ClipboardList size={14} className="text-slate-400" />
-            یادداشت‌های بالینی
-          </label>
-          <textarea
-            className="input min-h-[90px] bg-white resize-y"
-            value={form.clinical_notes}
-            onChange={(e) => update('clinical_notes', e.target.value)}
-            placeholder="یادداشت‌های بالینی، حساسیت‌ها، بیماری‌های زمینه‌ای…"
-          />
-        </div>
-      </Section>
+      {/* === PAGE VARIANT: compact viewport-fitting layout === */}
+      {variant === 'page' && (
+        <>
+          <CompactSection title="اطلاعات هویتی" icon={<User size={14} />}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="label text-xs">نام *</label>
+                <input
+                  className="input bg-white text-sm py-2"
+                  value={form.first_name}
+                  onChange={(e) => update('first_name', e.target.value)}
+                  placeholder="علی"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="label text-xs">نام خانوادگی *</label>
+                <input
+                  className="input bg-white text-sm py-2"
+                  value={form.last_name}
+                  onChange={(e) => update('last_name', e.target.value)}
+                  placeholder="رضایی"
+                />
+              </div>
+              <div>
+                <label className="label text-xs">شماره پرونده *</label>
+                <input
+                  className="input bg-white text-sm py-2"
+                  value={form.file_number}
+                  onChange={(e) => update('file_number', e.target.value)}
+                  placeholder="۱۰۲۳"
+                />
+              </div>
+              <div>
+                <label className="label text-xs">سال تولد</label>
+                <input
+                  className="input bg-white text-sm py-2"
+                  value={form.birth_year}
+                  onChange={(e) => update('birth_year', e.target.value)}
+                  placeholder="۱۳۷۰"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label text-xs">کد ملی</label>
+                <input
+                  className="input bg-white text-sm py-2"
+                  value={form.national_id}
+                  onChange={(e) => update('national_id', e.target.value)}
+                  placeholder="———"
+                />
+              </div>
+            </div>
+          </CompactSection>
+
+          <CompactSection title="تماس و نشانی" icon={<Phone size={14} />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="label text-xs">شماره تماس</label>
+                <input
+                  className="input bg-white text-sm py-2"
+                  value={form.phone}
+                  onChange={(e) => update('phone', e.target.value)}
+                  placeholder="۰۹۱۲———"
+                  type="tel"
+                />
+              </div>
+              <div>
+                <label className="label text-xs">نشانی</label>
+                <input
+                  className="input bg-white text-sm py-2"
+                  value={form.address}
+                  onChange={(e) => update('address', e.target.value)}
+                  placeholder="نشانی منزل یا محل کار"
+                />
+              </div>
+            </div>
+          </CompactSection>
+
+          <CompactSection title="شرح و یادداشت بالینی" icon={<Stethoscope size={14} />}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="label text-xs">شرح پرونده</label>
+                <textarea
+                  className="input min-h-[60px] bg-white resize-y text-sm py-2"
+                  value={form.file_description}
+                  onChange={(e) => update('file_description', e.target.value)}
+                  placeholder="شرح کلی وضعیت پرونده"
+                />
+              </div>
+              <div>
+                <label className="label text-xs">یادداشت‌های بالینی</label>
+                <textarea
+                  className="input min-h-[60px] bg-white resize-y text-sm py-2"
+                  value={form.clinical_notes}
+                  onChange={(e) => update('clinical_notes', e.target.value)}
+                  placeholder="حساسیت‌ها، بیماری‌های زمینه‌ای…"
+                />
+              </div>
+            </div>
+          </CompactSection>
+        </>
+      )}
 
       <div
         className={`flex flex-wrap gap-2 justify-end pt-2 border-t border-slate-100 ${
@@ -292,16 +426,15 @@ export function ProfileForm({
 
   if (variant === 'page') {
     return (
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="max-w-4xl mx-auto space-y-4">
         <button type="button" onClick={onClose} className="btn-ghost">
           <ArrowRight size={18} />
           {editing ? 'بازگشت به پرونده' : 'بازگشت به پرونده‌ها'}
         </button>
-        <div className="card p-6 md:p-8">
-          <h1 className="page-title">{editing ? 'ویرایش پرونده' : 'پرونده جدید'}</h1>
-          <p className="page-sub mt-1 mb-6">
-            {editing ? 'به‌روزرسانی اطلاعات بیمار' : 'ثبت اطلاعات بیمار در پرونده جدید'}
-          </p>
+        <div className="card p-5 md:p-6">
+          <h1 className="text-lg font-bold text-slate-900 mb-4">
+            {editing ? 'ویرایش پرونده' : 'پرونده جدید'}
+          </h1>
           {formBody}
         </div>
       </div>
