@@ -13,6 +13,7 @@ function needsPollingWatch(): boolean {
 const pollWatch = needsPollingWatch();
 
 export default defineConfig({
+  base: '/aidex-frontend/',
   plugins: [react()],
   resolve: {
     alias: {
