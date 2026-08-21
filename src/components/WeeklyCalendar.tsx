@@ -1,12 +1,11 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, Clock, CalendarDays } from 'lucide-react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { ChevronLeft, ChevronRight, Clock, Plus } from 'lucide-react';
 import { useData } from '@/data';
 import { formatDate, toFaDigits } from '@/lib/format';
 import {
   APPOINTMENT_TYPES,
   getNextStatuses,
   type Appointment,
-  type AppointmentType,
   type AppointmentStatus,
 } from '@/types';
 import { AppointmentForm } from './AppointmentForm';
@@ -22,20 +21,6 @@ const CHAIRS = [
   { id: 'surgery', label: 'جراحی' },
 ];
 
-const START_HOUR = 8;
-const END_HOUR = 18;
-const SLOT_MINUTES = 30;
-const SLOT_PX = 48;
-const TOTAL_SLOTS = ((END_HOUR - START_HOUR) * 60) / SLOT_MINUTES;
-
-const TYPE_BG: Record<string, string> = {
-  sky: 'bg-sky-100 border-sky-300 text-sky-800',
-  teal: 'bg-teal-100 border-teal-300 text-teal-800',
-  amber: 'bg-amber-100 border-amber-300 text-amber-800',
-  red: 'bg-red-100 border-red-300 text-red-800',
-  emerald: 'bg-emerald-100 border-emerald-300 text-emerald-800',
-};
-
 const STATUS_DOT: Record<AppointmentStatus, string> = {
   scheduled: 'bg-slate-400',
   confirmed: 'bg-sky-500',
@@ -46,23 +31,15 @@ const STATUS_DOT: Record<AppointmentStatus, string> = {
   cancelled: 'bg-slate-300',
 };
 
+const TYPE_BADGE: Record<string, string> = {
+  consultation: 'bg-sky-100 text-sky-700',
+  treatment: 'bg-teal-100 text-teal-700',
+  followup: 'bg-amber-100 text-amber-700',
+  emergency: 'bg-red-100 text-red-700',
+  hygiene: 'bg-emerald-100 text-emerald-700',
+};
+
 // ── Helpers ──
-
-function timeToMinutes(iso: string): number {
-  const d = new Date(iso);
-  return d.getHours() * 60 + d.getMinutes();
-}
-
-function minutesToSlot(minutes: number): number {
-  return (minutes - START_HOUR * 60) / SLOT_MINUTES;
-}
-
-function formatTimeShort(iso: string): string {
-  const d = new Date(iso);
-  const h = String(d.getHours()).padStart(2, '0');
-  const m = String(d.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
-}
 
 function todayISODate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -70,9 +47,8 @@ function todayISODate(): string {
 
 function getWeekStart(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
-  // Saturday = 6 in JS (Sunday=0), so we need to adjust
-  const day = d.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  const diff = (day + 1) % 7; // Sat=0, Sun=1, ..., Fri=6
+  const day = d.getDay();
+  const diff = (day + 1) % 7;
   d.setDate(d.getDate() - diff);
   return d.toISOString().slice(0, 10);
 }
@@ -114,14 +90,14 @@ function jalaliMonthYear(dateStr: string): string {
   }
 }
 
-// ── Types ──
-
-export type CalendarMode = 'chair' | 'dentist';
-
-interface ColumnDef {
-  id: string | null;
-  label: string;
+function formatTimeShort(iso: string): string {
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
 }
+
+// ── Types ──
 
 interface WeeklyCalendarProps {
   onOpenProfile?: (profile: { id: string; first_name: string; last_name: string; file_number?: string | null; phone?: string | null }) => void;
@@ -132,7 +108,6 @@ interface WeeklyCalendarProps {
 export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
   const data = useData();
   const [weekStart, setWeekStart] = useState(getWeekStart(todayISODate()));
-  const [mode, setMode] = useState<CalendarMode>('chair');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [profiles, setProfiles] = useState<Map<string, { first_name: string; last_name: string; file_number?: string | null }>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -149,13 +124,7 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
     y: number;
     appointment: Appointment;
   } | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [nowLine, setNowLine] = useState<number | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // ── Drag-and-drop state ──
-  const [draggedAppt, setDraggedAppt] = useState<Appointment | null>(null);
-  const [dragOverSlot, setDragOverSlot] = useState<{ dateStr: string; slotIndex: number } | null>(null);
 
   const weekDates = useMemo(() => getWeekDates(weekStart), [weekStart]);
 
@@ -166,7 +135,6 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
         data.listAppointments(),
         data.listProfiles(),
       ]);
-      // Filter to current week
       const weekSet = new Set(weekDates);
       const appts = allAppts.filter((a) => weekSet.has(a.start_time.slice(0, 10)));
       setAppointments(appts);
@@ -182,54 +150,7 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
     load();
   }, [load]);
 
-  // Current time indicator (only for today's column)
-  useEffect(() => {
-    const today = todayISODate();
-    if (!weekDates.includes(today)) {
-      setNowLine(null);
-      return;
-    }
-    const update = () => {
-      const now = new Date();
-      const mins = now.getHours() * 60 + now.getMinutes();
-      if (mins >= START_HOUR * 60 && mins <= END_HOUR * 60) {
-        setNowLine(minutesToSlot(mins));
-      } else {
-        setNowLine(null);
-      }
-    };
-    update();
-    const id = setInterval(update, 60_000);
-    return () => clearInterval(id);
-  }, [weekDates]);
-
-  // Scroll to 8:00 on mount
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-    }
-  }, [weekStart]);
-
-  // ── Columns ──
-
-  const columns: ColumnDef[] = useMemo(() => {
-    if (mode === 'chair') {
-      return CHAIRS;
-    }
-    // Dentist mode: derive from appointments + null column
-    const dentistIds = new Set<string>();
-    for (const a of appointments) {
-      if (a.dentist_id) dentistIds.add(a.dentist_id);
-    }
-    const cols: ColumnDef[] = [...dentistIds].map((id) => ({
-      id,
-      label: `دندانپزشک ${id.slice(0, 4)}`,
-    }));
-    cols.push({ id: null, label: 'بدون دندانپزشک' });
-    return cols;
-  }, [mode, appointments]);
-
-  // ── Flat list of appointments per date for rendering ──
+  // ── Group appointments by date ──
 
   const appointmentsByDate = useMemo(() => {
     const map = new Map<string, Appointment[]>();
@@ -237,28 +158,41 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
       map.set(date, []);
     }
     for (const appt of appointments) {
-      const apptDate = appt.start_time.slice(0, 10);
-      const list = map.get(apptDate);
+      const dateStr = appt.start_time.slice(0, 10);
+      const list = map.get(dateStr);
       if (list) list.push(appt);
+    }
+    // Sort each day's appointments by start time
+    for (const [date, appts] of map) {
+      map.set(date, appts.sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()));
     }
     return map;
   }, [appointments, weekDates]);
 
+  // ── Daily summary stats ──
+
+  const dailyStats = useMemo(() => {
+    const stats = new Map<string, { total: number; completed: number; active: number }>();
+    for (const date of weekDates) {
+      const dayAppts = appointmentsByDate.get(date) ?? [];
+      stats.set(date, {
+        total: dayAppts.length,
+        completed: dayAppts.filter((a) => a.status === 'completed').length,
+        active: dayAppts.filter((a) => a.status === 'in_progress' || a.status === 'arrived').length,
+      });
+    }
+    return stats;
+  }, [appointmentsByDate, weekDates]);
+
   // ── Handlers ──
 
-  const handleSlotClick = (dateStr: string, colId: string | null, slotIndex: number) => {
-    const minutes = START_HOUR * 60 + slotIndex * SLOT_MINUTES;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    const startTime = `${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-    setEditingAppt(null);
-    setFormPrefill({
-      startTime,
-      chairId: mode === 'chair' ? (colId ?? undefined) : undefined,
-      dentistId: mode === 'dentist' ? (colId ?? undefined) : undefined,
-    });
-    setFormOpen(true);
+  const navigateWeek = (delta: number) => {
+    setWeekStart(addDays(weekStart, delta * 7));
   };
+
+  const goToToday = () => setWeekStart(getWeekStart(todayISODate()));
+
+  const isToday = (dateStr: string) => dateStr === todayISODate();
 
   const handleCardClick = (appt: Appointment) => {
     setEditingAppt(appt);
@@ -295,79 +229,6 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
     }
   };
 
-  const navigateWeek = (delta: number) => {
-    setWeekStart(addDays(weekStart, delta * 7));
-  };
-
-  const goToToday = () => setWeekStart(getWeekStart(todayISODate()));
-
-  const isToday = (dateStr: string) => dateStr === todayISODate();
-
-  // ── Drag-and-drop handlers ──
-
-  const handleDragStart = (e: React.DragEvent, appt: Appointment) => {
-    setDraggedAppt(appt);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', appt.id);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedAppt(null);
-    setDragOverSlot(null);
-  };
-
-  const handleDragOver = (e: React.DragEvent, dateStr: string, slotIndex: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverSlot({ dateStr, slotIndex });
-  };
-
-  const handleDragLeave = () => {
-    setDragOverSlot(null);
-  };
-
-  const hasOverlap = (startTime: string, duration: number, chairId: string | null, excludeId?: string): boolean => {
-    const start = new Date(startTime).getTime();
-    const end = start + duration * 60000;
-    return appointments.some((a) => {
-      if (excludeId && a.id === excludeId) return false;
-      if (a.chair_id !== chairId) return false;
-      const aStart = new Date(a.start_time).getTime();
-      const aEnd = aStart + a.duration_minutes * 60000;
-      return start < aEnd && end > aStart;
-    });
-  };
-
-  const handleDrop = async (e: React.DragEvent, dateStr: string, slotIndex: number) => {
-    e.preventDefault();
-    if (!draggedAppt) return;
-
-    const minutes = START_HOUR * 60 + slotIndex * SLOT_MINUTES;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    const newStartTime = `${dateStr}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
-
-    // Check for conflicts
-    if (hasOverlap(newStartTime, draggedAppt.duration_minutes, draggedAppt.chair_id, draggedAppt.id)) {
-      // Non-blocking - proceed anyway for now
-    }
-
-    try {
-      await data.updateAppointment(draggedAppt.id, {
-        start_time: newStartTime,
-      });
-      load();
-    } catch {
-      // error handled silently
-    }
-
-    setDraggedAppt(null);
-    setDragOverSlot(null);
-  };
-
-  // ── Render ──
-
-  const timeSlots = Array.from({ length: TOTAL_SLOTS }, (_, i) => i);
   const monthLabel = jalaliMonthYear(weekDates[0]);
 
   return (
@@ -396,199 +257,162 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
           )}
         </div>
 
-        {/* Mode toggle */}
-        <div className="flex gap-1 rounded-xl border border-slate-200 p-0.5 bg-white">
-          <button
-            onClick={() => setMode('chair')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-              mode === 'chair'
-                ? 'bg-teal-600 text-white'
-                : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            صندلی‌محور
-          </button>
-          <button
-            onClick={() => setMode('dentist')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-              mode === 'dentist'
-                ? 'bg-teal-600 text-white'
-                : 'text-slate-500 hover:bg-slate-50'
-            }`}
-          >
-            دندانپزشک‌محور
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setEditingAppt(null);
+            setFormPrefill({});
+            setFormOpen(true);
+          }}
+          className="btn-primary text-xs"
+        >
+          <Plus size={14} />
+          نوبت جدید
+        </button>
       </div>
 
       {loading ? (
         <LoadingState />
       ) : (
-        <div className="card overflow-hidden">
-          <div
-            ref={scrollRef}
-            className="overflow-auto max-h-[calc(100dvh-220px)]"
-          >
-            <div className="flex min-w-max">
-              {/* Time axis */}
-              <div className="w-16 shrink-0 border-l border-slate-100 bg-slate-50/80">
-                <div className="h-10 border-b border-slate-100 flex items-center justify-center">
-                  <Clock size={14} className="text-slate-400" />
-                </div>
-                {timeSlots.map((slot) => {
-                  const minutes = START_HOUR * 60 + slot * SLOT_MINUTES;
-                  const h = Math.floor(minutes / 60);
-                  const m = minutes % 60;
-                  const showLabel = m === 0;
-                  return (
-                    <div
-                      key={slot}
-                      className="border-b border-slate-100 flex items-start justify-end pr-1.5"
-                      style={{ height: SLOT_PX }}
-                    >
-                      {showLabel && (
-                        <span className="text-[10px] text-slate-400 -mt-1.5">
-                          {toFaDigits(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+        <div className="grid grid-cols-7 gap-2">
+          {weekDates.map((dateStr) => {
+            const { dayName, dayNum } = jalaliDayHeader(dateStr);
+            const today = isToday(dateStr);
+            const dayAppts = appointmentsByDate.get(dateStr) ?? [];
+            const stats = dailyStats.get(dateStr);
 
-              {/* Day columns */}
-              {weekDates.map((dateStr) => {
-                const { dayName, dayNum } = jalaliDayHeader(dateStr);
-                const today = isToday(dateStr);
-
-                return (
-                  <div
-                    key={dateStr}
-                    className={`flex-1 min-w-[140px] border-l border-slate-100 ${
-                      today ? 'bg-teal-50/30' : ''
+            return (
+              <div
+                key={dateStr}
+                className={`rounded-xl border overflow-hidden ${
+                  today
+                    ? 'border-teal-300 bg-teal-50/30'
+                    : 'border-slate-200 bg-white'
+                }`}
+              >
+                {/* Day header */}
+                <div
+                  className={`px-2 py-2 text-center border-b ${
+                    today ? 'bg-teal-100/80 border-teal-200' : 'bg-slate-50 border-slate-100'
+                  }`}
+                >
+                  <span
+                    className={`text-[10px] font-medium ${
+                      today ? 'text-teal-700' : 'text-slate-500'
                     }`}
                   >
-                    {/* Column header */}
-                    <div className={`h-10 border-b border-slate-100 flex flex-col items-center justify-center sticky top-0 z-10 ${
-                      today ? 'bg-teal-100/80' : 'bg-slate-50/80'
-                    }`}>
-                      <span className={`text-[10px] font-medium ${today ? 'text-teal-700' : 'text-slate-500'}`}>
-                        {dayName}
-                      </span>
-                      <span className={`text-sm font-bold ${today ? 'text-teal-800' : 'text-slate-700'}`}>
-                        {toFaDigits(dayNum)}
-                      </span>
-                    </div>
+                    {dayName}
+                  </span>
+                  <span
+                    className={`block text-lg font-bold ${
+                      today
+                        ? 'bg-teal-600 text-white w-8 h-8 rounded-full flex items-center justify-center mx-auto mt-1'
+                        : 'text-slate-700'
+                    }`}
+                  >
+                    {toFaDigits(dayNum)}
+                  </span>
+                </div>
 
-                    {/* Slots */}
-                    <div className="relative">
-                      {timeSlots.map((slot) => {
-                        const isDragOver =
-                          dragOverSlot?.dateStr === dateStr &&
-                          dragOverSlot?.slotIndex === slot;
-                        return (
-                          <div
-                            key={slot}
-                            className={`border-b border-slate-100 hover:bg-slate-50/50 cursor-pointer transition-colors ${
-                              isDragOver ? 'bg-teal-100/80 border-2 border-teal-400 border-dashed' : ''
-                            }`}
-                            style={{ height: SLOT_PX }}
-                            onClick={() => handleSlotClick(dateStr, null, slot)}
-                            onDragOver={(e) => handleDragOver(e, dateStr, slot)}
-                            onDragLeave={handleDragLeave}
-                            onDrop={(e) => handleDrop(e, dateStr, slot)}
-                          />
-                        );
-                      })}
-
-                      {/* Appointment cards */}
-                      {(appointmentsByDate.get(dateStr) ?? []).map((appt) => {
-                        const startMins = timeToMinutes(appt.start_time);
-                        const slotIdx = minutesToSlot(startMins);
-                        const durationSlots = Math.max(
-                          1,
-                          Math.round(appt.duration_minutes / SLOT_MINUTES)
-                        );
-                        const top = slotIdx * SLOT_PX;
-                        const height = durationSlots * SLOT_PX - 2;
-                        const typeCfg = APPOINTMENT_TYPES.find(
-                          (t) => t.value === appt.type
-                        );
-                        const profile = profiles.get(appt.profile_id);
-                        const isPast =
-                          new Date(appt.start_time).getTime() < Date.now();
-
-                        const isDragging = draggedAppt?.id === appt.id;
-
-                        return (
-                          <div
-                            key={appt.id}
-                            className={`absolute left-0.5 right-0.5 rounded-lg border px-1.5 py-1 cursor-grab active:cursor-grabbing hover:shadow-md transition-all overflow-hidden ${
-                              TYPE_BG[typeCfg?.color ?? 'teal']
-                            } ${isPast ? 'opacity-50' : ''} ${isDragging ? 'opacity-40 border-dashed' : ''}`}
-                            style={{ top, height: Math.max(height, 22) }}
-                            draggable={!isPast}
-                            onDragStart={(e) => handleDragStart(e, appt)}
-                            onDragEnd={handleDragEnd}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCardClick(appt);
-                            }}
-                            onContextMenu={(e) => handleContextMenu(e, appt)}
-                            onTouchStart={(e) => handleTouchStart(e, appt)}
-                            onTouchEnd={handleTouchEnd}
-                            onTouchMove={handleTouchEnd}
-                          >
-                            <div className="flex items-center gap-1">
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                  STATUS_DOT[appt.status]
-                                }`}
-                              />
-                              <span className="text-[10px] font-semibold truncate">
-                                {profile
-                                  ? `${profile.first_name} ${profile.last_name}`
-                                  : '—'}
-                              </span>
-                            </div>
-                            {height > 30 && (
-                              <p className="text-[9px] opacity-70 mt-0.5">
-                                {formatTimeShort(appt.start_time)} –{' '}
-                                {formatTimeShort(
-                                  new Date(
-                                    new Date(appt.start_time).getTime() +
-                                      appt.duration_minutes * 60000
-                                  ).toISOString()
-                                )}
-                              </p>
-                            )}
-                            {height > 48 && typeCfg && (
-                              <span className="text-[9px] opacity-60">
-                                {typeCfg.label}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-
-                      {/* Now line (only for today's column) */}
-                      {today && nowLine !== null && (
-                        <div
-                          className="absolute left-0 right-0 z-20 pointer-events-none"
-                          style={{ top: nowLine * SLOT_PX }}
-                        >
-                          <div className="flex items-center">
-                            <div className="w-2 h-2 rounded-full bg-red-500 -ml-1" />
-                            <div className="flex-1 h-px bg-red-500" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
+                {/* Stats bar */}
+                {stats && stats.total > 0 && (
+                  <div className="px-2 py-1 flex items-center justify-center gap-1 text-[9px] text-slate-400 border-b border-slate-100">
+                    <span>{toFaDigits(stats.total)} نوبت</span>
+                    {stats.active > 0 && (
+                      <>
+                        <span>·</span>
+                        <span className="text-teal-600 font-medium">{toFaDigits(stats.active)} فعال</span>
+                      </>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                )}
+
+                {/* Appointments list */}
+                <div className="p-1 space-y-1 min-h-[60px] max-h-[300px] overflow-y-auto">
+                  {dayAppts.length === 0 ? (
+                    <div className="text-center py-3">
+                      <span className="text-[10px] text-slate-300">—</span>
+                    </div>
+                  ) : (
+                    dayAppts.map((appt) => {
+                      const profile = profiles.get(appt.profile_id);
+                      const typeCfg = APPOINTMENT_TYPES.find(
+                        (t) => t.value === appt.type
+                      );
+                      const now = Date.now();
+                      const start = new Date(appt.start_time).getTime();
+                      const end = start + appt.duration_minutes * 60000;
+                      const isActive = now >= start && now < end;
+                      const isPast = end < now;
+
+                      return (
+                        <div
+                          key={appt.id}
+                          className={`rounded-lg px-2 py-1.5 cursor-pointer transition-all ${
+                            isActive
+                              ? 'bg-teal-100 border border-teal-300'
+                              : isPast
+                              ? 'bg-slate-50 opacity-50'
+                              : 'bg-slate-50 hover:bg-slate-100'
+                          }`}
+                          onClick={() => handleCardClick(appt)}
+                          onContextMenu={(e) => handleContextMenu(e, appt)}
+                          onTouchStart={(e) => handleTouchStart(e, appt)}
+                          onTouchEnd={handleTouchEnd}
+                          onTouchMove={handleTouchEnd}
+                        >
+                          {/* Time + Name */}
+                          <div className="flex items-center gap-1">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                isActive ? 'bg-teal-500 animate-pulse' : STATUS_DOT[appt.status]
+                              }`}
+                            />
+                            <span className="text-[10px] font-mono text-slate-500 shrink-0">
+                              {toFaDigits(formatTimeShort(appt.start_time))}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-medium text-slate-700 truncate mt-0.5">
+                            {profile
+                              ? `${profile.first_name} ${profile.last_name}`
+                              : '—'}
+                          </p>
+
+                          {/* Type badge */}
+                          {typeCfg && (
+                            <span
+                              className={`inline-block text-[8px] px-1 py-0.5 rounded mt-0.5 ${
+                                TYPE_BADGE[appt.type] ?? 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {typeCfg.label}
+                            </span>
+                          )}
+
+                          {/* Quick status change */}
+                          {getNextStatuses(appt.status).length > 0 && (
+                            <div className="flex gap-0.5 mt-1">
+                              {getNextStatuses(appt.status).slice(0, 1).map((trans) => (
+                                <button
+                                  key={trans.status}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleStatusChange(appt, trans.status);
+                                  }}
+                                  className={`text-[8px] font-medium px-1.5 py-0.5 rounded transition ${trans.color}`}
+                                >
+                                  {trans.label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -626,7 +450,14 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
             setFormPrefill({});
             setFormOpen(true);
           }}
-          onOpenProfile={onOpenProfile}
+          onOpenProfile={(appt) => {
+            if (onOpenProfile) {
+              const profile = profiles.get(appt.profile_id);
+              if (profile) {
+                onOpenProfile({ id: appt.profile_id, ...profile } as { id: string; first_name: string; last_name: string; file_number?: string | null; phone?: string | null });
+              }
+            }
+          }}
         />
       )}
     </div>
