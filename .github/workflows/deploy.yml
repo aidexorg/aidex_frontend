@@ -34,13 +34,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          echo "=== dist contents ==="
+          ls -la dist/
+          echo "=== index.html check ==="
+          grep -c 'crossorigin' dist/index.html || echo 'FAIL: index.html not built'
+
       - name: SPA fallback
         run: cp dist/index.html dist/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ${{ github.workspace }}/dist
+          path: dist
 
   deploy:
     needs: build

@@ -288,9 +288,9 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
       // Refresh data
       await loadAll();
       dismissGap(gap.id);
-      showToast({ type: 'success', message: 'تکمیل شد.' });
+      showToast({ variant: 'success', message: 'تکمیل شد.' });
     } catch {
-      showToast({ type: 'error', message: 'خطا در اعمال تغییر.' });
+      showToast({ variant: 'error', message: 'خطا در اعمال تغییر.' });
     } finally {
       setApplyingGap(null);
     }

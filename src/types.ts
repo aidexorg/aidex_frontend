@@ -1,4 +1,5 @@
 // Domain types for AIDEX — mirror the database schema.
+import { formatPrice } from '@/lib/format';
 
 export interface Profile {
   id: string;

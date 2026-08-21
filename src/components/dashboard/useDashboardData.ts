@@ -129,12 +129,12 @@ export function useDashboardData() {
 
       const current = chairAppts.find(
         (a) => a.status === 'in_progress' || a.status === 'arrived'
-      );
+      ) ?? null;
 
       const upcoming = !current
         ? chairAppts.find(
             (a) => a.status === 'scheduled' || a.status === 'confirmed'
-          )
+          ) ?? null
         : null;
 
       const status: ChairStatus['status'] = current
@@ -220,8 +220,10 @@ export function useDashboardData() {
         }
 
         for (const payment of payments) {
-          const current = balanceByProfile.get(payment.profile_id) ?? 0;
-          balanceByProfile.set(payment.profile_id, current - payment.amount);
+          const period = periodMap.get(payment.period_id);
+          if (!period) continue;
+          const current = balanceByProfile.get(period.profile_id) ?? 0;
+          balanceByProfile.set(period.profile_id, current - payment.amount);
         }
 
         const today = new Date();
@@ -542,8 +544,10 @@ export function useDashboardData() {
         }
 
         for (const payment of payments) {
-          const current = balanceByProfile.get(payment.profile_id) ?? 0;
-          balanceByProfile.set(payment.profile_id, current - payment.amount);
+          const period = periods.find((p) => p.id === payment.period_id);
+          if (!period) continue;
+          const current = balanceByProfile.get(period.profile_id) ?? 0;
+          balanceByProfile.set(period.profile_id, current - payment.amount);
         }
 
         const now = new Date();

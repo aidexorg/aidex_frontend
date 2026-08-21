@@ -3,7 +3,8 @@ import { APPOINTMENT_TYPES } from '@/types';
 import { formatPrice, toFaDigits } from '@/lib/format';
 import { formatTime } from './helpers';
 import { STATUS_CONFIG, TYPE_COLORS } from './constants';
-import type { AppointmentWithProfile, Profile } from './types';
+import type { AppointmentWithProfile } from './types';
+import type { Profile } from '@/types';
 
 interface TodayAppointmentsProps {
   appointments: AppointmentWithProfile[];
