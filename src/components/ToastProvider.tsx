@@ -76,7 +76,7 @@ function ToastCard({
       ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
       : toast.variant === 'error'
         ? 'bg-red-50 border-red-100 text-red-800'
-        : 'bg-sky-50 border-sky-100 text-sky-800';
+        : 'bg-sage-50 border-sage-100 text-sage-800';
 
   const Icon =
     toast.variant === 'success' ? CheckCircle2 : toast.variant === 'error' ? XCircle : Info;

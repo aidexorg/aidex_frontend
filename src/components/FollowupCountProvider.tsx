@@ -36,7 +36,7 @@ export function FollowupCountProvider({
 
   useEffect(() => {
     refresh();
-  }, [refresh, view]);
+  }, [refresh]);
 
   const value = useMemo(() => ({ count, refresh }), [count, refresh]);
 

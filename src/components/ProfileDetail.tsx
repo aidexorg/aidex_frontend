@@ -30,11 +30,19 @@ import { PeriodForm } from './PeriodForm';
 import { ActionForm } from './ActionForm';
 import { PaymentForm } from './PaymentForm';
 import { AppointmentForm } from './AppointmentForm';
+import { TabBar } from './design';
+import { ProfileTab } from './profile-detail/ProfileTab';
+import { ReviewTab } from './profile-detail/ReviewTab';
+import { FinancialTab } from './profile-detail/FinancialTab';
+import { TreatmentChartPanel } from './profile-detail/TreatmentChartPanel';
+
+export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
 
 interface ProfileDetailProps {
   profile: Profile;
   onBack: () => void;
   onEditProfile: () => void;
+  initialTab?: ProfileDetailTab;
 }
 
 /** BR-UX-05: bounded periods per page (accordion-heavy) */
@@ -43,10 +51,11 @@ const PERIOD_PAGE_SIZE = 6;
 /** BR-POL-03: deferred delete undo window (ms) */
 const DELETE_UNDO_MS = 30_000;
 
-export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailProps) {
+export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'profile' }: ProfileDetailProps) {
   const data = useData();
   const { showToast, showUndoToast } = useToast();
   const { refresh: refreshFollowupCount } = useFollowupCount();
+  const [activeTab, setActiveTab] = useState<ProfileDetailTab>(initialTab);
   const [periods, setPeriods] = useState<Period[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -394,6 +403,13 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
 
   if (loading) return <SkeletonProfileDetail />;
 
+  const profileTabs = [
+    { key: 'profile' as const, label: 'پروفایل' },
+    { key: 'review' as const, label: 'ریویو' },
+    { key: 'treatment' as const, label: 'اورویو درمانی' },
+    { key: 'financial' as const, label: 'اورویو مالی' },
+  ];
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -404,96 +420,76 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
         </button>
       </div>
 
-      {/* Patient card */}
-      <div className="card p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex items-start gap-4 min-w-0">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-700 text-white flex items-center justify-center text-lg font-bold shrink-0 shadow-md shadow-teal-700/20">
-              {profile.first_name.charAt(0)}
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] text-slate-400">
-                {profile.file_number ? `پرونده ${toFaDigits(profile.file_number)}` : 'پرونده بیمار'}
-              </p>
-              <h2 className="text-xl font-bold text-slate-900">
-                {profile.first_name} {profile.last_name}
-              </h2>
-              <div className="flex flex-wrap gap-x-5 gap-y-1 mt-2 text-sm text-slate-500">
-                {profile.birth_year && (
-                  <span>
-                    <span className="text-slate-400 block text-[11px]">سال تولد</span>
-                    {toFaDigits(profile.birth_year)}
-                  </span>
-                )}
-                {profile.phone && (
-                  <span>
-                    <span className="text-slate-400 block text-[11px]">تلفن</span>
-                    {toFaDigits(profile.phone)}
-                  </span>
-                )}
-                {profile.national_id && (
-                  <span>
-                    <span className="text-slate-400 block text-[11px]">کد ملی</span>
-                    {toFaDigits(profile.national_id)}
-                  </span>
-                )}
-              </div>
-            </div>
+      {/* Patient header */}
+      <div className="card p-5">
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-lg font-bold shrink-0 border-2 border-white shadow-sm">
+            {profile.first_name.charAt(0)}
           </div>
-          <div className="flex gap-2">
-            <button onClick={onEditProfile} className="btn-secondary">
-              <Pencil size={16} />
-              ویرایش پرونده
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-slate-400">
+              {profile.file_number ? `No${toFaDigits(profile.file_number)}` : 'پرونده بیمار'}
+            </p>
+            <h2 className="text-xl font-bold text-brand-navy">
+              {profile.first_name} {profile.last_name}
+            </h2>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={onEditProfile} className="btn-secondary text-xs">
+              <Pencil size={14} />
+              ویرایش
             </button>
             <button
               onClick={() => {
                 setEditingPeriod(null);
                 setPeriodFormOpen(true);
               }}
-              className="btn-secondary"
+              className="btn-secondary text-xs"
             >
-              <Plus size={16} />
-              دوره درمان جدید
+              <Plus size={14} />
+              دوره جدید
             </button>
             <button
-              onClick={() => {
-                setAppointmentFormOpen(true);
-              }}
-              className="btn-primary"
+              onClick={() => setAppointmentFormOpen(true)}
+              className="btn-sage text-xs"
             >
-              <CalendarDays size={16} />
-              نوبت جدید
+              <CalendarDays size={14} />
+              نوبت
             </button>
           </div>
         </div>
-        {(profile.address || profile.clinical_notes || profile.file_description) && (
-          <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            {profile.address && (
-              <div>
-                <span className="text-slate-400">نشانی: </span>
-                <span className="text-slate-600">{profile.address}</span>
-              </div>
-            )}
-            {profile.file_description && (
-              <div className="sm:col-span-2">
-                <span className="text-slate-400">شرح پرونده: </span>
-                <span className="text-slate-600">{profile.file_description}</span>
-              </div>
-            )}
-            {profile.clinical_notes && (
-              <div className="sm:col-span-2">
-                <span className="text-slate-400">یادداشت بالینی: </span>
-                <span className="text-slate-600">{profile.clinical_notes}</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
+
+      <TabBar tabs={profileTabs} active={activeTab} onChange={setActiveTab} />
 
       {error && <ErrorBanner message={error} onRetry={loadAll} />}
 
-      {/* Periods */}
-      {periods.length === 0 ? (
+      {activeTab === 'profile' && (
+        <ProfileTab
+          profile={profile}
+          periods={periods}
+          sessions={sessions}
+          parts={parts}
+          actions={actions}
+          onEditProfile={onEditProfile}
+          onGoReview={() => setActiveTab('review')}
+        />
+      )}
+
+      {activeTab === 'review' && (
+        <ReviewTab profile={profile} sessions={sessions} />
+      )}
+
+      {activeTab === 'financial' && (
+        <FinancialTab actions={actions} payments={payments} />
+      )}
+
+      {activeTab === 'treatment' && (
+        <>
+          <TreatmentChartPanel parts={parts} actions={actions} />
+
+          {/* Periods — advanced management */}
+          {periods.length === 0 ? (
         <div className="card">
           <EmptyState
             icon={<Layers size={48} />}
@@ -1216,6 +1212,9 @@ export function ProfileDetail({ profile, onBack, onEditProfile }: ProfileDetailP
             ))}
           </div>
         </div>
+      )}
+
+        </>
       )}
 
       {/* Forms */}

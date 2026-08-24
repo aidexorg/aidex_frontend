@@ -71,7 +71,7 @@ interface ArrivalsViewProps {
 
 export function ArrivalsView({ onOpenProfile }: ArrivalsViewProps) {
   const data = useData();
-  const { toast } = useToast();
+  const { showToast } = useToast();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [profiles, setProfiles] = useState<Map<string, Profile>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -109,10 +109,10 @@ export function ArrivalsView({ onOpenProfile }: ArrivalsViewProps) {
   const handleStatusChange = async (appt: Appointment, newStatus: AppointmentStatus) => {
     try {
       await data.updateAppointment(appt.id, { status: newStatus });
-      toast(`وضعیت نوبت به «${APPOINTMENT_STATUSES.find((s) => s.value === newStatus)?.label}» تغییر کرد`, 'success');
+      showToast({ message: `وضعیت نوبت به «${APPOINTMENT_STATUSES.find((s) => s.value === newStatus)?.label}» تغییر کرد`, variant: 'success' });
       load();
     } catch {
-      toast('خطا در تغییر وضعیت', 'error');
+      showToast({ message: 'خطا در تغییر وضعیت', variant: 'error' });
     }
   };
 

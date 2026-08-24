@@ -1,48 +1,26 @@
-import { type ReactNode, useState, useEffect, useCallback } from 'react';
-import {
-  Users,
-  Wallet,
-  AlertCircle,
-  FileText,
-  BarChart3,
-  CalendarDays,
-  Stethoscope,
-  LogOut,
-  Search,
-  LayoutDashboard,
-} from 'lucide-react';
+import { type ReactNode, useState, useEffect } from 'react';
+import { FolderOpen, CalendarDays, LayoutDashboard, LogOut, Search, ChevronDown, Menu, X } from 'lucide-react';
 import type { Account, Profile } from '@/types';
-import { toFaDigits } from '@/lib/format';
-import { useFollowupCount } from './FollowupCountProvider';
+import { AppLogo, DecorativeBg } from './design';
 import { CommandPalette } from './CommandPalette';
 
 export type View =
   | 'dashboard'
   | 'profiles'
-  | 'followups'
-  | 'payments'
-  | 'reports'
-  | 'outputs'
   | 'appointments'
-  | 'arrivals'
   | 'register'
   | 'login';
 
 interface NavItem {
   key: View;
   label: string;
-  icon: typeof Users;
+  icon: typeof FolderOpen;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'dashboard', label: 'داشبورد', icon: LayoutDashboard },
-  { key: 'profiles', label: 'پرونده‌ها', icon: Users },
-  { key: 'appointments', label: 'نوبت‌ها', icon: CalendarDays },
-  { key: 'arrivals', label: 'ورودی‌ها', icon: Users },
-  { key: 'followups', label: 'پیگیری‌ها', icon: AlertCircle },
-  { key: 'payments', label: 'پرداخت‌ها', icon: Wallet },
-  { key: 'reports', label: 'گزارش درآمد', icon: BarChart3 },
-  { key: 'outputs', label: 'خروجی قالب', icon: FileText },
+  { key: 'dashboard', label: 'خانه', icon: LayoutDashboard },
+  { key: 'profiles', label: 'فهرست پرونده‌ها', icon: FolderOpen },
+  { key: 'appointments', label: 'تقویم نوبت‌ها', icon: CalendarDays },
 ];
 
 interface LayoutProps {
@@ -54,168 +32,163 @@ interface LayoutProps {
   onSelectProfile?: (profile: Profile) => void;
 }
 
+function displayName(account: Account): string {
+  return account.display_name || account.email.split('@')[0];
+}
+
 function initials(account: Account): string {
   const source = (account.display_name || account.email).trim();
   return source.slice(0, 1).toUpperCase();
 }
 
-function NavFollowupBadge({ count }: { count: number }) {
-  if (count <= 0) return null;
-  const label = count > 99 ? `${toFaDigits(99)}+` : toFaDigits(count);
-  return (
-    <span className="absolute -top-1.5 -left-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none flex items-center justify-center shadow-sm">
-      {label}
-    </span>
-  );
-}
-
 export function Layout({ current, onNavigate, children, account, onLogout, onSelectProfile }: LayoutProps) {
   const authed = account !== null;
-  const { count: followupCount } = useFollowupCount();
-  const pageLabel = NAV_ITEMS.find((item) => item.key === current)?.label ?? 'ایدکس';
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Ctrl+K keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        if (authed) {
-          setPaletteOpen((prev) => !prev);
-        }
+        if (authed) setPaletteOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [authed]);
 
-  return (
-    <div className="min-h-screen bg-[#F3F5F8] flex flex-col md:flex-row">
-      <aside className="hidden md:flex w-[260px] flex-col bg-[#101820] text-white sticky top-0 h-screen shrink-0">
-        <div className="flex items-center gap-3 px-5 py-6">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center text-white shadow-lg shadow-teal-900/40">
-            <Stethoscope size={22} />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold leading-tight">ایدکس</h1>
-            <p className="text-[11px] text-slate-400">مدیریت کلینیک دندان‌پزشکی</p>
-          </div>
-        </div>
+  const navButton = (item: NavItem, mobile = false) => {
+    const Icon = item.icon;
+    const active = current === item.key;
+    return (
+      <button
+        key={item.key}
+        type="button"
+        onClick={() => {
+          onNavigate(item.key);
+          setMobileMenuOpen(false);
+        }}
+        className={active ? 'nav-item-active w-full' : `nav-item w-full ${mobile ? '' : ''}`}
+      >
+        <Icon size={18} className={active ? 'text-sage-600' : 'text-slate-400'} />
+        {item.label}
+      </button>
+    );
+  };
 
+  return (
+    <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row relative">
+      <DecorativeBg />
+
+      {/* Desktop sidebar */}
+      <aside className="hidden md:flex w-[240px] flex-col bg-white/80 backdrop-blur-sm border-l border-slate-100 sticky top-0 h-screen shrink-0 z-20">
+        <div className="px-5 py-6">
+          <AppLogo size="md" />
+        </div>
         {authed && (
           <nav className="flex-1 px-3 py-2 space-y-1">
-            {NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = current === item.key;
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => onNavigate(item.key)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                    active
-                      ? 'bg-teal-500/15 text-teal-300 shadow-[inset_0_0_0_1px_rgba(45,212,191,0.25)]'
-                      : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-                  }`}
-                >
-                  <span className="relative shrink-0">
-                    <Icon size={18} className={active ? 'text-teal-300' : 'text-slate-500'} />
-                    {item.key === 'followups' && <NavFollowupBadge count={followupCount} />}
-                  </span>
-                  {item.label}
-                </button>
-              );
-            })}
+            {NAV_ITEMS.map((item) => navButton(item))}
           </nav>
         )}
         {!authed && <div className="flex-1" />}
-
-        <div className="px-4 py-4 border-t border-white/10 space-y-3">
-          {authed && (
-            <div className="flex items-center gap-3 px-1">
-              <div className="w-9 h-9 rounded-full bg-teal-500/20 text-teal-300 flex items-center justify-center text-sm font-bold">
-                {initials(account)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs text-white truncate" title={account.email}>
-                  {account.display_name || account.email}
-                </p>
-                <p className="text-[10px] text-slate-500 truncate">اپراتور</p>
-              </div>
-              <button
-                type="button"
-                onClick={onLogout}
-                className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition"
-                title="خروج"
-              >
-                <LogOut size={16} />
-              </button>
-            </div>
-          )}
-          <p className="text-[10px] text-slate-600 px-1">نسخه ۱.۰ — دمو</p>
+        <div className="px-4 py-4 border-t border-slate-100">
+          <p className="text-[10px] text-slate-400 px-1">نسخه ۱.۰ — AIDEX</p>
         </div>
       </aside>
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="hidden md:flex items-center gap-4 px-6 lg:px-8 h-[72px] sticky top-0 z-30 bg-white/75 backdrop-blur-xl border-b border-white/60">
-          <div>
-            <p className="text-[11px] text-slate-400">ایدکس</p>
-            <h2 className="text-base font-semibold text-slate-900 leading-tight">{pageLabel}</h2>
-          </div>
-          <div className="flex-1" />
-          {authed && (
-            <div className="flex items-center gap-3">
-              {/* Search button */}
-              <button
-                onClick={() => setPaletteOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 text-sm text-slate-400 hover:text-slate-600 hover:border-slate-300 transition"
-              >
-                <Search size={14} />
-                <span className="hidden lg:inline">جستجو...</span>
-                <kbd className="hidden lg:inline px-1.5 py-0.5 rounded bg-slate-100 text-[10px] font-mono">
-                  Ctrl+K
-                </kbd>
-              </button>
-              <div className="text-left">
-                <p className="text-sm font-medium text-slate-800 truncate max-w-[180px]">
-                  {account.display_name || account.email}
-                </p>
-                <p className="text-[11px] text-slate-400">اپراتور کلینیک</p>
-              </div>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-teal-700 text-white flex items-center justify-center text-sm font-bold shadow-md shadow-teal-700/20">
-                {initials(account)}
-              </div>
-            </div>
-          )}
-        </header>
+      <div className="flex-1 min-w-0 flex flex-col relative z-10">
+        {/* Header */}
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+          <div className="flex items-center gap-3 px-4 md:px-6 lg:px-8 h-[64px]">
+            <button
+              type="button"
+              className="md:hidden p-2 rounded-lg hover:bg-slate-100"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="منو"
+            >
+              <Menu size={20} />
+            </button>
 
-        <header className="md:hidden bg-[#101820] text-white sticky top-0 z-30">
-          <div className="flex items-center gap-2.5 px-4 py-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 flex items-center justify-center">
-              <Stethoscope size={18} />
-            </div>
-            <h1 className="text-base font-bold flex-1">ایدکس</h1>
+            <div className="hidden md:block md:flex-1" />
+
             {authed && (
               <button
                 type="button"
-                onClick={onLogout}
-                className="text-xs font-medium px-2.5 py-1 rounded-lg bg-white/10 text-teal-200"
+                onClick={() => setPaletteOpen(true)}
+                className="flex-1 md:max-w-xl flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-slate-50/80 text-sm text-slate-400 hover:border-sage-300 hover:bg-white transition"
               >
-                خروج
+                <Search size={16} className="shrink-0" />
+                <span className="flex-1 text-right truncate">
+                  جستجو در پرونده‌ها، بیماران، نوبت‌ها و...
+                </span>
+                <kbd className="hidden sm:inline px-1.5 py-0.5 rounded bg-white border border-slate-200 text-[10px] font-mono text-slate-400">
+                  Ctrl+K
+                </kbd>
               </button>
+            )}
+
+            {authed && account && (
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="hidden sm:block text-left">
+                  <p className="text-sm font-semibold text-brand-navy truncate max-w-[140px]">
+                    دکتر {displayName(account)}
+                  </p>
+                  <p className="text-[11px] text-slate-400">متخصص دندانپزشکی</p>
+                </div>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1"
+                    onClick={onLogout}
+                    title="خروج"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm">
+                      {initials(account)}
+                    </div>
+                    <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </header>
 
-        <main className={`flex-1 min-w-0 ${authed ? 'pb-24 md:pb-0' : 'pb-0'}`}>
+        {/* Mobile drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/30" onClick={() => setMobileMenuOpen(false)} />
+            <aside className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-xl flex flex-col">
+              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
+                <AppLogo size="sm" />
+                <button type="button" onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
+                  <X size={20} />
+                </button>
+              </div>
+              <nav className="flex-1 px-3 py-4 space-y-1">
+                {NAV_ITEMS.map((item) => navButton(item, true))}
+              </nav>
+              {account && (
+                <div className="px-4 py-4 border-t border-slate-100">
+                  <button type="button" onClick={onLogout} className="nav-item w-full text-red-600">
+                    <LogOut size={18} />
+                    خروج
+                  </button>
+                </div>
+              )}
+            </aside>
+          </div>
+        )}
+
+        <main className={`flex-1 min-w-0 ${authed ? 'pb-20 md:pb-0' : ''}`}>
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 animate-fade-in">
             {children}
           </div>
         </main>
       </div>
 
+      {/* Mobile bottom nav */}
       {authed && (
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-[#101820] border-t border-white/10 z-30 grid grid-cols-5">
+        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-30 grid grid-cols-3 shadow-[0_-4px_20px_rgb(0_0_0_/_0.06)]">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = current === item.key;
@@ -224,30 +197,23 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
                 key={item.key}
                 type="button"
                 onClick={() => onNavigate(item.key)}
-                className={`relative flex flex-col items-center justify-center gap-0.5 py-2.5 transition ${
-                  active ? 'text-teal-300' : 'text-slate-500'
+                className={`flex flex-col items-center justify-center gap-0.5 py-2.5 transition ${
+                  active ? 'text-sage-600' : 'text-slate-400'
                 }`}
               >
-                <span className="relative">
-                  <Icon size={20} />
-                  {item.key === 'followups' && <NavFollowupBadge count={followupCount} />}
-                </span>
+                <Icon size={20} />
                 <span className="text-[10px] font-medium">{item.label}</span>
               </button>
             );
           })}
         </nav>
       )}
-      {/* Command Palette */}
+
       {authed && (
         <CommandPalette
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
-          onSelectProfile={(profile) => {
-            if (onSelectProfile) {
-              onSelectProfile(profile);
-            }
-          }}
+          onSelectProfile={(profile) => onSelectProfile?.(profile)}
         />
       )}
     </div>

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { DataError, useData } from '@/data';
 import type { Account } from '@/types';
-import { ErrorBanner, Spinner, SuccessBanner } from './ui';
+import { ErrorBanner, Spinner } from './ui';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -18,7 +18,6 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<Account | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -27,30 +26,25 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
 
     if (!trimmedEmail || !password || !confirm) {
       setError('ایمیل، رمز عبور و تکرار رمز الزامی است.');
-      setCreated(null);
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
       setError(`رمز عبور باید حداقل ${MIN_PASSWORD_LENGTH} نویسه باشد.`);
-      setCreated(null);
       return;
     }
     if (password !== confirm) {
       setError('رمز عبور و تکرار آن یکسان نیستند.');
-      setCreated(null);
       return;
     }
 
     setSaving(true);
     setError(null);
-    setCreated(null);
     try {
       const account = await data.registerAccount({
         email: trimmedEmail,
         password,
         display_name: trimmedName || null,
       });
-      setCreated(account);
       setPassword('');
       setConfirm('');
       onAuthenticated?.(account);
@@ -67,21 +61,14 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
   };
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-bold text-white">ثبت‌نام اپراتور</h2>
+    <div className="card p-8 space-y-6 shadow-lg">
+      <div className="text-center">
+        <h2 className="text-xl font-bold text-brand-navy">ثبت‌نام</h2>
         <p className="text-sm text-slate-400 mt-1">حساب ورود جدا از پرونده بیمار است.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="card p-6 space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {error && <ErrorBanner message={error} />}
-        {created && (
-          <SuccessBanner
-            message={`حساب «${created.email}» ساخته شد.${
-              created.display_name ? ` (${created.display_name})` : ''
-            }`}
-          />
-        )}
         <div>
           <label className="label">ایمیل *</label>
           <input
@@ -89,10 +76,7 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
             type="email"
             autoComplete="username"
             value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setCreated(null);
-            }}
+            onChange={(e) => setEmail(e.target.value)}
             placeholder="operator@clinic.ir"
             autoFocus
           />
@@ -129,18 +113,14 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
             onChange={(e) => setConfirm(e.target.value)}
           />
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
-          {onGoLogin ? (
-            <button type="button" className="btn-ghost text-xs" onClick={onGoLogin}>
-              حساب دارید؟ ورود
-            </button>
-          ) : (
-            <span />
-          )}
-          <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? <Spinner /> : 'ایجاد حساب'}
+        <button type="submit" disabled={saving} className="btn-primary w-full py-3">
+          {saving ? <Spinner /> : 'ایجاد حساب'}
+        </button>
+        {onGoLogin && (
+          <button type="button" className="btn-ghost w-full text-sm" onClick={onGoLogin}>
+            حساب دارید؟ ورود
           </button>
-        </div>
+        )}
       </form>
     </div>
   );

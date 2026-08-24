@@ -1,48 +1,17 @@
-import { useState } from 'react';
-import { LayoutDashboard, BarChart3 } from 'lucide-react';
+import { CalendarDays, ChevronLeft, FolderOpen, Users, Wallet } from 'lucide-react';
 import { SkeletonProfileList } from '../Skeleton';
-import { useDashboardData } from './useDashboardData';
-import { DashboardHeader } from './DashboardHeader';
-import { StatsCards } from './StatsCards';
-import { ChairStatusBoard } from './ChairStatusBoard';
-import { ArrivalsQueue } from './ArrivalsQueue';
-import { BalanceAlerts } from './BalanceAlerts';
-import { QuickActions } from './QuickActions';
-import { TodayAppointments } from './TodayAppointments';
-import { FinancialMetricsCard } from './FinancialMetrics';
-import { ARAging } from './ARAging';
-import { MonthlySummaryCard } from './MonthlySummaryCard';
-import { ProductionByDentist } from './ProductionByDentist';
-import { ProductionByType } from './ProductionByType';
-import { QuickStatsFooter } from './QuickStatsFooter';
-import { StatusBreakdown } from './StatusBreakdown';
+import { useWelcomeDashboardData } from './useWelcomeDashboardData';
+import { formatPrice, toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
-
-type Tab = 'dashboard' | 'reports';
+import type { View } from '../Layout';
 
 interface DashboardViewProps {
   onOpenProfile?: (profile: Profile) => void;
-  onNavigate?: (view: 'profiles' | 'appointments' | 'payments' | 'followups' | 'reports' | 'outputs' | 'arrivals' | 'dashboard') => void;
+  onNavigate?: (view: View) => void;
 }
 
-export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps) {
-  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
-  const {
-    appointments,
-    loading,
-    account,
-    financial,
-    arItems,
-    monthly,
-    dentistProd,
-    typeProd,
-    balanceAlerts,
-    stats,
-    chairStatuses,
-    arrivals,
-    balanceByProfileId,
-    handleStartTreatment,
-  } = useDashboardData();
+export function DashboardView({ onNavigate }: DashboardViewProps) {
+  const { loading, account, stats, arrivals, totalOutstanding } = useWelcomeDashboardData();
 
   if (loading) {
     return (
@@ -52,97 +21,108 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
     );
   }
 
-  return (
-    <div className="flex flex-col h-full">
-      <DashboardHeader displayName={account?.display_name ?? null} />
+  const doctorName = account?.display_name?.split(' ')[0] ?? 'فرهمند';
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 mt-4 mb-4 border-b border-slate-200">
+  return (
+    <div className="space-y-8 animate-fade-in">
+      <div className="relative card p-8 overflow-hidden">
+        <div className="absolute top-0 left-0 w-32 h-32 bg-sage-100/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
+        <div className="relative flex flex-wrap items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-sage-100 border-4 border-white shadow-md flex items-center justify-center">
+            <Users size={32} className="text-sage-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl font-bold text-brand-navy flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sage-500" />
+              خوش آمدید دکتر {doctorName}
+            </h1>
+            <p className="text-slate-500 mt-1">مرکز مدیریت کلینیک دندانپزشکی AIDEX</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-            activeTab === 'dashboard'
-              ? 'border-teal-600 text-teal-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+          type="button"
+          onClick={() => onNavigate?.('profiles')}
+          className="card p-6 text-right hover:shadow-lg hover:border-sage-200 transition-all group"
         >
-          <LayoutDashboard size={16} />
-          داشبورد
+          <div className="icon-well bg-sage-50 text-sage-600 mb-4">
+            <FolderOpen size={24} />
+          </div>
+          <h3 className="font-bold text-brand-navy text-lg">فهرست پرونده‌ها</h3>
+          <p className="text-sm text-slate-500 mt-1">مشاهده و مدیریت پرونده‌های بیماران</p>
+          <span className="inline-flex items-center gap-1 mt-4 text-sm text-sage-600 font-medium group-hover:gap-2 transition-all">
+            مشاهده پرونده‌ها
+            <ChevronLeft size={16} />
+          </span>
         </button>
+
         <button
-          onClick={() => setActiveTab('reports')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-            activeTab === 'reports'
-              ? 'border-teal-600 text-teal-700'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
+          type="button"
+          onClick={() => onNavigate?.('appointments')}
+          className="card p-6 text-right hover:shadow-lg hover:border-sage-200 transition-all group"
         >
-          <BarChart3 size={16} />
-          گزارش‌ها
+          <div className="icon-well bg-sage-50 text-sage-600 mb-4">
+            <CalendarDays size={24} />
+          </div>
+          <h3 className="font-bold text-brand-navy text-lg">تقویم نوبت‌ها</h3>
+          <p className="text-sm text-slate-500 mt-1">برنامه‌ریزی و مدیریت نوبت‌های بیماران</p>
+          <span className="inline-flex items-center gap-1 mt-4 text-sm text-sage-600 font-medium group-hover:gap-2 transition-all">
+            مشاهده تقویم
+            <ChevronLeft size={16} />
+          </span>
         </button>
       </div>
 
-      {/* Tab content */}
-      {activeTab === 'dashboard' ? (
-        /* ═══════════════════════════════════════════
-           Operational tab — viewport-fitting grid
-           ═══════════════════════════════════════════ */
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 auto-rows-min content-start overflow-y-auto">
-          {/* Row 1: Stats + Chairs */}
-          <div className="lg:col-span-5 space-y-4">
-            <StatsCards stats={stats} />
-            <QuickActions onNavigate={onNavigate as ((view: string) => void) | undefined} />
+      <div className="card p-0 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-x-reverse divide-slate-100">
+          <div className="p-5 flex items-center gap-4">
+            <div className="icon-well bg-blue-50 text-blue-600">
+              <CalendarDays size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">نوبت امروز</p>
+              <p className="text-xl font-bold text-brand-navy">{toFaDigits(stats.total)} نوبت</p>
+            </div>
           </div>
-          <div className="lg:col-span-7">
-            <ChairStatusBoard chairStatuses={chairStatuses} />
+          <div className="p-5 flex items-center gap-4">
+            <div className="icon-well bg-sage-50 text-sage-600">
+              <Users size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">بیمار فعال</p>
+              <p className="text-xl font-bold text-brand-navy">{toFaDigits(stats.active)} بیمار</p>
+            </div>
           </div>
-
-          {/* Row 2: Arrivals + Balance */}
-          <div className="lg:col-span-6">
-            <ArrivalsQueue
-              arrivals={arrivals}
-              onStartTreatment={handleStartTreatment}
-              onNavigate={onNavigate ? () => onNavigate('arrivals') : undefined}
-            />
-          </div>
-          <div className="lg:col-span-6">
-            <BalanceAlerts
-              alerts={balanceAlerts}
-              onNavigate={onNavigate ? () => onNavigate('payments') : undefined}
-            />
-          </div>
-
-          {/* Row 3: Today's appointments (full width, compact) */}
-          <div className="lg:col-span-12">
-            <TodayAppointments
-              appointments={appointments}
-              balanceByProfileId={balanceByProfileId}
-              onOpenProfile={onOpenProfile}
-              onNavigate={onNavigate ? () => onNavigate('appointments') : undefined}
-              maxItems={5}
-            />
+          <div className="p-5 flex items-center gap-4">
+            <div className="icon-well bg-amber-50 text-amber-600">
+              <Wallet size={20} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500">مانده پرداخت نشده</p>
+              <p className="text-xl font-bold text-brand-navy">{formatPrice(totalOutstanding)}</p>
+            </div>
           </div>
         </div>
-      ) : (
-        /* ═══════════════════════════════════════════
-           Reports tab — analytics & summaries
-           ═══════════════════════════════════════════ */
-        <div className="flex-1 space-y-6 overflow-y-auto">
-          <StatusBreakdown stats={stats} />
+      </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <FinancialMetricsCard financial={financial} />
-            <MonthlySummaryCard monthly={monthly} />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ProductionByDentist dentistProd={dentistProd} />
-            <ProductionByType typeProd={typeProd} />
-          </div>
-
-          <ARAging arItems={arItems} />
-
-          <QuickStatsFooter stats={stats} />
+      {arrivals.length > 0 && (
+        <div className="card p-5">
+          <h3 className="font-semibold text-brand-navy mb-3">صف ورود امروز</h3>
+          <ul className="space-y-2">
+            {arrivals.slice(0, 5).map((a) => (
+              <li
+                key={a.id}
+                className="flex items-center justify-between text-sm py-2 border-b border-slate-50 last:border-0"
+              >
+                <span className="font-medium">
+                  {a.profile ? `${a.profile.first_name} ${a.profile.last_name}` : '—'}
+                </span>
+                <span className="text-slate-400">{a.start_time.slice(11, 16)}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

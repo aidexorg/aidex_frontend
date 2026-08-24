@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Layout, type View } from '@/components/Layout';
 import { ProfilesList } from '@/components/ProfilesList';
-import { ProfileDetail } from '@/components/ProfileDetail';
+import { ProfileDetail, type ProfileDetailTab } from '@/components/ProfileDetail';
 import { ProfileForm } from '@/components/ProfileForm';
-import { FollowupsView } from '@/components/FollowupsView';
-import { PaymentsView } from '@/components/PaymentsView';
-import { ReportsView } from '@/components/ReportsView';
-import { OutputsView } from '@/components/OutputsView';
 import { AppointmentsView } from '@/components/AppointmentsView';
-import { ArrivalsView } from '@/components/ArrivalsView';
 import { DashboardView } from '@/components/dashboard';
 import { RegisterView } from '@/components/RegisterView';
 import { LoginView } from '@/components/LoginView';
@@ -29,6 +24,7 @@ function App() {
   const [account, setAccount] = useState<Account | null>(null);
   const [view, setView] = useState<View>('login');
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
+  const [profileInitialTab, setProfileInitialTab] = useState<ProfileDetailTab>('profile');
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
 
@@ -55,12 +51,13 @@ function App() {
       setActiveProfile(null);
       setCreatingProfile(false);
       setEditingProfile(false);
+      setProfileInitialTab('profile');
       if (!account) {
         setView(isAuthView(v) ? v : 'login');
         return;
       }
       if (isAuthView(v)) {
-        setView('profiles');
+        setView('dashboard');
         return;
       }
       setView(v);
@@ -73,7 +70,8 @@ function App() {
     setActiveProfile(null);
     setCreatingProfile(false);
     setEditingProfile(false);
-    setView('profiles');
+    setProfileInitialTab('profile');
+    setView('dashboard');
   };
 
   const handleLogout = async () => {
@@ -85,10 +83,11 @@ function App() {
     setView('login');
   };
 
-  const openProfile = (profile: Profile) => {
+  const openProfile = (profile: Profile, tab: ProfileDetailTab = 'profile') => {
     setCreatingProfile(false);
     setEditingProfile(false);
     setActiveProfile(profile);
+    setProfileInitialTab(tab);
     setView('profiles');
   };
 
@@ -96,22 +95,21 @@ function App() {
     return (
       <AuthShell>
         {view === 'register' ? (
-          <RegisterView
-            onGoLogin={() => setView('login')}
-            onAuthenticated={enterApp}
-          />
+          <RegisterView onGoLogin={() => setView('login')} onAuthenticated={enterApp} />
         ) : (
-          <LoginView
-            onGoRegister={() => setView('register')}
-            onAuthenticated={enterApp}
-          />
+          <LoginView onGoRegister={() => setView('register')} onAuthenticated={enterApp} />
         )}
       </AuthShell>
     );
   }
 
   const renderView = () => {
-    if (view === 'dashboard') return <DashboardView onOpenProfile={openProfile} onNavigate={navigate} />;
+    if (view === 'dashboard') {
+      return <DashboardView onNavigate={navigate} onOpenProfile={(p) => openProfile(p)} />;
+    }
+    if (view === 'appointments') {
+      return <AppointmentsView onOpenProfile={(p) => openProfile(p)} />;
+    }
     if (view === 'profiles') {
       if (activeProfile && editingProfile) {
         return (
@@ -130,6 +128,7 @@ function App() {
         return (
           <ProfileDetail
             profile={activeProfile}
+            initialTab={profileInitialTab}
             onBack={() => setActiveProfile(null)}
             onEditProfile={() => setEditingProfile(true)}
           />
@@ -149,26 +148,12 @@ function App() {
       }
       return (
         <ProfilesList
-          onOpenProfile={openProfile}
+          onOpenProfile={(p) => openProfile(p)}
           onCreateProfile={() => setCreatingProfile(true)}
         />
       );
     }
-    if (view === 'followups') return <FollowupsView onOpenProfile={openProfile} />;
-    if (view === 'payments') return <PaymentsView onOpenProfile={openProfile} />;
-    if (view === 'reports') return <ReportsView />;
-    if (view === 'outputs') return <OutputsView onOpenProfile={openProfile} />;
-    if (view === 'appointments') return <AppointmentsView onOpenProfile={openProfile} />;
-    if (view === 'arrivals') return <ArrivalsView onOpenProfile={openProfile} />;
-    return (
-      <ProfilesList
-        onOpenProfile={openProfile}
-        onCreateProfile={() => {
-          setView('profiles');
-          setCreatingProfile(true);
-        }}
-      />
-    );
+    return <DashboardView onNavigate={navigate} onOpenProfile={(p) => openProfile(p)} />;
   };
 
   return (
@@ -181,7 +166,7 @@ function App() {
           onLogout={() => {
             void handleLogout();
           }}
-          onSelectProfile={openProfile}
+          onSelectProfile={(p) => openProfile(p)}
         >
           {renderView()}
         </Layout>

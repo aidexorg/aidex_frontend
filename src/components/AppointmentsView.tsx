@@ -26,6 +26,9 @@ import { DailyCalendar } from './DailyCalendar';
 import { WeeklyCalendar } from './WeeklyCalendar';
 import { MonthlyCalendar } from './MonthlyCalendar';
 import { ContextMenu } from './ContextMenu';
+import { PageHeader, StatCard } from './design';
+import { formatPrice } from '@/lib/format';
+import { CreditCard, Users, Wallet, CalendarDays as CalIcon, TrendingUp } from 'lucide-react';
 
 interface AppointmentRow extends Appointment {
   profile: Profile | null;
@@ -35,7 +38,7 @@ const STATUS_COLORS: Record<AppointmentStatus, string> = {
   scheduled: 'bg-slate-100 text-slate-600',
   confirmed: 'bg-sky-100 text-sky-700',
   arrived: 'bg-amber-100 text-amber-700',
-  in_progress: 'bg-teal-100 text-teal-700',
+  in_progress: 'bg-sage-100 text-sage-700',
   completed: 'bg-emerald-100 text-emerald-700',
   no_show: 'bg-red-100 text-red-700',
   cancelled: 'bg-slate-100 text-slate-400 line-through',
@@ -43,7 +46,7 @@ const STATUS_COLORS: Record<AppointmentStatus, string> = {
 
 const TYPE_COLORS: Record<string, string> = {
   consultation: 'bg-sky-50 text-sky-700 border-sky-200',
-  treatment: 'bg-teal-50 text-teal-700 border-teal-200',
+  treatment: 'bg-sage-50 text-sage-700 border-sage-200',
   followup: 'bg-amber-50 text-amber-700 border-amber-200',
   emergency: 'bg-red-50 text-red-700 border-red-200',
   hygiene: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -82,12 +85,19 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const [financialStats, setFinancialStats] = useState({
+    totalReceived: 0,
+    appointmentCount: 0,
+    avgPerAppointment: 0,
+  });
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [appointments, profiles] = await Promise.all([
+      const [appointments, profiles, payments] = await Promise.all([
         data.listAppointments(),
         data.listProfiles(),
+        data.listPayments(),
       ]);
       const profileMap = new Map(profiles.map((p) => [p.id, p]));
       const joined: AppointmentRow[] = appointments.map((a) => ({
@@ -95,6 +105,13 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         profile: profileMap.get(a.profile_id) ?? null,
       }));
       setRows(joined);
+      const totalReceived = payments.reduce((s, p) => s + p.amount, 0);
+      const appointmentCount = appointments.length;
+      setFinancialStats({
+        totalReceived,
+        appointmentCount,
+        avgPerAppointment: appointmentCount > 0 ? Math.round(totalReceived / appointmentCount) : 0,
+      });
     } catch {
       setRows([]);
     } finally {
@@ -155,79 +172,64 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const typeLabel = (t: string) =>
     APPOINTMENT_TYPES.find((tp) => tp.value === t)?.label ?? t;
 
+  const handleOpenProfileFromPartial = useCallback(
+    (partial: { id: string }) => {
+      if (!onOpenProfile) return;
+      const row = rows.find((r) => r.profile_id === partial.id);
+      if (row?.profile) onOpenProfile(row.profile);
+    },
+    [onOpenProfile, rows]
+  );
+
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="page-title">نوبت‌ها</h1>
-          <p className="page-sub">مدیریت نوبت‌های بیماران</p>
-        </div>
-        <button
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-          className="btn-primary"
-        >
-          <Plus size={16} />
-          نوبت جدید
-        </button>
-      </div>
+    <div className="space-y-5 animate-fade-in">
+      <PageHeader
+        title="تقویم نوبت‌ها"
+        subtitle="مدیریت و برنامه‌ریزی نوبت‌های بیماران"
+        action={
+          <button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+            className="btn-sage"
+          >
+            <Plus size={16} />
+            نوبت جدید
+          </button>
+        }
+      />
 
       {/* View toggle */}
       <div className="flex gap-1 rounded-xl border border-slate-200 p-0.5 bg-white w-fit">
-        <button
-          onClick={() => setViewMode('calendar')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
-            viewMode === 'calendar'
-              ? 'bg-teal-600 text-white'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
-        >
-          <CalendarDays size={14} />
-          روزانه
-        </button>
-        <button
-          onClick={() => setViewMode('weekly')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
-            viewMode === 'weekly'
-              ? 'bg-teal-600 text-white'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
-        >
-          <CalendarDays size={14} />
-          هفتگی
-        </button>
-        <button
-          onClick={() => setViewMode('monthly')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
-            viewMode === 'monthly'
-              ? 'bg-teal-600 text-white'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
-        >
-          <CalendarDays size={14} />
-          ماهانه
-        </button>
-        <button
-          onClick={() => setViewMode('list')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
-            viewMode === 'list'
-              ? 'bg-teal-600 text-white'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
-        >
-          لیست
-        </button>
+        {(
+          [
+            { key: 'calendar' as const, label: 'روزانه' },
+            { key: 'weekly' as const, label: 'هفته' },
+            { key: 'monthly' as const, label: 'ماه' },
+            { key: 'list' as const, label: 'لیست' },
+          ] as const
+        ).map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setViewMode(tab.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
+              viewMode === tab.key ? 'bg-sage-600 text-white' : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            {tab.key !== 'list' && <CalendarDays size={14} />}
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {viewMode === 'calendar' ? (
-        <DailyCalendar onOpenProfile={onOpenProfile} />
+        <DailyCalendar onOpenProfile={handleOpenProfileFromPartial} />
       ) : viewMode === 'weekly' ? (
-        <WeeklyCalendar onOpenProfile={onOpenProfile} />
+        <WeeklyCalendar onOpenProfile={handleOpenProfileFromPartial} />
       ) : viewMode === 'monthly' ? (
         <MonthlyCalendar
-          onOpenProfile={onOpenProfile}
+          onOpenProfile={handleOpenProfileFromPartial}
           onSelectDate={(date) => {
             // Store the selected date and switch to daily view
             // The DailyCalendar doesn't accept a date prop, so we navigate via state
@@ -408,6 +410,24 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       </>
       )}
 
+      {/* Financial summary footer */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <StatCard label="جمع دریافتی" value={formatPrice(financialStats.totalReceived)} icon={CreditCard} />
+        <StatCard label="تعداد نوبت" value={toFaDigits(financialStats.appointmentCount)} icon={CalIcon} />
+        <StatCard label="میانگین هر نوبت" value={formatPrice(financialStats.avgPerAppointment)} icon={TrendingUp} />
+        <StatCard label="تکمیل شده" value={toFaDigits(rows.filter((r) => r.status === 'completed').length)} icon={Users} />
+        <StatCard label="در انتظار" value={toFaDigits(rows.filter((r) => r.status === 'scheduled' || r.status === 'confirmed').length)} icon={Wallet} />
+        <StatCard
+          label="نرخ تکمیل"
+          value={
+            rows.length > 0
+              ? `${toFaDigits(Math.round((rows.filter((r) => r.status === 'completed').length / rows.length) * 100))}%`
+              : '—'
+          }
+          icon={TrendingUp}
+        />
+      </div>
+
       {/* Form */}
       {formOpen && (
         <AppointmentForm
@@ -453,7 +473,14 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
             setEditing(appt);
             setFormOpen(true);
           }}
-          onOpenProfile={onOpenProfile}
+          onOpenProfile={
+            onOpenProfile
+              ? (appt) => {
+                  const row = rows.find((r) => r.id === appt.id);
+                  if (row?.profile) onOpenProfile(row.profile);
+                }
+              : undefined
+          }
         />
       )}
     </div>
