@@ -187,6 +187,10 @@ export const messages = {
     'planMode.emptyNoParts': 'برای افزودن اقدام برنامه‌ریزی‌شده، در نمای دوره‌ها جلسه و بخش درمان ایجاد کنید.',
     'planMode.emptyNoPlanned': 'اقدام برنامه‌ریزی‌شده‌ای برای این دوره ثبت نشده.',
     'planMode.emptyNoPlannedGlobal': 'هنوز اقدام برنامه‌ریزی‌شده‌ای ثبت نشده. از دکمه «افزودن به طرح» استفاده کنید.',
+
+    'periodProgress.summary': '{complete}/{total} انجام‌شده',
+    'periodProgress.percent': '{percent}٪',
+    'periodProgress.ariaLabel': 'پیشرفت دوره {n}: {complete} از {total} انجام‌شده',
   },
   en: {
     'common.loading': 'Loading…',
@@ -374,6 +378,10 @@ export const messages = {
     'planMode.emptyNoParts': 'Create sessions and parts in the periods view before adding planned actions.',
     'planMode.emptyNoPlanned': 'No planned actions for this period.',
     'planMode.emptyNoPlannedGlobal': 'No planned actions yet. Use “Add to plan” to start.',
+
+    'periodProgress.summary': '{complete}/{total} complete',
+    'periodProgress.percent': '{percent}%',
+    'periodProgress.ariaLabel': 'Period {n} progress: {complete} of {total} complete',
   },
 } as const satisfies Record<AppLocale, Record<string, string>>;
 

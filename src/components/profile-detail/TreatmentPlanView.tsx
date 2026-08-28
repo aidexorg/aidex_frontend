@@ -3,6 +3,7 @@ import { ClipboardList, MapPin, PlayCircle, Plus } from 'lucide-react';
 import { useTranslation } from '../LocaleProvider';
 import { formatPrice, toFaDigits } from '@/lib/format';
 import { computePeriodProgress } from '@/lib/periodProgress';
+import { PeriodProgressBar } from './PeriodProgressBar';
 import { AREA_OPTIONS, type Action, type Part, type Period, type Session } from '@/types';
 
 interface TreatmentPlanViewProps {
@@ -22,45 +23,6 @@ function partLocationLabel(part: Part): string {
   if (part.tooth) return `دندان ${toFaDigits(part.tooth.slice(2))}`;
   if (part.area) return areaLabel(part.area);
   return '';
-}
-
-function PeriodProgressBar({
-  progress,
-  label,
-}: {
-  progress: ReturnType<typeof computePeriodProgress>;
-  label: string;
-}) {
-  const { t } = useTranslation();
-  if (progress.total === 0) return null;
-
-  return (
-    <div className="mt-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
-        <span>{label}</span>
-        <span>
-          {t('planMode.progressSummary', {
-            complete: toFaDigits(progress.complete),
-            total: toFaDigits(progress.total),
-            percent: toFaDigits(progress.percentComplete),
-          })}
-        </span>
-      </div>
-      <div
-        className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={progress.percentComplete}
-        aria-label={label}
-      >
-        <div
-          className="h-full rounded-full bg-sage-500 transition-all"
-          style={{ width: `${progress.percentComplete}%` }}
-        />
-      </div>
-    </div>
-  );
 }
 
 function PeriodPlanCard({
@@ -138,10 +100,7 @@ function PeriodPlanCard({
         )}
       </div>
 
-      <PeriodProgressBar
-        progress={progress}
-        label={t('planMode.progressLabel', { n: toFaDigits(periodNumber) })}
-      />
+      <PeriodProgressBar progress={progress} periodNumber={periodNumber} />
 
       {plannedActions.length === 0 ? (
         <p className="mt-4 text-sm text-slate-400">{t('planMode.emptyNoPlanned')}</p>

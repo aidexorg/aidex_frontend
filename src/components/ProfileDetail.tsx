@@ -37,9 +37,11 @@ import { TreatmentChartPanel } from './profile-detail/TreatmentChartPanel';
 import { TreatmentTimeline } from './profile-detail/TreatmentTimeline';
 import { ToothHistoryView } from './profile-detail/ToothHistoryView';
 import { TreatmentPlanView } from './profile-detail/TreatmentPlanView';
+import { PeriodProgressBar } from './profile-detail/PeriodProgressBar';
 import { useTranslation } from './LocaleProvider';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 import type { ActionStatus } from '@/types';
+import { computePeriodProgress } from '@/lib/periodProgress';
 
 export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
 
@@ -683,6 +685,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
             const paid = periodPaid(period.id);
             const remaining = periodRemaining(period.id);
             const actCount = periodActions(period.id).length;
+            const progress = computePeriodProgress(periodActions(period.id));
 
             return (
               <div key={period.id} className="card overflow-hidden">
@@ -707,6 +710,11 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                       <div className="text-xs text-slate-400 mt-0.5">
                         {periodSess.length} جلسه · {actCount} اقدام
                       </div>
+                      <PeriodProgressBar
+                        progress={progress}
+                        periodNumber={displayNum}
+                        variant="compact"
+                      />
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
