@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
+import { FormDraftUI } from './FormDraftUI';
 import { useData } from '@/data';
+import { useFormDraft } from '@/lib/useFormDraft';
 import {
   APPOINTMENT_TYPES,
   RECURRENCE_PATTERNS,
@@ -20,6 +22,54 @@ interface AppointmentFormProps {
   onSaved: (appointment: Appointment) => void;
   editing?: Appointment | null;
   prefillProfileId?: string;
+}
+
+interface AppointmentDraft {
+  selectedProfileId: string;
+  type: AppointmentType;
+  date: string;
+  time: string;
+  duration: string;
+  notes: string;
+  recurrencePattern: RecurrencePattern;
+  recurrenceEndType: 'date' | 'count';
+  recurrenceEndDate: string;
+  recurrenceCount: string;
+  showRecurrence: boolean;
+}
+
+function appointmentDraftInitial(
+  editing?: Appointment | null,
+  prefillProfileId?: string,
+): AppointmentDraft {
+  if (editing) {
+    return {
+      selectedProfileId: editing.profile_id,
+      type: editing.type,
+      date: toLocalDate(editing.start_time),
+      time: toLocalTime(editing.start_time),
+      duration: editing.duration_minutes.toString(),
+      notes: editing.notes ?? '',
+      recurrencePattern: editing.recurrence_pattern ?? 'none',
+      recurrenceEndType: editing.series_id ? 'count' : 'date',
+      recurrenceEndDate: '',
+      recurrenceCount: '6',
+      showRecurrence: false,
+    };
+  }
+  return {
+    selectedProfileId: prefillProfileId ?? '',
+    type: 'treatment',
+    date: '',
+    time: '09:00',
+    duration: '45',
+    notes: '',
+    recurrencePattern: 'none',
+    recurrenceEndType: 'date',
+    recurrenceEndDate: '',
+    recurrenceCount: '6',
+    showRecurrence: false,
+  };
 }
 
 function toLocalDate(iso: string): string {
@@ -81,6 +131,65 @@ export function AppointmentForm({
   >([]);
   const [showRecurrence, setShowRecurrence] = useState(false);
   const conflictTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const initialDraft = useMemo(
+    () => appointmentDraftInitial(editing, prefillProfileId),
+    [editing, prefillProfileId],
+  );
+
+  const draftValue = useMemo(
+    () => ({
+      selectedProfileId,
+      type,
+      date,
+      time,
+      duration,
+      notes,
+      recurrencePattern,
+      recurrenceEndType,
+      recurrenceEndDate,
+      recurrenceCount,
+      showRecurrence,
+    }),
+    [
+      selectedProfileId,
+      type,
+      date,
+      time,
+      duration,
+      notes,
+      recurrencePattern,
+      recurrenceEndType,
+      recurrenceEndDate,
+      recurrenceCount,
+      showRecurrence,
+    ],
+  );
+
+  const setDraftValue = useCallback((value: AppointmentDraft) => {
+    setSelectedProfileId(value.selectedProfileId);
+    setType(value.type);
+    setDate(value.date);
+    setTime(value.time);
+    setDuration(value.duration);
+    setNotes(value.notes);
+    setRecurrencePattern(value.recurrencePattern);
+    setRecurrenceEndType(value.recurrenceEndType);
+    setRecurrenceEndDate(value.recurrenceEndDate);
+    setRecurrenceCount(value.recurrenceCount);
+    setShowRecurrence(value.showRecurrence);
+  }, []);
+
+  const draft = useFormDraft({
+    formId: 'appointment',
+    scopeKey: editing ? `edit:${editing.id}` : `create:${prefillProfileId ?? 'new'}`,
+    enabled: open,
+    initialValue: initialDraft,
+    value: draftValue,
+    setValue: setDraftValue,
+  });
+
+  const handleClose = useCallback(() => draft.requestClose(onClose), [draft, onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -271,6 +380,7 @@ export function AppointmentForm({
         const row = editing
           ? await data.updateAppointment(editing.id, payload)
           : await data.createAppointment(payload);
+        draft.markSaved();
         onSaved(row);
       } else {
         const startDate = new Date(`${date}T${time}:00`);
@@ -338,6 +448,7 @@ export function AppointmentForm({
             series_index: idx,
           });
         }
+        draft.markSaved();
         onSaved(lastRow!);
       }
     } catch (err) {
@@ -354,7 +465,7 @@ export function AppointmentForm({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={editing ? 'ویرایش نوبت' : 'نوبت جدید'}
       size="xl"
     >
@@ -366,6 +477,7 @@ export function AppointmentForm({
         aria-describedby={error ? 'appointment-form-error' : undefined}
         className="space-y-4"
       >
+        <FormDraftUI draft={draft} />
         {/* Patient preview */}
         {selectedProfile && (
           <div className="rounded-xl bg-gradient-to-br from-teal-600 to-teal-700 p-3 text-white flex items-center gap-3">
@@ -648,7 +760,7 @@ export function AppointmentForm({
 
         {/* Submit */}
         <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
-          <button type="button" onClick={onClose} className="btn-secondary text-sm">
+          <button type="button" onClick={handleClose} className="btn-secondary text-sm">
             انصراف
           </button>
           <button

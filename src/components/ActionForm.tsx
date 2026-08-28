@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, FormSubmitButton } from './ui';
 import { useToast } from './ToastProvider';
+import { FormDraftUI } from './FormDraftUI';
 import { useFollowupCount } from './FollowupCountProvider';
 import { useData } from '@/data';
 import { formSaveSuccessDelay } from '@/lib/formSaveSuccess';
+import { useFormDraft } from '@/lib/useFormDraft';
 import {
   ACTION_FAMILIES,
   ACTION_PARAM_VALUES,
@@ -48,10 +50,28 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
   const data = useData();
   const { showToast } = useToast();
   const { refresh: refreshFollowupCount } = useFollowupCount();
-  const [form, setForm] = useState(() => initialFromEditing(editing));
+  const initialForm = useMemo(() => initialFromEditing(editing), [editing]);
+  const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const draft = useFormDraft({
+    formId: 'action',
+    scopeKey: editing ? `edit:${editing.id}` : `create:${partId}`,
+    enabled: open,
+    initialValue: initialForm,
+    value: form,
+    setValue: setForm,
+  });
+
+  const handleClose = useCallback(() => draft.requestClose(onClose), [draft, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(initialFromEditing(editing));
+    setError(null);
+  }, [open, editing, partId]);
 
   const family = ACTION_FAMILIES.find((f) => f.id === form.familyId);
   const needsParam = family != null && family.kind !== 'fixed';
@@ -102,6 +122,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
       setSaving(false);
       setSaved(true);
       await formSaveSuccessDelay();
+      draft.markSaved();
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
@@ -114,7 +135,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={editing ? 'ویرایش اقدام' : 'اقدام درمانی جدید'}
       size="md"
     >
@@ -126,6 +147,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
         aria-describedby={error ? 'action-form-error' : undefined}
         className="space-y-4"
       >
+        <FormDraftUI draft={draft} />
         {error && <div id="action-form-error"><ErrorBanner message={error} /></div>}
 
         <div>
@@ -265,7 +287,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
         </label>
 
         <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
-          <button type="button" onClick={onClose} className="btn-secondary">
+          <button type="button" onClick={handleClose} className="btn-secondary">
             انصراف
           </button>
           <FormSubmitButton

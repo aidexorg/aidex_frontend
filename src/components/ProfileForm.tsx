@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, useCallback, type FormEvent, type ReactNode } from 'react';
 import {
   User,
   Phone,
@@ -15,7 +15,23 @@ import { DataError, useData } from '@/data';
 import { toFaDigits } from '@/lib/format';
 import { formSaveSuccessDelay } from '@/lib/formSaveSuccess';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
+import { useFormDraft } from '@/lib/useFormDraft';
+import { FormDraftUI } from './FormDraftUI';
 import type { Profile } from '@/types';
+
+function profileFormInitial(editing?: Profile | null) {
+  return {
+    first_name: editing?.first_name ?? '',
+    last_name: editing?.last_name ?? '',
+    birth_year: editing?.birth_year ?? '',
+    phone: editing?.phone ?? '',
+    address: editing?.address ?? '',
+    file_number: editing?.file_number ?? '',
+    national_id: editing?.national_id ?? '',
+    file_description: editing?.file_description ?? '',
+    clinical_notes: editing?.clinical_notes ?? '',
+  };
+}
 
 interface ProfileFormProps {
   /** BR-UX-06/07: full-page create/edit vs legacy modal */
@@ -80,35 +96,33 @@ export function ProfileForm({
 }: ProfileFormProps) {
   const data = useData();
   const { showToast } = useToast();
-  const [form, setForm] = useState({
-    first_name: editing?.first_name ?? '',
-    last_name: editing?.last_name ?? '',
-    birth_year: editing?.birth_year ?? '',
-    phone: editing?.phone ?? '',
-    address: editing?.address ?? '',
-    file_number: editing?.file_number ?? '',
-    national_id: editing?.national_id ?? '',
-    file_description: editing?.file_description ?? '',
-    clinical_notes: editing?.clinical_notes ?? '',
-  });
+  const initialForm = useMemo(() => profileFormInitial(editing), [editing]);
+  const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /** BR-UX-07: sync fields when opening edit page */
+  const formEnabled = variant === 'page' ? true : open;
+  const draft = useFormDraft({
+    formId: 'profile',
+    scopeKey: editing ? `edit:${editing.id}` : 'create',
+    enabled: formEnabled,
+    initialValue: initialForm,
+    value: form,
+    setValue: setForm,
+  });
+
+  const handleClose = useCallback(() => draft.requestClose(onClose), [draft, onClose]);
+
+  useEffect(() => {
+    if (variant === 'page' || !open) return;
+    setForm(initialForm);
+    setError(null);
+  }, [open, variant, initialForm]);
+
   useEffect(() => {
     if (variant !== 'page' || !editing) return;
-    setForm({
-      first_name: editing.first_name ?? '',
-      last_name: editing.last_name ?? '',
-      birth_year: editing.birth_year ?? '',
-      phone: editing.phone ?? '',
-      address: editing.address ?? '',
-      file_number: editing.file_number ?? '',
-      national_id: editing.national_id ?? '',
-      file_description: editing.file_description ?? '',
-      clinical_notes: editing.clinical_notes ?? '',
-    });
+    setForm(profileFormInitial(editing));
     setError(null);
   }, [variant, editing]);
 
@@ -153,6 +167,7 @@ export function ProfileForm({
       setSaving(false);
       setSaved(true);
       await formSaveSuccessDelay();
+      draft.markSaved();
       onSaved(row);
     } catch (err) {
       const anyErr = err as { code?: string; message?: string } | null;
@@ -183,6 +198,7 @@ export function ProfileForm({
       aria-describedby={error ? 'profile-form-error' : undefined}
       className="space-y-5"
     >
+      <FormDraftUI draft={draft} />
       {/* Header card — same for both variants */}
       <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-4 text-white flex flex-wrap items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-xl font-bold">
@@ -452,7 +468,7 @@ export function ProfileForm({
           variant === 'modal' ? 'sticky bottom-0 bg-white pb-1' : ''
         }`}
       >
-        <button type="button" onClick={onClose} className="btn-secondary">
+        <button type="button" onClick={handleClose} className="btn-secondary">
           انصراف
         </button>
         <FormSubmitButton
@@ -467,7 +483,7 @@ export function ProfileForm({
   if (variant === 'page') {
     return (
       <div className="max-w-4xl mx-auto space-y-4">
-        <button type="button" onClick={onClose} className="btn-ghost">
+        <button type="button" onClick={handleClose} className="btn-ghost">
           <ArrowRight size={18} />
           {editing ? 'بازگشت به پرونده' : 'بازگشت به پرونده‌ها'}
         </button>
@@ -484,7 +500,7 @@ export function ProfileForm({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={editing ? 'ویرایش پرونده' : 'پرونده جدید'}
       size="xl"
     >

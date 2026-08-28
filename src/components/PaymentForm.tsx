@@ -1,11 +1,23 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, useMemo, useCallback, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, Spinner } from './ui';
 import { useToast } from './ToastProvider';
+import { FormDraftUI } from './FormDraftUI';
 import { useData } from '@/data';
 import { todayISO } from '@/lib/format';
+import { useFormDraft } from '@/lib/useFormDraft';
 import type { Payment } from '@/types';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
+
+function paymentFormInitial(editing?: Payment | null) {
+  return {
+    payment_date: editing?.payment_date ?? todayISO(),
+    tracking_code: editing?.tracking_code ?? '',
+    amount: editing?.amount != null ? String(editing.amount) : '',
+    description: editing?.description ?? '',
+    direct_to_dentist: editing?.direct_to_dentist ?? false,
+  };
+}
 
 interface PaymentFormProps {
   open: boolean;
@@ -18,15 +30,27 @@ interface PaymentFormProps {
 export function PaymentForm({ open, onClose, onSaved, periodId, editing }: PaymentFormProps) {
   const data = useData();
   const { showToast } = useToast();
-  const [form, setForm] = useState({
-    payment_date: editing?.payment_date ?? todayISO(),
-    tracking_code: editing?.tracking_code ?? '',
-    amount: editing?.amount != null ? String(editing.amount) : '',
-    description: editing?.description ?? '',
-    direct_to_dentist: editing?.direct_to_dentist ?? false,
-  });
+  const initialForm = useMemo(() => paymentFormInitial(editing), [editing]);
+  const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const draft = useFormDraft({
+    formId: 'payment',
+    scopeKey: editing ? `edit:${editing.id}` : `create:${periodId}`,
+    enabled: open,
+    initialValue: initialForm,
+    value: form,
+    setValue: setForm,
+  });
+
+  const handleClose = useCallback(() => draft.requestClose(onClose), [draft, onClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    setForm(paymentFormInitial(editing));
+    setError(null);
+  }, [open, editing, periodId]);
 
   const update = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -63,6 +87,7 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         message: editing ? 'پرداخت به‌روزرسانی شد.' : 'پرداخت ثبت شد.',
         variant: 'success',
       });
+      draft.markSaved();
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
@@ -74,7 +99,7 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={editing ? 'ویرایش پرداخت' : 'ثبت پرداخت جدید'}
       size="md"
     >
@@ -86,6 +111,7 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         aria-describedby={error ? 'payment-form-error' : undefined}
         className="space-y-4"
       >
+        <FormDraftUI draft={draft} />
         {error && <div id="payment-form-error"><ErrorBanner message={error} /></div>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -147,7 +173,7 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         </label>
 
         <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
-          <button type="button" onClick={onClose} className="btn-secondary">
+          <button type="button" onClick={handleClose} className="btn-secondary">
             انصراف
           </button>
           <button

@@ -1,14 +1,34 @@
-import { useState, useEffect, useRef, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback, type FormEvent } from 'react';
 import { Modal } from './Modal';
 import { ErrorBanner, FormSubmitButton } from './ui';
 import { useToast } from './ToastProvider';
 import { DentalChart } from './DentalChart';
+import { FormDraftUI } from './FormDraftUI';
 import { useData } from '@/data';
 import { AREA_OPTIONS, validatePeriodTeethAreas } from '@/types';
 import type { Period } from '@/types';
 import { CheckCircle2, Circle, ArrowRight } from 'lucide-react';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
 import { formSaveSuccessDelay } from '@/lib/formSaveSuccess';
+import { useFormDraft } from '@/lib/useFormDraft';
+
+interface PeriodDraft {
+  teeth: string[];
+  areas: string[];
+  step: 1 | 2;
+}
+
+function periodDraftInitial(
+  editing: Period | null | undefined,
+  existingTeeth: string[],
+  existingAreas: string[],
+): PeriodDraft {
+  return {
+    teeth: editing ? [...editing.teeth] : [...existingTeeth],
+    areas: editing ? [...editing.areas] : [...existingAreas],
+    step: 1,
+  };
+}
 
 interface PeriodFormProps {
   open: boolean;
@@ -34,26 +54,43 @@ export function PeriodForm({
 }: PeriodFormProps) {
   const data = useData();
   const { showToast } = useToast();
-  const [teeth, setTeeth] = useState<string[]>(existingTeeth);
-  const [areas, setAreas] = useState<string[]>(existingAreas);
+  const initialDraft = useMemo(
+    () => periodDraftInitial(editing, existingTeeth, existingAreas),
+    [editing, existingTeeth, existingAreas],
+  );
+  const [teeth, setTeeth] = useState<string[]>(initialDraft.teeth);
+  const [areas, setAreas] = useState<string[]>(initialDraft.areas);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2>(initialDraft.step);
   const prevOpenRef = useRef(false);
+
+  const draftValue = useMemo(() => ({ teeth, areas, step }), [teeth, areas, step]);
+  const setDraftValue = useCallback((value: PeriodDraft) => {
+    setTeeth(value.teeth);
+    setAreas(value.areas);
+    setStep(value.step);
+  }, []);
+
+  const draft = useFormDraft({
+    formId: 'period',
+    scopeKey: editing ? `edit:${editing.id}` : `create:${profileId}`,
+    enabled: open || variant === 'page',
+    initialValue: initialDraft,
+    value: draftValue,
+    setValue: setDraftValue,
+  });
+
+  const handleClose = useCallback(() => draft.requestClose(onClose), [draft, onClose]);
 
   /** BR-UX-02: re-sync chart ONLY when modal opens (not on every parent re-render) */
   useEffect(() => {
     if (open && !prevOpenRef.current) {
-      // Modal just opened — initialize state
-      if (editing) {
-        setTeeth([...editing.teeth]);
-        setAreas([...editing.areas]);
-      } else {
-        setTeeth([...existingTeeth]);
-        setAreas([...existingAreas]);
-      }
-      setStep(1);
+      const next = periodDraftInitial(editing, existingTeeth, existingAreas);
+      setTeeth(next.teeth);
+      setAreas(next.areas);
+      setStep(next.step);
       setError(null);
     }
     prevOpenRef.current = open;
@@ -88,6 +125,7 @@ export function PeriodForm({
       setSaving(false);
       setSaved(true);
       await formSaveSuccessDelay();
+      draft.markSaved();
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
@@ -108,6 +146,7 @@ export function PeriodForm({
         aria-describedby={error ? 'period-form-error' : undefined}
         className="space-y-5"
       >
+        <FormDraftUI draft={draft} />
         {error && <div id="period-form-error"><ErrorBanner message={error} /></div>}
 
         {/* Step indicator */}
@@ -258,7 +297,7 @@ export function PeriodForm({
                   بازگشت
                 </button>
               )}
-              <button type="button" onClick={onClose} className="btn-secondary">
+              <button type="button" onClick={handleClose} className="btn-secondary">
                 انصراف
               </button>
               <FormSubmitButton
@@ -276,7 +315,7 @@ export function PeriodForm({
   if (variant === 'page') {
     return (
       <div className="max-w-5xl mx-auto space-y-4">
-        <button type="button" onClick={onClose} className="btn-ghost">
+        <button type="button" onClick={handleClose} className="btn-ghost">
           <ArrowRight size={18} />
           بازگشت به پرونده
         </button>
@@ -293,7 +332,7 @@ export function PeriodForm({
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       title={editing ? 'ویرایش دوره درمان' : 'دوره درمان جدید'}
       size="xl"
     >

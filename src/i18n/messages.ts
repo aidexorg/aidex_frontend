@@ -130,6 +130,14 @@ export const messages = {
     'import.field.national_id': 'کد ملی',
     'import.field.file_description': 'توضیحات پرونده',
 
+    'draft.restorePrompt': 'پیش‌نویس ذخیره‌شده یافت شد.',
+    'draft.restore': 'بازیابی',
+    'draft.discardStored': 'حذف پیش‌نویس',
+    'draft.discardTitle': 'انصراف از تغییرات؟',
+    'draft.discardMessage': 'تغییرات ذخیره‌نشده از بین می‌روند. مطمئنید؟',
+    'draft.discardConfirm': 'بله، انصراف',
+    'draft.discardCancel': 'ادامه ویرایش',
+
     'currency.toman': 'تومان',
   },
   en: {
@@ -260,6 +268,14 @@ export const messages = {
     'import.field.file_number': 'File number',
     'import.field.national_id': 'National ID',
     'import.field.file_description': 'File description',
+
+    'draft.restorePrompt': 'A saved draft was found.',
+    'draft.restore': 'Restore',
+    'draft.discardStored': 'Discard draft',
+    'draft.discardTitle': 'Discard unsaved changes?',
+    'draft.discardMessage': 'Unsaved changes will be lost. Continue?',
+    'draft.discardConfirm': 'Yes, discard',
+    'draft.discardCancel': 'Keep editing',
 
     'currency.toman': 'Toman',
   },
