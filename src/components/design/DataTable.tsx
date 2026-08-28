@@ -1,11 +1,15 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { toFaDigits } from '@/lib/format';
+
+export type SortDirection = 'asc' | 'desc';
 
 export interface Column<T> {
   key: string;
   header: string;
   render: (row: T) => React.ReactNode;
   className?: string;
+  /** Opt-in: render this column header as a sort control. */
+  sortable?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -25,6 +29,10 @@ interface DataTableProps<T> {
   onSelectionChange?: (keys: Set<string>) => void;
   /** Accessible label for a row checkbox. */
   selectionLabel?: (row: T) => string;
+  /** Controlled sort state (parent performs the actual sort). */
+  sortKey?: string | null;
+  sortDirection?: SortDirection;
+  onSortChange?: (key: string) => void;
 }
 
 export function DataTable<T>({
@@ -42,6 +50,9 @@ export function DataTable<T>({
   selectedKeys,
   onSelectionChange,
   selectionLabel,
+  sortKey = null,
+  sortDirection = 'asc',
+  onSortChange,
 }: DataTableProps<T>) {
   const selected = selectedKeys ?? new Set<string>();
   const pageKeys = rows.map(rowKey);
@@ -87,14 +98,46 @@ export function DataTable<T>({
                   />
                 </th>
               )}
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  className={`px-4 py-3 text-right font-medium text-slate-500 ${col.className ?? ''}`}
-                >
-                  {col.header}
-                </th>
-              ))}
+              {columns.map((col) => {
+                const isSortable = Boolean(col.sortable && onSortChange);
+                const isActiveSort = isSortable && sortKey === col.key;
+                return (
+                  <th
+                    key={col.key}
+                    aria-sort={
+                      isActiveSort
+                        ? sortDirection === 'asc'
+                          ? 'ascending'
+                          : 'descending'
+                        : isSortable
+                          ? 'none'
+                          : undefined
+                    }
+                    className={`px-4 py-3 text-right font-medium text-slate-500 ${col.className ?? ''}`}
+                  >
+                    {isSortable ? (
+                      <button
+                        type="button"
+                        onClick={() => onSortChange?.(col.key)}
+                        className="inline-flex items-center gap-1 font-medium text-slate-500 hover:text-slate-700 transition-colors"
+                      >
+                        {col.header}
+                        {isActiveSort ? (
+                          sortDirection === 'asc' ? (
+                            <ChevronUp size={14} aria-hidden="true" />
+                          ) : (
+                            <ChevronDown size={14} aria-hidden="true" />
+                          )
+                        ) : (
+                          <ChevronsUpDown size={14} className="text-slate-300" aria-hidden="true" />
+                        )}
+                      </button>
+                    ) : (
+                      col.header
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
