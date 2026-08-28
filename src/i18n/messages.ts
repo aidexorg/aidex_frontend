@@ -191,6 +191,14 @@ export const messages = {
     'periodProgress.summary': '{complete}/{total} انجام‌شده',
     'periodProgress.percent': '{percent}٪',
     'periodProgress.ariaLabel': 'پیشرفت دوره {n}: {complete} از {total} انجام‌شده',
+
+    'profileQuickActions.menuLabel': 'اقدامات سریع برای {name}',
+    'profileQuickActions.payment': 'ثبت پرداخت',
+    'profileQuickActions.newSession': 'جلسه جدید',
+    'profileQuickActions.output': 'خروجی / مرور',
+    'profileQuickActions.noPeriodForPayment': 'ابتدا یک دوره درمانی برای این پرونده ایجاد کنید.',
+    'profileQuickActions.noPeriodForSession': 'ابتدا یک دوره درمانی برای ثبت جلسه ایجاد کنید.',
+    'profileQuickActions.newSessionHint': 'دوره باز شد — از دکمه «جلسه جدید» استفاده کنید.',
   },
   en: {
     'common.loading': 'Loading…',
@@ -382,6 +390,14 @@ export const messages = {
     'periodProgress.summary': '{complete}/{total} complete',
     'periodProgress.percent': '{percent}%',
     'periodProgress.ariaLabel': 'Period {n} progress: {complete} of {total} complete',
+
+    'profileQuickActions.menuLabel': 'Quick actions for {name}',
+    'profileQuickActions.payment': 'Record payment',
+    'profileQuickActions.newSession': 'New session',
+    'profileQuickActions.output': 'Output / review',
+    'profileQuickActions.noPeriodForPayment': 'Create a treatment period for this record first.',
+    'profileQuickActions.noPeriodForSession': 'Create a treatment period before adding a session.',
+    'profileQuickActions.newSessionHint': 'Period expanded — use “New session” to continue.',
   },
 } as const satisfies Record<AppLocale, Record<string, string>>;
 

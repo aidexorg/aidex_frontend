@@ -21,7 +21,9 @@ import { EmptyState } from './ui';
 import { SkeletonProfileList } from './Skeleton';
 import { useToast } from './ToastProvider';
 import { ProfileImportWizard } from './ProfileImportWizard';
+import { ProfileQuickActionsMenu, type ProfileQuickAction } from './ProfileQuickActionsMenu';
 import { useTranslation } from './LocaleProvider';
+import type { ProfileDetailIntent, ProfileDetailTab } from './ProfileDetail';
 import {
   DataTable,
   BulkActionBar,
@@ -34,7 +36,11 @@ import {
 } from './design';
 
 interface ProfilesListProps {
-  onOpenProfile: (profile: Profile) => void;
+  onOpenProfile: (
+    profile: Profile,
+    tab?: ProfileDetailTab,
+    intent?: ProfileDetailIntent | null,
+  ) => void;
   onCreateProfile: () => void;
 }
 
@@ -251,6 +257,28 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
     }
   }, [selectedProfiles, data, showToast]);
 
+  const profileLabel = useCallback(
+    (profile: Profile) => `${profile.first_name} ${profile.last_name}`.trim(),
+    [],
+  );
+
+  const handleQuickAction = useCallback(
+    (profile: Profile, action: ProfileQuickAction) => {
+      switch (action) {
+        case 'payment':
+          onOpenProfile(profile, 'financial', 'openPayment');
+          break;
+        case 'newSession':
+          onOpenProfile(profile, 'treatment', 'newSession');
+          break;
+        case 'output':
+          onOpenProfile(profile, 'review');
+          break;
+      }
+    },
+    [onOpenProfile],
+  );
+
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
   }, [page, safePage]);
@@ -307,8 +335,19 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
             <StatusPill status={statusMap.get(p.id) ?? 'active'} />
           ),
       },
+      {
+        key: 'actions',
+        header: '',
+        className: 'w-12 text-left',
+        render: (p) => (
+          <ProfileQuickActionsMenu
+            profileLabel={profileLabel(p)}
+            onAction={(action) => handleQuickAction(p, action)}
+          />
+        ),
+      },
     ],
-    [lastVisitMap, statusMap, loadingMeta]
+    [lastVisitMap, statusMap, loadingMeta, profileLabel, handleQuickAction]
   );
 
   return (
@@ -474,6 +513,8 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
                 })
               }
               onOpenProfile={onOpenProfile}
+              onQuickAction={handleQuickAction}
+              profileLabel={profileLabel}
               page={safePage}
               totalPages={totalPages}
               onPageChange={setPage}
@@ -493,6 +534,8 @@ interface ProfileCardGridProps {
   selectedIds: Set<string>;
   onToggleSelect: (id: string) => void;
   onOpenProfile: (profile: Profile) => void;
+  onQuickAction: (profile: Profile, action: ProfileQuickAction) => void;
+  profileLabel: (profile: Profile) => string;
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
@@ -506,6 +549,8 @@ function ProfileCardGrid({
   selectedIds,
   onToggleSelect,
   onOpenProfile,
+  onQuickAction,
+  profileLabel,
   page,
   totalPages,
   onPageChange,
@@ -551,11 +596,17 @@ function ProfileCardGrid({
                       {toFaDigits(p.file_number ?? '—')}
                     </span>
                   </div>
-                  {loadingMeta ? (
-                    <span className="inline-block h-5 w-16 animate-pulse rounded-full bg-slate-100" />
-                  ) : (
-                    <StatusPill status={status} />
-                  )}
+                  <div className="flex items-start gap-1 shrink-0">
+                    {loadingMeta ? (
+                      <span className="inline-block h-5 w-16 animate-pulse rounded-full bg-slate-100" />
+                    ) : (
+                      <StatusPill status={status} />
+                    )}
+                    <ProfileQuickActionsMenu
+                      profileLabel={profileLabel(p)}
+                      onAction={(action) => onQuickAction(p, action)}
+                    />
+                  </div>
                 </div>
 
                 <p className="mt-3 font-medium text-brand-navy">

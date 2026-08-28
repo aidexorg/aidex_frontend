@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Layout, type View } from '@/components/Layout';
 import { ProfilesList } from '@/components/ProfilesList';
-import { ProfileDetail, type ProfileDetailTab } from '@/components/ProfileDetail';
+import { ProfileDetail, type ProfileDetailTab, type ProfileDetailIntent } from '@/components/ProfileDetail';
 import { ProfileForm } from '@/components/ProfileForm';
 import { AppointmentsView } from '@/components/AppointmentsView';
 import { DashboardView } from '@/components/dashboard';
@@ -30,6 +30,7 @@ function App() {
   const [view, setView] = useState<View>('login');
   const [activeProfile, setActiveProfile] = useState<Profile | null>(null);
   const [profileInitialTab, setProfileInitialTab] = useState<ProfileDetailTab>('profile');
+  const [profileIntent, setProfileIntent] = useState<ProfileDetailIntent | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
 
@@ -57,6 +58,7 @@ function App() {
       setCreatingProfile(false);
       setEditingProfile(false);
       setProfileInitialTab('profile');
+      setProfileIntent(null);
       if (!account) {
         setView(isAuthView(v) ? v : 'login');
         return;
@@ -76,6 +78,7 @@ function App() {
     setCreatingProfile(false);
     setEditingProfile(false);
     setProfileInitialTab('profile');
+    setProfileIntent(null);
     setView('dashboard');
   };
 
@@ -85,14 +88,20 @@ function App() {
     setActiveProfile(null);
     setCreatingProfile(false);
     setEditingProfile(false);
+    setProfileIntent(null);
     setView('login');
   };
 
-  const openProfile = (profile: Profile, tab: ProfileDetailTab = 'profile') => {
+  const openProfile = (
+    profile: Profile,
+    tab: ProfileDetailTab = 'profile',
+    intent: ProfileDetailIntent | null = null,
+  ) => {
     setCreatingProfile(false);
     setEditingProfile(false);
     setActiveProfile(profile);
     setProfileInitialTab(tab);
+    setProfileIntent(intent);
     setView('profiles');
   };
 
@@ -100,6 +109,7 @@ function App() {
     setActiveProfile(null);
     setEditingProfile(false);
     setProfileInitialTab('profile');
+    setProfileIntent(null);
     setCreatingProfile(true);
     setView('profiles');
   }, []);
@@ -150,7 +160,12 @@ function App() {
           <ProfileDetail
             profile={activeProfile}
             initialTab={profileInitialTab}
-            onBack={() => setActiveProfile(null)}
+            initialIntent={profileIntent}
+            onInitialIntentHandled={() => setProfileIntent(null)}
+            onBack={() => {
+              setActiveProfile(null);
+              setProfileIntent(null);
+            }}
             onEditProfile={() => setEditingProfile(true)}
           />
         );
@@ -169,7 +184,7 @@ function App() {
       }
       return (
         <ProfilesList
-          onOpenProfile={(p) => openProfile(p)}
+          onOpenProfile={(p, tab, intent) => openProfile(p, tab ?? 'profile', intent ?? null)}
           onCreateProfile={startCreatingProfile}
         />
       );

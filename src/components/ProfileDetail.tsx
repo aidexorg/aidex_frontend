@@ -45,11 +45,15 @@ import { computePeriodProgress } from '@/lib/periodProgress';
 
 export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
 
+export type ProfileDetailIntent = 'openPayment' | 'newSession';
+
 interface ProfileDetailProps {
   profile: Profile;
   onBack: () => void;
   onEditProfile: () => void;
   initialTab?: ProfileDetailTab;
+  initialIntent?: ProfileDetailIntent | null;
+  onInitialIntentHandled?: () => void;
 }
 
 /** BR-UX-05: bounded periods per page (accordion-heavy) */
@@ -58,7 +62,14 @@ const PERIOD_PAGE_SIZE = 6;
 /** BR-POL-03: deferred delete undo window (ms) */
 const DELETE_UNDO_MS = 30_000;
 
-export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'profile' }: ProfileDetailProps) {
+export function ProfileDetail({
+  profile,
+  onBack,
+  onEditProfile,
+  initialTab = 'profile',
+  initialIntent = null,
+  onInitialIntentHandled,
+}: ProfileDetailProps) {
   const data = useData();
   const { showToast, showUndoToast } = useToast();
   const { refresh: refreshFollowupCount } = useFollowupCount();
@@ -211,6 +222,42 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
   useEffect(() => {
     loadAll();
   }, [loadAll]);
+
+  const intentHandledRef = useRef(false);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+    intentHandledRef.current = false;
+  }, [profile.id, initialTab, initialIntent]);
+
+  useEffect(() => {
+    if (loading || !initialIntent || intentHandledRef.current) return;
+
+    const latestPeriod = periods.length > 0 ? periods[periods.length - 1] : null;
+
+    if (initialIntent === 'openPayment') {
+      setActiveTab('financial');
+      if (latestPeriod) {
+        setPaymentPeriodId(latestPeriod.id);
+        setEditingPayment(null);
+        setPaymentFormOpen(true);
+      } else {
+        showToast({ message: t('profileQuickActions.noPeriodForPayment'), variant: 'info' });
+      }
+    } else if (initialIntent === 'newSession') {
+      setActiveTab('treatment');
+      setTreatmentView('accordion');
+      if (latestPeriod) {
+        setExpandedPeriod(latestPeriod.id);
+        showToast({ message: t('profileQuickActions.newSessionHint'), variant: 'info' });
+      } else {
+        showToast({ message: t('profileQuickActions.noPeriodForSession'), variant: 'info' });
+      }
+    }
+
+    intentHandledRef.current = true;
+    onInitialIntentHandled?.();
+  }, [loading, initialIntent, periods, onInitialIntentHandled, showToast, t]);
 
   // Derived totals (exclude pending deletes from UI)
   const periodActions = (periodId: string) => {
