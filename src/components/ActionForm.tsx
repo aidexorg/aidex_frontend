@@ -1,9 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Modal } from './Modal';
-import { ErrorBanner, Spinner } from './ui';
+import { ErrorBanner, FormSubmitButton } from './ui';
 import { useToast } from './ToastProvider';
 import { useFollowupCount } from './FollowupCountProvider';
 import { useData } from '@/data';
+import { formSaveSuccessDelay } from '@/lib/formSaveSuccess';
 import {
   ACTION_FAMILIES,
   ACTION_PARAM_VALUES,
@@ -49,6 +50,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
   const { refresh: refreshFollowupCount } = useFollowupCount();
   const [form, setForm] = useState(() => initialFromEditing(editing));
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const family = ACTION_FAMILIES.find((f) => f.id === form.familyId);
@@ -97,11 +99,15 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
         variant: 'success',
       });
       refreshFollowupCount();
+      setSaving(false);
+      setSaved(true);
+      await formSaveSuccessDelay();
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
     } finally {
       setSaving(false);
+      setSaved(false);
     }
   };
 
@@ -114,7 +120,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
     >
       <form
         onSubmit={handleSubmit}
-        onKeyDown={(event) => handleFormSaveShortcut(event, saving)}
+        onKeyDown={(event) => handleFormSaveShortcut(event, saving || saved)}
         aria-keyshortcuts="Control+Enter Meta+Enter"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? 'action-form-error' : undefined}
@@ -262,16 +268,12 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
           <button type="button" onClick={onClose} className="btn-secondary">
             انصراف
           </button>
-          <button
-            type="submit"
-            disabled={saving}
+          <FormSubmitButton
+            saving={saving}
+            saved={saved}
+            label={editing ? 'ذخیره تغییرات' : 'افزودن اقدام'}
             className="btn-primary"
-            aria-keyshortcuts="Control+Enter Meta+Enter"
-            title="ذخیره (Ctrl+Enter)"
-          >
-            {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'افزودن اقدام'}
-            {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
-          </button>
+          />
         </div>
       </form>
     </Modal>

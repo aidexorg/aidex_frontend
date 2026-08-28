@@ -19,6 +19,14 @@
     --color-brand-navy: 30 42 58;
     --radius-card: 1rem;
     --shadow-card: 0 8px 32px -12px rgb(30 42 58 / 0.1);
+    /* POL-14: motion tokens */
+    --motion-duration-fast: 150ms;
+    --motion-duration-normal: 200ms;
+    --motion-duration-enter: 280ms;
+    --motion-duration-success: 600ms;
+    --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --motion-scale-press: 0.98;
   }
 
   html {
@@ -41,19 +49,45 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed;
+    transition: background-color var(--motion-duration-normal) var(--motion-ease-standard),
+      border-color var(--motion-duration-normal) var(--motion-ease-standard),
+      color var(--motion-duration-normal) var(--motion-ease-standard),
+      box-shadow var(--motion-duration-normal) var(--motion-ease-standard),
+      transform var(--motion-duration-fast) var(--motion-ease-out);
   }
   .btn-primary {
-    @apply btn bg-brand-navy text-white hover:bg-brand-navyLight active:scale-[0.98] shadow-sm;
+    @apply btn bg-brand-navy text-white hover:bg-brand-navyLight shadow-sm;
+  }
+  .btn-primary:active:not(:disabled) {
+    transform: scale(var(--motion-scale-press));
   }
   .btn-sage {
-    @apply btn bg-sage-500 text-white hover:bg-sage-600 active:scale-[0.98] shadow-sm shadow-sage-500/20;
+    @apply btn bg-sage-500 text-white hover:bg-sage-600 shadow-sm shadow-sage-500/20;
+  }
+  .btn-sage:active:not(:disabled) {
+    transform: scale(var(--motion-scale-press));
   }
   .btn-secondary {
-    @apply btn bg-white text-slate-700 border border-slate-200/80 hover:bg-slate-50 active:scale-[0.98] shadow-sm;
+    @apply btn bg-white text-slate-700 border border-slate-200/80 hover:bg-slate-50 shadow-sm;
+  }
+  .btn-secondary:active:not(:disabled) {
+    transform: scale(var(--motion-scale-press));
   }
   .btn-danger {
-    @apply btn bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 active:scale-[0.98];
+    @apply btn bg-red-50 text-red-600 border border-red-100 hover:bg-red-100;
+  }
+  .btn-danger:active:not(:disabled) {
+    transform: scale(var(--motion-scale-press));
+  }
+  .btn-danger-confirm {
+    @apply btn bg-red-600 text-white hover:bg-red-700 shadow-sm shadow-red-600/20;
+  }
+  .btn-danger-confirm:active:not(:disabled) {
+    transform: scale(var(--motion-scale-press));
+  }
+  .btn-save-success {
+    @apply bg-emerald-600 hover:bg-emerald-600 shadow-sm shadow-emerald-600/20;
   }
   .btn-ghost {
     @apply btn text-slate-600 hover:bg-white/80;
@@ -94,8 +128,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-success-pop,
+  .animate-pulse,
+  .animate-spin {
     animation: none !important;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: none !important;
   }
 }
 
@@ -119,7 +160,16 @@
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fade-in {
-  animation: fadeIn 0.28s ease-out;
+  animation: fadeIn var(--motion-duration-enter) var(--motion-ease-out);
+}
+
+@keyframes successPop {
+  0% { opacity: 0; transform: scale(0.85); }
+  60% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-success-pop {
+  animation: successPop var(--motion-duration-normal) var(--motion-ease-out);
 }
 
 input[type="number"],

@@ -9,10 +9,11 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Modal } from './Modal';
-import { ErrorBanner, Spinner } from './ui';
+import { ErrorBanner, FormSubmitButton } from './ui';
 import { useToast } from './ToastProvider';
 import { DataError, useData } from '@/data';
 import { toFaDigits } from '@/lib/format';
+import { formSaveSuccessDelay } from '@/lib/formSaveSuccess';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
 import type { Profile } from '@/types';
 
@@ -91,6 +92,7 @@ export function ProfileForm({
     clinical_notes: editing?.clinical_notes ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /** BR-UX-07: sync fields when opening edit page */
@@ -148,6 +150,9 @@ export function ProfileForm({
         message: editing ? 'تغییرات پرونده ذخیره شد.' : 'پرونده جدید ایجاد شد.',
         variant: 'success',
       });
+      setSaving(false);
+      setSaved(true);
+      await formSaveSuccessDelay();
       onSaved(row);
     } catch (err) {
       const anyErr = err as { code?: string; message?: string } | null;
@@ -165,13 +170,14 @@ export function ProfileForm({
       }
     } finally {
       setSaving(false);
+      setSaved(false);
     }
   };
 
   const formBody = (
     <form
       onSubmit={handleSubmit}
-      onKeyDown={(event) => handleFormSaveShortcut(event, saving)}
+      onKeyDown={(event) => handleFormSaveShortcut(event, saving || saved)}
       aria-keyshortcuts="Control+Enter Meta+Enter"
       aria-invalid={Boolean(error)}
       aria-describedby={error ? 'profile-form-error' : undefined}
@@ -449,16 +455,11 @@ export function ProfileForm({
         <button type="button" onClick={onClose} className="btn-secondary">
           انصراف
         </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="btn-primary min-w-[140px]"
-          aria-keyshortcuts="Control+Enter Meta+Enter"
-          title="ذخیره (Ctrl+Enter)"
-        >
-          {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد پرونده'}
-          {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
-        </button>
+        <FormSubmitButton
+          saving={saving}
+          saved={saved}
+          label={editing ? 'ذخیره تغییرات' : 'ایجاد پرونده'}
+        />
       </div>
     </form>
   );

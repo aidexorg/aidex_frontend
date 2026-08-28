@@ -1,5 +1,5 @@
-import { type ReactNode } from 'react';
-import { Loader2, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { useState, useEffect, type ReactNode } from 'react';
+import { Loader2, CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
 
 export function Spinner({ className = '', size = 20 }: { className?: string; size?: number }) {
@@ -80,6 +80,49 @@ export function InfoBanner({ message }: { message: string }) {
   );
 }
 
+export function FormSubmitButton({
+  saving,
+  saved,
+  label,
+  savedLabel = 'ذخیره شد',
+  className = 'btn-primary min-w-[140px]',
+  shortcutHint = true,
+  disabled = false,
+}: {
+  saving: boolean;
+  saved: boolean;
+  label: string;
+  savedLabel?: string;
+  className?: string;
+  shortcutHint?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={disabled || saving || saved}
+      className={`${className}${saved ? ' btn-save-success' : ''}`}
+      aria-keyshortcuts="Control+Enter Meta+Enter"
+      title="ذخیره (Ctrl+Enter)"
+      aria-live="polite"
+    >
+      {saved ? (
+        <>
+          <CheckCircle2 size={16} className="animate-success-pop" aria-hidden="true" />
+          {savedLabel}
+        </>
+      ) : saving ? (
+        <Spinner />
+      ) : (
+        label
+      )}
+      {!saving && !saved && shortcutHint && (
+        <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>
+      )}
+    </button>
+  );
+}
+
 export function ConfirmDialog({
   open,
   title,
@@ -99,18 +142,44 @@ export function ConfirmDialog({
   onCancel: () => void;
   danger?: boolean;
 }) {
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    if (!open) setConfirming(false);
+  }, [open]);
+
   if (!open) return null;
+
+  const handleConfirm = () => {
+    setConfirming(true);
+    onConfirm();
+    window.setTimeout(() => setConfirming(false), 200);
+  };
+
   return (
     <Modal open={open} onClose={onCancel} title={title} size="sm">
-      <p className="text-sm text-slate-600 mb-5">{message}</p>
+      {danger ? (
+        <div className="flex items-start gap-3 mb-4 rounded-xl border border-red-100 bg-red-50/80 p-3">
+          <div className="icon-well bg-red-100 text-red-600 w-10 h-10 rounded-xl shrink-0">
+            <AlertTriangle size={20} aria-hidden="true" />
+          </div>
+          <p className="text-sm text-red-800 pt-1">{message}</p>
+        </div>
+      ) : (
+        <p className="text-sm text-slate-600 mb-5">{message}</p>
+      )}
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={onCancel} className="btn-secondary">
           {cancelLabel}
         </button>
         <button
           type="button"
-          onClick={onConfirm}
-          className={danger ? 'btn bg-red-600 text-white hover:bg-red-700' : 'btn-primary'}
+          onClick={handleConfirm}
+          className={
+            danger
+              ? `btn-danger-confirm min-w-[100px]${confirming ? ' bg-red-800' : ''}`
+              : 'btn-primary'
+          }
         >
           {confirmLabel}
         </button>

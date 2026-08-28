@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { Modal } from './Modal';
-import { ErrorBanner, Spinner } from './ui';
+import { ErrorBanner, FormSubmitButton } from './ui';
 import { useToast } from './ToastProvider';
 import { DentalChart } from './DentalChart';
 import { useData } from '@/data';
@@ -8,6 +8,7 @@ import { AREA_OPTIONS, validatePeriodTeethAreas } from '@/types';
 import type { Period } from '@/types';
 import { CheckCircle2, Circle, ArrowRight } from 'lucide-react';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
+import { formSaveSuccessDelay } from '@/lib/formSaveSuccess';
 
 interface PeriodFormProps {
   open: boolean;
@@ -36,6 +37,7 @@ export function PeriodForm({
   const [teeth, setTeeth] = useState<string[]>(existingTeeth);
   const [areas, setAreas] = useState<string[]>(existingAreas);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState<1 | 2>(1);
   const prevOpenRef = useRef(false);
@@ -83,11 +85,15 @@ export function PeriodForm({
         message: editing ? 'دوره درمان به‌روزرسانی شد.' : 'دوره درمان جدید ثبت شد.',
         variant: 'success',
       });
+      setSaving(false);
+      setSaved(true);
+      await formSaveSuccessDelay();
       onSaved(row);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ذخیره‌سازی.');
     } finally {
       setSaving(false);
+      setSaved(false);
     }
   };
 
@@ -95,7 +101,7 @@ export function PeriodForm({
       <form
         onSubmit={handleSubmit}
         onKeyDown={(event) =>
-          handleFormSaveShortcut(event, saving || (!editing && step === 1))
+          handleFormSaveShortcut(event, saving || saved || (!editing && step === 1))
         }
         aria-keyshortcuts="Control+Enter Meta+Enter"
         aria-invalid={Boolean(error)}
@@ -255,16 +261,12 @@ export function PeriodForm({
               <button type="button" onClick={onClose} className="btn-secondary">
                 انصراف
               </button>
-              <button
-                type="submit"
-                disabled={saving || teeth.length === 0 || areas.length === 0}
-                className="btn-primary min-w-[140px]"
-                aria-keyshortcuts="Control+Enter Meta+Enter"
-                title="ذخیره (Ctrl+Enter)"
-              >
-                {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد دوره'}
-                {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
-              </button>
+              <FormSubmitButton
+                saving={saving}
+                saved={saved}
+                label={editing ? 'ذخیره تغییرات' : 'ایجاد دوره'}
+                disabled={teeth.length === 0 || areas.length === 0}
+              />
             </div>
           </div>
         )}
