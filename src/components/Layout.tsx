@@ -3,6 +3,7 @@ import { FolderOpen, CalendarDays, LayoutDashboard, LogOut, Search, ChevronDown,
 import type { Account, Profile } from '@/types';
 import { AppLogo, DecorativeBg } from './design';
 import { CommandPalette } from './CommandPalette';
+import { ThemeToggle } from './ThemeToggle';
 import { useDialogFocus } from '@/lib/accessibility';
 
 export type View =
@@ -95,7 +96,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
   };
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row relative">
+    <div className="min-h-screen bg-[rgb(var(--color-bg))] flex flex-col md:flex-row relative">
       <a
         href="#main-content"
         className="fixed right-4 top-3 z-[100] -translate-y-20 rounded-lg bg-brand-navy px-4 py-2 text-sm font-medium text-white shadow-lg transition-transform focus:translate-y-0"
@@ -105,7 +106,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
       <DecorativeBg />
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-[240px] flex-col bg-white/80 backdrop-blur-sm border-l border-slate-100 sticky top-0 h-screen shrink-0 z-20">
+      <aside className="hidden md:flex w-[240px] flex-col bg-white/80 backdrop-blur-sm border-l border-slate-100 sticky top-0 h-screen shrink-0 z-20 dark:bg-slate-900/80 dark:border-slate-800">
         <div className="px-5 py-6">
           <AppLogo size="md" />
         </div>
@@ -115,18 +116,18 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
           </nav>
         )}
         {!authed && <div className="flex-1" />}
-        <div className="px-4 py-4 border-t border-slate-100">
-          <p className="text-[10px] text-slate-400 px-1">نسخه ۱.۰ — AIDEX</p>
+        <div className="px-4 py-4 border-t border-slate-100 dark:border-slate-800">
+          <p className="text-[10px] text-slate-400 px-1 dark:text-slate-500">نسخه ۱.۰ — AIDEX</p>
         </div>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col relative z-10">
         {/* Header */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100 dark:bg-slate-900/80 dark:border-slate-800">
           <div className="flex items-center gap-3 px-4 md:px-6 lg:px-8 h-[64px]">
             <button
               type="button"
-              className="md:hidden p-2 rounded-lg hover:bg-slate-100"
+              className="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="منو"
               aria-expanded={mobileMenuOpen}
@@ -145,22 +146,23 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
                 aria-keyshortcuts="Control+K Meta+K"
                 aria-expanded={paletteOpen}
                 aria-controls="command-palette-dialog"
-                className="flex-1 md:max-w-xl flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-slate-50/80 text-sm text-slate-400 hover:border-sage-300 hover:bg-white transition"
+                className="flex-1 md:max-w-xl flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-slate-50/80 text-sm text-slate-400 hover:border-sage-300 hover:bg-white transition dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-500 dark:hover:border-sage-500 dark:hover:bg-slate-800"
               >
                 <Search size={16} className="shrink-0" />
                 <span className="flex-1 text-right truncate">
                   جستجو در پرونده‌ها، بیماران، نوبت‌ها و...
                 </span>
-                <kbd className="hidden sm:inline px-1.5 py-0.5 rounded bg-white border border-slate-200 text-[10px] font-mono text-slate-400">
+                <kbd className="hidden sm:inline px-1.5 py-0.5 rounded bg-white border border-slate-200 text-[10px] font-mono text-slate-400 dark:bg-slate-900 dark:border-slate-600 dark:text-slate-500">
                   Ctrl+K
                 </kbd>
               </button>
             )}
 
             {authed && account && (
-              <div className="flex items-center gap-3 shrink-0">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <ThemeToggle />
                 <div className="hidden sm:block text-left">
-                  <p className="text-sm font-semibold text-brand-navy truncate max-w-[140px]">
+                  <p className="text-sm font-semibold text-brand-navy truncate max-w-[140px] dark:text-slate-100">
                     دکتر {displayName(account)}
                   </p>
                   <p className="text-[11px] text-slate-400">متخصص دندانپزشکی</p>
@@ -173,7 +175,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
                     title="خروج"
                     aria-label="خروج از حساب"
                   >
-                    <div className="w-10 h-10 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm">
+                    <div className="w-10 h-10 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm dark:bg-sage-900/60 dark:text-sage-300 dark:border-slate-700">
                       {initials(account)}
                     </div>
                     <ChevronDown size={14} className="text-slate-400 hidden sm:block" />
@@ -195,14 +197,14 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
               aria-modal="true"
               aria-label="منوی ناوبری"
               tabIndex={-1}
-              className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-xl flex flex-col"
+              className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-xl flex flex-col dark:bg-slate-900 dark:shadow-black/40"
             >
-              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 dark:border-slate-800">
                 <AppLogo size="sm" />
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-lg hover:bg-slate-100"
+                  className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                   aria-label="بستن منو"
                 >
                   <X size={20} />
@@ -211,8 +213,11 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
               <nav aria-label="ناوبری اصلی موبایل" className="flex-1 px-3 py-4 space-y-1">
                 {NAV_ITEMS.map((item) => navButton(item, true))}
               </nav>
+              <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
+                <ThemeToggle />
+              </div>
               {account && (
-                <div className="px-4 py-4 border-t border-slate-100">
+                <div className="px-4 py-4 border-t border-slate-100 dark:border-slate-800">
                   <button type="button" onClick={onLogout} className="nav-item w-full text-red-600">
                     <LogOut size={18} />
                     خروج
@@ -236,7 +241,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
 
       {/* Mobile bottom nav */}
       {authed && (
-        <nav aria-label="ناوبری پایین موبایل" className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-30 grid grid-cols-3 shadow-[0_-4px_20px_rgb(0_0_0_/_0.06)]">
+        <nav aria-label="ناوبری پایین موبایل" className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-30 grid grid-cols-3 shadow-[0_-4px_20px_rgb(0_0_0_/_0.06)] dark:bg-slate-900 dark:border-slate-800 dark:shadow-[0_-4px_20px_rgb(0_0_0_/_0.25)]">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = current === item.key;

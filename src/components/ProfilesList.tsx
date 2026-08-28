@@ -344,7 +344,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
         <div
           role="group"
           aria-label="نوع نمایش فهرست"
-          className="inline-flex rounded-xl border border-slate-200 bg-white p-0.5"
+          className="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800"
         >
           <button
             type="button"
@@ -353,7 +353,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               viewMode === 'table'
                 ? 'bg-sage-50 text-sage-700'
-                : 'text-slate-500 hover:text-slate-700'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <Rows3 size={14} aria-hidden="true" />
@@ -366,7 +366,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
               viewMode === 'card'
                 ? 'bg-sage-50 text-sage-700'
-                : 'text-slate-500 hover:text-slate-700'
+                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
           >
             <LayoutGrid size={14} aria-hidden="true" />
@@ -587,7 +587,7 @@ function ProfileCardGrid({
               aria-current={p === page ? 'page' : undefined}
               aria-label={`صفحه ${toFaDigits(p)}`}
               className={`h-8 min-w-[32px] rounded-lg text-sm font-medium ${
-                p === page ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'
+                p === page ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
               {toFaDigits(p)}

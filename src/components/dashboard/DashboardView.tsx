@@ -71,7 +71,7 @@ function FollowupsPanel({
   return (
     <section aria-label="نیازمند پیگیری">
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-slate-700">نیازمند پیگیری</h3>
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">نیازمند پیگیری</h3>
         {items.length > 0 && (
           <span className="inline-flex items-center justify-center px-2 h-5 text-[10px] font-bold text-white bg-amber-500 rounded-full">
             {toFaDigits(items.length)}
@@ -81,10 +81,10 @@ function FollowupsPanel({
 
       {items.length === 0 ? (
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center dark:bg-slate-700">
             <ClipboardList size={18} className="text-slate-400" />
           </div>
-          <p className="text-sm text-slate-500">اقدام درمانی معوقی وجود ندارد</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">اقدام درمانی معوقی وجود ندارد</p>
         </div>
       ) : (
         <ul className="space-y-2">
@@ -94,15 +94,15 @@ function FollowupsPanel({
                 type="button"
                 onClick={() => onOpenProfile?.(item.profile)}
                 aria-label={`باز کردن پرونده ${item.profile.first_name} ${item.profile.last_name}`}
-                className="w-full text-right card p-3 flex items-center gap-3 hover:bg-slate-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
+                className="w-full text-right card p-3 flex items-center gap-3 hover:bg-slate-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400 dark:hover:bg-slate-700/50"
               >
                 <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-800 truncate">
+                  <p className="text-sm font-medium text-slate-800 truncate dark:text-slate-100">
                     {item.profile.first_name} {item.profile.last_name}
                   </p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50">
                       {item.action.needs_followup ? 'پیگیری' : 'ناقص'}
                     </span>
                     <span className="text-xs text-slate-400">
@@ -135,7 +135,7 @@ function NeedsAttentionPanel({
   return (
     <section aria-label="بیماران نیازمند زمان‌بندی نوبت">
       <div className="flex items-center gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-slate-700">نیازمند نوبت</h3>
+        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">نیازمند نوبت</h3>
         {profiles.length > 0 && (
           <span className="inline-flex items-center justify-center px-2 h-5 text-[10px] font-bold text-white bg-sky-500 rounded-full">
             {toFaDigits(profiles.length)}
@@ -145,10 +145,10 @@ function NeedsAttentionPanel({
 
       {profiles.length === 0 ? (
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center dark:bg-slate-700">
             <UserPlus size={18} className="text-slate-400" />
           </div>
-          <p className="text-sm text-slate-500">بیماری نیازمند زمان‌بندی نیست</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">بیماری نیازمند زمان‌بندی نیست</p>
         </div>
       ) : (
         <ul className="flex flex-wrap gap-2">
@@ -158,7 +158,7 @@ function NeedsAttentionPanel({
                 type="button"
                 onClick={() => onOpenProfile?.(profile)}
                 aria-label={`باز کردن پرونده ${profile.first_name} ${profile.last_name}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 text-xs font-medium hover:bg-sky-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-sky-200 bg-sky-50 text-sky-700 text-xs font-medium hover:bg-sky-100 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-sky-800/50 dark:bg-sky-950/40 dark:text-sky-300 dark:hover:bg-sky-950/60"
               >
                 <UserPlus size={12} aria-hidden="true" />
                 {profile.first_name} {profile.last_name}
@@ -207,17 +207,17 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="relative card p-6 overflow-hidden">
-        <div className="absolute top-0 left-0 w-32 h-32 bg-sage-100/50 rounded-full -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute top-0 left-0 w-32 h-32 bg-sage-100/50 rounded-full -translate-x-1/2 -translate-y-1/2 dark:bg-sage-800/30" />
         <div className="relative flex flex-wrap items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-sage-100 border-4 border-white shadow-md flex items-center justify-center">
-            <Users size={28} className="text-sage-500" />
+          <div className="w-16 h-16 rounded-full bg-sage-100 border-4 border-white shadow-md flex items-center justify-center dark:bg-sage-900/50 dark:border-slate-700">
+            <Users size={28} className="text-sage-500 dark:text-sage-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-brand-navy flex items-center gap-2">
+            <h1 className="text-xl font-bold text-brand-navy flex items-center gap-2 dark:text-slate-100">
               <span className="w-2 h-2 rounded-full bg-sage-500" />
               خوش آمدید دکتر {doctorName}
             </h1>
-            <p className="text-slate-500 mt-1 text-sm">مرکز مدیریت کلینیک دندانپزشکی AIDEX</p>
+            <p className="text-slate-500 mt-1 text-sm dark:text-slate-400">مرکز مدیریت کلینیک دندانپزشکی AIDEX</p>
           </div>
         </div>
       </div>

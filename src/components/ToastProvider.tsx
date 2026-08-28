@@ -73,10 +73,10 @@ function ToastCard({
 }) {
   const styles =
     toast.variant === 'success'
-      ? 'bg-emerald-50 border-emerald-100 text-emerald-800'
+      ? 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:border-emerald-900/50 dark:text-emerald-200'
       : toast.variant === 'error'
-        ? 'bg-red-50 border-red-100 text-red-800'
-        : 'bg-sage-50 border-sage-100 text-sage-800';
+        ? 'bg-red-50 border-red-100 text-red-800 dark:bg-red-950/50 dark:border-red-900/50 dark:text-red-200'
+        : 'bg-sage-50 border-sage-100 text-sage-800 dark:bg-sage-950/40 dark:border-sage-800/50 dark:text-sage-200';
 
   const Icon =
     toast.variant === 'success' ? CheckCircle2 : toast.variant === 'error' ? XCircle : Info;
@@ -88,7 +88,7 @@ function ToastCard({
 
   return (
     <div
-      className={`pointer-events-auto flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm shadow-lg shadow-slate-900/10 animate-fade-in ${styles}`}
+      className={`pointer-events-auto flex items-start gap-2.5 rounded-xl border px-4 py-3 text-sm shadow-lg shadow-slate-900/10 dark:shadow-black/30 animate-fade-in ${styles}`}
       role="status"
     >
       <Icon size={18} className="shrink-0 mt-0.5" />
@@ -97,7 +97,7 @@ function ToastCard({
         <button
           type="button"
           onClick={handleAction}
-          className="shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold bg-white/80 hover:bg-white border border-current/20 transition-colors"
+          className="shrink-0 rounded-lg px-2 py-0.5 text-xs font-semibold bg-white/80 hover:bg-white border border-current/20 transition-colors dark:bg-slate-900/60 dark:hover:bg-slate-900"
         >
           {toast.actionLabel}
         </button>

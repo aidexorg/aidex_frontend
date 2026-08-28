@@ -22,7 +22,7 @@ export function AppLogo({ size = 'md', showTagline = true, className = '' }: App
         <Stethoscope size={s.icon} strokeWidth={2.2} />
       </div>
       <div className="leading-tight">
-        <div className={`${s.title} font-bold text-brand-navy tracking-wide`}>AIDEX</div>
+        <div className={`${s.title} font-bold text-brand-navy tracking-wide dark:text-slate-100`}>AIDEX</div>
         {showTagline && (
           <div className={`${s.sub} font-medium text-slate-400 tracking-widest uppercase`}>
             DENTAL CLINIC

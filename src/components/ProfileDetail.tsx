@@ -466,14 +466,14 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
       {/* Patient header */}
       <div className="card p-5">
         <div className="flex flex-wrap items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-lg font-bold shrink-0 border-2 border-white shadow-sm">
+          <div className="w-14 h-14 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-lg font-bold shrink-0 border-2 border-white shadow-sm dark:bg-sage-900/50 dark:text-sage-300 dark:border-slate-700">
             {profile.first_name.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-slate-400">
               {profile.file_number ? `No${toFaDigits(profile.file_number)}` : 'پرونده بیمار'}
             </p>
-            <h2 className="text-xl font-bold text-brand-navy">
+            <h2 className="text-xl font-bold text-brand-navy dark:text-slate-100">
               {profile.first_name} {profile.last_name}
             </h2>
           </div>
@@ -539,15 +539,15 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
             role="group"
             aria-label="نوع نمایش تاریخچه درمان"
           >
-            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-600 dark:bg-slate-800">
               <button
                 type="button"
                 onClick={() => setTreatmentView('accordion')}
                 aria-pressed={treatmentView === 'accordion'}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   treatmentView === 'accordion'
-                    ? 'bg-brand-navy text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-brand-navy text-white shadow-sm dark:bg-sage-600'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
                 نمای دوره‌ها
@@ -558,8 +558,8 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                 aria-pressed={treatmentView === 'timeline'}
                 className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
                   treatmentView === 'timeline'
-                    ? 'bg-brand-navy text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-50'
+                    ? 'bg-brand-navy text-white shadow-sm dark:bg-sage-600'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
                 تایم‌لاین
@@ -588,9 +588,9 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
         </div>
       ) : (
         <div className="card overflow-hidden flex flex-col max-h-[min(70vh,calc(100dvh-14rem))]">
-          <div className="shrink-0 px-5 py-3 border-b border-slate-100 bg-slate-50/80 space-y-3">
+          <div className="shrink-0 px-5 py-3 border-b border-slate-100 bg-slate-50/80 space-y-3 dark:border-slate-700 dark:bg-slate-900/50">
             <div>
-              <h3 className="text-sm font-semibold text-slate-700">دوره‌های درمان</h3>
+              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">دوره‌های درمان</h3>
               <p className="text-xs text-slate-400 mt-0.5">باز و بسته کردن جلسات داخل همین ناحیه اسکرول می‌شود</p>
             </div>
             <div className="relative">
@@ -1061,7 +1061,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
           )}
           </div>
           {periodTotalPages > 1 && (
-            <div className="shrink-0 px-4 py-3 border-t border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-3">
+            <div className="shrink-0 px-4 py-3 border-t border-slate-100 bg-slate-50/80 flex flex-wrap items-center justify-between gap-3 dark:border-slate-700 dark:bg-slate-900/50">
               <p className="text-xs text-slate-500">
                 صفحه {toFaDigits(safePeriodPage)} از {toFaDigits(periodTotalPages)}
                 <span className="text-slate-400 mx-1">·</span>

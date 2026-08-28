@@ -37,21 +37,21 @@ interface AppointmentRow extends Appointment {
 }
 
 const STATUS_COLORS: Record<AppointmentStatus, string> = {
-  scheduled: 'bg-slate-100 text-slate-600',
-  confirmed: 'bg-sky-100 text-sky-700',
-  arrived: 'bg-amber-100 text-amber-700',
-  in_progress: 'bg-sage-100 text-sage-700',
-  completed: 'bg-emerald-100 text-emerald-700',
-  no_show: 'bg-red-100 text-red-700',
-  cancelled: 'bg-slate-100 text-slate-400 line-through',
+  scheduled: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+  confirmed: 'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+  arrived: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+  in_progress: 'bg-sage-100 text-sage-700 dark:bg-sage-950/50 dark:text-sage-300',
+  completed: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300',
+  no_show: 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300',
+  cancelled: 'bg-slate-100 text-slate-400 line-through dark:bg-slate-800 dark:text-slate-500',
 };
 
 const TYPE_COLORS: Record<string, string> = {
-  consultation: 'bg-sky-50 text-sky-700 border-sky-200',
-  treatment: 'bg-sage-50 text-sage-700 border-sage-200',
-  followup: 'bg-amber-50 text-amber-700 border-amber-200',
-  emergency: 'bg-red-50 text-red-700 border-red-200',
-  hygiene: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  consultation: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/50',
+  treatment: 'bg-sage-50 text-sage-700 border-sage-200 dark:bg-sage-950/40 dark:text-sage-300 dark:border-sage-800/50',
+  followup: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50',
+  emergency: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800/50',
+  hygiene: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50',
 };
 
 function formatTime(iso: string): string {
@@ -297,7 +297,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       <div
         role="tablist"
         aria-label="نوع نمایش نوبت‌ها"
-        className="flex gap-1 rounded-xl border border-slate-200 p-0.5 bg-white w-fit"
+        className="flex gap-1 rounded-xl border border-slate-200 p-0.5 bg-white w-fit dark:border-slate-600 dark:bg-slate-800"
       >
         {(
           [
@@ -334,7 +334,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
               tabButtons?.[nextIndex]?.focus();
             }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
-              viewMode === tab.key ? 'bg-sage-600 text-white' : 'text-slate-500 hover:bg-slate-50'
+              viewMode === tab.key ? 'bg-sage-600 text-white' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700'
             }`}
           >
             {tab.key !== 'list' && <CalendarDays size={14} />}
@@ -459,7 +459,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
               {/* Type icon */}
               <div
                 className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                  TYPE_COLORS[row.type] ?? 'bg-slate-100 text-slate-600'
+                  TYPE_COLORS[row.type] ?? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                 }`}
               >
                 <CalendarDays size={18} />
@@ -468,7 +468,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
               {/* Main info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-slate-900">
+                  <span className="font-medium text-slate-900 dark:text-slate-100">
                     {row.profile
                       ? `${row.profile.first_name} ${row.profile.last_name}`
                       : 'بیمار ناشناس'}

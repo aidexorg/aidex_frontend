@@ -83,7 +83,7 @@ export function DataTable<T>({
       <div className="overflow-x-auto">
         <table aria-label={ariaLabel} className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/60">
+            <tr className="border-b border-slate-100 bg-slate-50/60 dark:border-slate-700 dark:bg-slate-900/50">
               {selectable && (
                 <th className="px-4 py-3 w-10">
                   <input
@@ -113,13 +113,13 @@ export function DataTable<T>({
                           ? 'none'
                           : undefined
                     }
-                    className={`px-4 py-3 text-right font-medium text-slate-500 ${col.className ?? ''}`}
+                    className={`px-4 py-3 text-right font-medium text-slate-500 dark:text-slate-400 ${col.className ?? ''}`}
                   >
                     {isSortable ? (
                       <button
                         type="button"
                         onClick={() => onSortChange?.(col.key)}
-                        className="inline-flex items-center gap-1 font-medium text-slate-500 hover:text-slate-700 transition-colors"
+                        className="inline-flex items-center gap-1 font-medium text-slate-500 hover:text-slate-700 transition-colors dark:text-slate-400 dark:hover:text-slate-200"
                       >
                         {col.header}
                         {isActiveSort ? (
@@ -161,9 +161,9 @@ export function DataTable<T>({
                   }}
                   tabIndex={onRowClick ? 0 : undefined}
                   aria-label={rowLabel?.(row)}
-                  className={`border-b border-slate-50 last:border-0 ${
-                    onRowClick ? 'cursor-pointer hover:bg-sage-50/50 transition-colors' : ''
-                  } ${selected.has(key) ? 'bg-sage-50/40' : ''}`}
+                  className={`border-b border-slate-50 last:border-0 dark:border-slate-700/50 ${
+                    onRowClick ? 'cursor-pointer hover:bg-sage-50/50 transition-colors dark:hover:bg-sage-950/30' : ''
+                  } ${selected.has(key) ? 'bg-sage-50/40 dark:bg-sage-950/25' : ''}`}
                 >
                   {selectable && (
                     <td className="px-4 py-3.5 w-10">
@@ -208,7 +208,7 @@ export function DataTable<T>({
               aria-current={p === page ? 'page' : undefined}
               aria-label={`صفحه ${toFaDigits(p)}`}
               className={`min-w-[32px] h-8 rounded-lg text-sm font-medium ${
-                p === page ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'
+                p === page ? 'bg-slate-100 text-slate-900 dark:bg-slate-700 dark:text-slate-100' : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
               {toFaDigits(p)}

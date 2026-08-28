@@ -46,14 +46,14 @@ export function ErrorBanner({
   onRetry?: () => void;
 }) {
   return (
-    <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+    <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:border-red-900/50 dark:text-red-300">
       <XCircle size={18} className="shrink-0" />
       <span className="flex-1">{message}</span>
       {onRetry && (
         <button
           type="button"
           onClick={onRetry}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition shrink-0"
+          className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition shrink-0 dark:bg-red-900/50 dark:text-red-200 dark:hover:bg-red-900/70"
         >
           تلاش مجدد
         </button>
@@ -64,7 +64,7 @@ export function ErrorBanner({
 
 export function SuccessBanner({ message }: { message: string }) {
   return (
-    <div role="status" className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
+    <div role="status" className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700 dark:bg-emerald-950/40 dark:border-emerald-900/50 dark:text-emerald-300">
       <CheckCircle2 size={18} className="shrink-0" />
       <span>{message}</span>
     </div>
@@ -73,7 +73,7 @@ export function SuccessBanner({ message }: { message: string }) {
 
 export function InfoBanner({ message }: { message: string }) {
   return (
-    <div role="status" className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-sm text-sky-700">
+    <div role="status" className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-sm text-sky-700 dark:bg-sky-950/40 dark:border-sky-900/50 dark:text-sky-300">
       <Info size={18} className="shrink-0" />
       <span>{message}</span>
     </div>
@@ -159,14 +159,14 @@ export function ConfirmDialog({
   return (
     <Modal open={open} onClose={onCancel} title={title} size="sm">
       {danger ? (
-        <div className="flex items-start gap-3 mb-4 rounded-xl border border-red-100 bg-red-50/80 p-3">
-          <div className="icon-well bg-red-100 text-red-600 w-10 h-10 rounded-xl shrink-0">
+        <div className="flex items-start gap-3 mb-4 rounded-xl border border-red-100 bg-red-50/80 p-3 dark:border-red-900/50 dark:bg-red-950/40">
+          <div className="icon-well bg-red-100 text-red-600 w-10 h-10 rounded-xl shrink-0 dark:bg-red-900/50 dark:text-red-400">
             <AlertTriangle size={20} aria-hidden="true" />
           </div>
-          <p className="text-sm text-red-800 pt-1">{message}</p>
+          <p className="text-sm text-red-800 pt-1 dark:text-red-200">{message}</p>
         </div>
       ) : (
-        <p className="text-sm text-slate-600 mb-5">{message}</p>
+        <p className="text-sm text-slate-600 mb-5 dark:text-slate-300">{message}</p>
       )}
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={onCancel} className="btn-secondary">

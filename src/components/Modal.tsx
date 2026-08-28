@@ -52,12 +52,12 @@ export function Modal({
         tabIndex={-1}
         className={`relative w-full ${sizeClasses[size]} max-h-[90vh] overflow-y-auto card animate-fade-in`}
       >
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sticky top-0 bg-white/95 backdrop-blur-sm rounded-t-[1.25rem] z-10">
-          <h2 id={titleId} className="text-base font-semibold text-brand-navy">{title}</h2>
+        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 sticky top-0 bg-white/95 backdrop-blur-sm rounded-t-[1.25rem] z-10 dark:border-slate-700 dark:bg-slate-800/95">
+          <h2 id={titleId} className="text-base font-semibold text-brand-navy dark:text-slate-100">{title}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1 transition"
+            className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1 transition dark:hover:text-slate-200 dark:hover:bg-slate-700"
             aria-label="بستن پنجره"
           >
             <X size={20} />
