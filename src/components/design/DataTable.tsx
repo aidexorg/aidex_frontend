@@ -19,6 +19,12 @@ interface DataTableProps<T> {
   onPageChange?: (page: number) => void;
   ariaLabel?: string;
   rowLabel?: (row: T) => string;
+  /** Enable controlled row selection (checkbox column). */
+  selectable?: boolean;
+  selectedKeys?: Set<string>;
+  onSelectionChange?: (keys: Set<string>) => void;
+  /** Accessible label for a row checkbox. */
+  selectionLabel?: (row: T) => string;
 }
 
 export function DataTable<T>({
@@ -32,13 +38,55 @@ export function DataTable<T>({
   onPageChange,
   ariaLabel = 'جدول اطلاعات',
   rowLabel,
+  selectable = false,
+  selectedKeys,
+  onSelectionChange,
+  selectionLabel,
 }: DataTableProps<T>) {
+  const selected = selectedKeys ?? new Set<string>();
+  const pageKeys = rows.map(rowKey);
+  const selectedOnPage = pageKeys.filter((key) => selected.has(key));
+  const allPageSelected = pageKeys.length > 0 && selectedOnPage.length === pageKeys.length;
+  const somePageSelected = selectedOnPage.length > 0 && !allPageSelected;
+  const totalColumns = columns.length + (selectable ? 1 : 0);
+
+  const toggleRow = (key: string) => {
+    const next = new Set(selected);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    onSelectionChange?.(next);
+  };
+
+  const togglePage = () => {
+    const next = new Set(selected);
+    if (allPageSelected) {
+      pageKeys.forEach((key) => next.delete(key));
+    } else {
+      pageKeys.forEach((key) => next.add(key));
+    }
+    onSelectionChange?.(next);
+  };
+
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
         <table aria-label={ariaLabel} className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/60">
+              {selectable && (
+                <th className="px-4 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-sage-600"
+                    checked={allPageSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = somePageSelected;
+                    }}
+                    onChange={togglePage}
+                    aria-label="انتخاب همه ردیف‌های این صفحه"
+                  />
+                </th>
+              )}
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -52,14 +100,16 @@ export function DataTable<T>({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center text-slate-400">
+                <td colSpan={totalColumns} className="px-4 py-12 text-center text-slate-400">
                   {emptyMessage}
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
+              rows.map((row) => {
+                const key = rowKey(row);
+                return (
                 <tr
-                  key={rowKey(row)}
+                  key={key}
                   onClick={() => onRowClick?.(row)}
                   onKeyDown={(event) => {
                     if (!onRowClick || (event.key !== 'Enter' && event.key !== ' ')) return;
@@ -70,15 +120,28 @@ export function DataTable<T>({
                   aria-label={rowLabel?.(row)}
                   className={`border-b border-slate-50 last:border-0 ${
                     onRowClick ? 'cursor-pointer hover:bg-sage-50/50 transition-colors' : ''
-                  }`}
+                  } ${selected.has(key) ? 'bg-sage-50/40' : ''}`}
                 >
+                  {selectable && (
+                    <td className="px-4 py-3.5 w-10">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-sage-600"
+                        checked={selected.has(key)}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={() => toggleRow(key)}
+                        aria-label={selectionLabel?.(row) ?? 'انتخاب ردیف'}
+                      />
+                    </td>
+                  )}
                   {columns.map((col) => (
                     <td key={col.key} className={`px-4 py-3.5 text-slate-700 ${col.className ?? ''}`}>
                       {col.render(row)}
                     </td>
                   ))}
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

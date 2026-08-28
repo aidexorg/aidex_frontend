@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   CalendarDays,
   Plus,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useData } from '@/data';
 import { formatDate, toFaDigits } from '@/lib/format';
+import { runBulk } from '@/lib/bulkRun';
 import {
   APPOINTMENT_TYPES,
   APPOINTMENT_STATUSES,
@@ -20,6 +21,8 @@ import {
 } from '@/types';
 import type { Profile } from '@/types';
 import { LoadingState, EmptyState, ConfirmDialog } from './ui';
+import { BulkActionBar } from './design';
+import { useToast } from './ToastProvider';
 import { AppointmentForm } from './AppointmentForm';
 import { DailyCalendar } from './DailyCalendar';
 import { WeeklyCalendar } from './WeeklyCalendar';
@@ -70,6 +73,7 @@ interface AppointmentsViewProps {
 
 export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const data = useData();
+  const { showToast } = useToast();
   const [rows, setRows] = useState<AppointmentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | AppointmentStatus>('all');
@@ -77,6 +81,9 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<AppointmentRow | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'weekly' | 'monthly'>('calendar');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -125,6 +132,93 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
   const filtered = rows.filter(
     (r) => filter === 'all' || r.status === filter
   );
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [filter]);
+
+  useEffect(() => {
+    if (viewMode !== 'list') setSelectedIds(new Set());
+  }, [viewMode]);
+
+  const selectedRows = useMemo(
+    () => rows.filter((r) => selectedIds.has(r.id)),
+    [rows, selectedIds]
+  );
+
+  /** Next statuses valid for EVERY selected appointment (never jump lifecycle). */
+  const sharedNextStatuses = useMemo(() => {
+    if (selectedRows.length === 0) return [];
+    const perRow = selectedRows.map(
+      (r) => new Map(getNextStatuses(r.status).map((t) => [t.status, t]))
+    );
+    const [first, ...rest] = perRow;
+    return [...first.values()].filter((t) => rest.every((m) => m.has(t.status)));
+  }, [selectedRows]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkStatus = async (status: AppointmentStatus) => {
+    if (selectedRows.length === 0) return;
+    setBulkBusy(true);
+    const result = await runBulk(
+      selectedRows,
+      (row) => data.updateAppointment(row.id, { status }),
+      { concurrency: 4 }
+    );
+    setBulkBusy(false);
+    await load();
+    if (result.failed.length === 0) {
+      showToast({
+        message: `${toFaDigits(result.succeeded.length)} نوبت به‌روزرسانی شد.`,
+        variant: 'success',
+      });
+      setSelectedIds(new Set());
+    } else {
+      showToast({
+        message: `${toFaDigits(result.succeeded.length)} نوبت به‌روزرسانی شد، ${toFaDigits(
+          result.failed.length
+        )} مورد ناموفق بود.`,
+        variant: 'error',
+      });
+      setSelectedIds(new Set(result.failed.map((f) => f.item.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    setBulkDeleteConfirm(false);
+    if (selectedRows.length === 0) return;
+    setBulkBusy(true);
+    const result = await runBulk(
+      selectedRows,
+      (row) => data.deleteAppointment(row.id),
+      { concurrency: 4 }
+    );
+    setBulkBusy(false);
+    await load();
+    if (result.failed.length === 0) {
+      showToast({
+        message: `${toFaDigits(result.succeeded.length)} نوبت حذف شد.`,
+        variant: 'success',
+      });
+      setSelectedIds(new Set());
+    } else {
+      showToast({
+        message: `${toFaDigits(result.succeeded.length)} نوبت حذف شد، ${toFaDigits(
+          result.failed.length
+        )} مورد ناموفق بود.`,
+        variant: 'error',
+      });
+      setSelectedIds(new Set(result.failed.map((f) => f.item.id)));
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
@@ -319,15 +413,49 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         </div>
       ) : (
         <div className="space-y-2">
+          <BulkActionBar
+            count={selectedIds.size}
+            busy={bulkBusy}
+            status={bulkBusy ? 'در حال اجرا…' : null}
+            onClear={() => setSelectedIds(new Set())}
+            actions={[
+              ...sharedNextStatuses.map((trans) => ({
+                key: `status-${trans.status}`,
+                label: trans.label,
+                onClick: () => void handleBulkStatus(trans.status),
+              })),
+              {
+                key: 'delete',
+                label: 'حذف',
+                danger: true,
+                onClick: () => setBulkDeleteConfirm(true),
+              },
+            ]}
+          />
           {filtered.map((row) => (
             <div
               key={row.id}
-              className="card p-4 flex items-center gap-3 hover:shadow-lg transition-all"
+              className={`card p-4 flex items-center gap-3 hover:shadow-lg transition-all ${
+                selectedIds.has(row.id) ? 'ring-2 ring-sage-300' : ''
+              }`}
               onContextMenu={(e) => handleContextMenu(e, row)}
               onTouchStart={(e) => handleTouchStart(e, row)}
               onTouchEnd={handleTouchEnd}
               onTouchMove={handleTouchEnd}
             >
+              <input
+                type="checkbox"
+                className="h-4 w-4 shrink-0 cursor-pointer rounded border-slate-300 accent-sage-600"
+                checked={selectedIds.has(row.id)}
+                onClick={(e) => e.stopPropagation()}
+                onChange={() => toggleSelected(row.id)}
+                aria-label={`انتخاب نوبت ${
+                  row.profile
+                    ? `${row.profile.first_name} ${row.profile.last_name}`
+                    : ''
+                } در ${formatDate(row.start_time)}`}
+              />
+
               {/* Type icon */}
               <div
                 className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
@@ -490,6 +618,17 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         danger
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(null)}
+      />
+
+      {/* Bulk delete confirm */}
+      <ConfirmDialog
+        open={bulkDeleteConfirm}
+        title="حذف گروهی نوبت‌ها"
+        message={`آیا از حذف ${toFaDigits(selectedIds.size)} نوبت انتخاب‌شده مطمئن هستید؟`}
+        confirmLabel="حذف"
+        danger
+        onConfirm={handleBulkDelete}
+        onCancel={() => setBulkDeleteConfirm(false)}
       />
 
       {contextMenu && (

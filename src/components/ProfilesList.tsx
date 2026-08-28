@@ -3,11 +3,15 @@ import { Plus, FolderOpen, Filter } from 'lucide-react';
 import { useData } from '@/data';
 import { formatDate, toFaDigits } from '@/lib/format';
 import { loadProfileListMeta } from '@/lib/patientStatus';
+import { generateProfileOutput } from '@/lib/profileOutput';
+import { runBulk } from '@/lib/bulkRun';
 import type { Profile } from '@/types';
 import { EmptyState } from './ui';
 import { SkeletonProfileList } from './Skeleton';
+import { useToast } from './ToastProvider';
 import {
   DataTable,
+  BulkActionBar,
   PageHeader,
   StatusPill,
   type Column,
@@ -32,6 +36,7 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
 
 export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListProps) {
   const data = useData();
+  const { showToast } = useToast();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingMeta, setLoadingMeta] = useState(false);
@@ -40,6 +45,8 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
   const [page, setPage] = useState(1);
   const [statusMap, setStatusMap] = useState<Map<string, PatientStatus>>(new Map());
   const [lastVisitMap, setLastVisitMap] = useState<Map<string, string | null>>(new Map());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
     setLoadingProfiles(true);
@@ -89,7 +96,65 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
 
   useEffect(() => {
     setPage(1);
+    setSelectedIds(new Set());
   }, [search, statusFilter]);
+
+  const selectedProfiles = useMemo(
+    () => profiles.filter((p) => selectedIds.has(p.id)),
+    [profiles, selectedIds]
+  );
+
+  const handleExportSelected = useCallback(async () => {
+    if (selectedProfiles.length === 0) return;
+    setExporting(true);
+    const sections = new Map<string, string>();
+    const result = await runBulk(
+      selectedProfiles,
+      async (profile) => {
+        const output = await generateProfileOutput(data, profile, 'profile');
+        sections.set(profile.id, output);
+      },
+      { concurrency: 3 }
+    );
+
+    if (result.succeeded.length > 0) {
+      const body = result.succeeded
+        .map((profile) => {
+          const name = `${profile.first_name} ${profile.last_name}`.trim();
+          const fileNo = profile.file_number ? ` (پرونده ${profile.file_number})` : '';
+          return `${'='.repeat(48)}\n${name}${fileNo}\n${'='.repeat(48)}\n\n${
+            sections.get(profile.id) ?? ''
+          }`;
+        })
+        .join('\n\n\n');
+      const blob = new Blob([`\uFEFF${body}`], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `aidex-profiles-${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    setExporting(false);
+    if (result.failed.length === 0) {
+      showToast({
+        message: `${toFaDigits(result.succeeded.length)} پرونده با موفقیت خروجی گرفته شد.`,
+        variant: 'success',
+      });
+      setSelectedIds(new Set());
+    } else {
+      showToast({
+        message: `${toFaDigits(result.succeeded.length)} پرونده خروجی گرفته شد، ${toFaDigits(
+          result.failed.length
+        )} مورد ناموفق بود.`,
+        variant: 'error',
+      });
+      setSelectedIds(new Set(result.failed.map((f) => f.item.id)));
+    }
+  }, [selectedProfiles, data, showToast]);
 
   useEffect(() => {
     if (page !== safePage) setPage(safePage);
@@ -208,17 +273,36 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
           />
         </div>
       ) : (
-        <DataTable
-          ariaLabel="فهرست پرونده‌های بیماران"
-          columns={columns}
-          rows={paginatedProfiles}
-          rowKey={(p) => p.id}
-          rowLabel={(p) => `باز کردن پرونده ${p.first_name} ${p.last_name}`}
-          onRowClick={onOpenProfile}
-          page={safePage}
-          totalPages={totalPages}
-          onPageChange={setPage}
-        />
+        <>
+          <BulkActionBar
+            count={selectedIds.size}
+            busy={exporting}
+            status={exporting ? 'در حال آماده‌سازی خروجی…' : null}
+            onClear={() => setSelectedIds(new Set())}
+            actions={[
+              {
+                key: 'export',
+                label: 'خروجی متنی',
+                onClick: () => void handleExportSelected(),
+              },
+            ]}
+          />
+          <DataTable
+            ariaLabel="فهرست پرونده‌های بیماران"
+            columns={columns}
+            rows={paginatedProfiles}
+            rowKey={(p) => p.id}
+            rowLabel={(p) => `باز کردن پرونده ${p.first_name} ${p.last_name}`}
+            onRowClick={onOpenProfile}
+            page={safePage}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            selectable
+            selectedKeys={selectedIds}
+            onSelectionChange={setSelectedIds}
+            selectionLabel={(p) => `انتخاب ${p.first_name} ${p.last_name}`}
+          />
+        </>
       )}
     </div>
   );
