@@ -35,6 +35,8 @@ import { ReviewTab } from './profile-detail/ReviewTab';
 import { FinancialTab } from './profile-detail/FinancialTab';
 import { TreatmentChartPanel } from './profile-detail/TreatmentChartPanel';
 import { TreatmentTimeline } from './profile-detail/TreatmentTimeline';
+import { ToothHistoryView } from './profile-detail/ToothHistoryView';
+import { useTranslation } from './LocaleProvider';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 
 export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
@@ -85,7 +87,8 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
-  const [treatmentView, setTreatmentView] = useState<'accordion' | 'timeline'>('accordion');
+  const [treatmentView, setTreatmentView] = useState<'accordion' | 'timeline' | 'toothHistory'>('accordion');
+  const { t } = useTranslation();
   /** BR-POL-03: hide until undo window expires */
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(() => new Set());
   const deleteTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -532,12 +535,14 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
 
       {activeTab === 'treatment' && (
         <>
-          <TreatmentChartPanel parts={parts} actions={actions} />
+          {treatmentView !== 'toothHistory' && (
+            <TreatmentChartPanel parts={parts} actions={actions} />
+          )}
 
           <div
-            className="flex justify-end"
+            className="flex justify-end mb-4"
             role="group"
-            aria-label="نوع نمایش تاریخچه درمان"
+            aria-label={t('toothHistory.viewGroupLabel')}
           >
             <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-600 dark:bg-slate-800">
               <button
@@ -550,7 +555,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                     : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
-                نمای دوره‌ها
+                {t('toothHistory.viewAccordion')}
               </button>
               <button
                 type="button"
@@ -562,12 +567,31 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                     : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
                 }`}
               >
-                تایم‌لاین
+                {t('toothHistory.viewTimeline')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTreatmentView('toothHistory')}
+                aria-pressed={treatmentView === 'toothHistory'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  treatmentView === 'toothHistory'
+                    ? 'bg-brand-navy text-white shadow-sm dark:bg-sage-600'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
+                }`}
+              >
+                {t('toothHistory.viewToggle')}
               </button>
             </div>
           </div>
 
-          {treatmentView === 'timeline' ? (
+          {treatmentView === 'toothHistory' ? (
+            <ToothHistoryView
+              periods={periods.filter((period) => !pendingDeleteIds.has(period.id))}
+              sessions={sessions.filter((session) => !pendingDeleteIds.has(session.id))}
+              parts={parts.filter((part) => !pendingDeleteIds.has(part.id))}
+              actions={actions.filter((action) => !pendingDeleteIds.has(action.id))}
+            />
+          ) : treatmentView === 'timeline' ? (
             <TreatmentTimeline
               periods={periods.filter((period) => !pendingDeleteIds.has(period.id))}
               sessions={sessions.filter((session) => !pendingDeleteIds.has(session.id))}
