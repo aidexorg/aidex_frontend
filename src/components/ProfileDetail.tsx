@@ -34,6 +34,7 @@ import { ProfileTab } from './profile-detail/ProfileTab';
 import { ReviewTab } from './profile-detail/ReviewTab';
 import { FinancialTab } from './profile-detail/FinancialTab';
 import { TreatmentChartPanel } from './profile-detail/TreatmentChartPanel';
+import { TreatmentTimeline } from './profile-detail/TreatmentTimeline';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 
 export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
@@ -84,6 +85,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
+  const [treatmentView, setTreatmentView] = useState<'accordion' | 'timeline'>('accordion');
   /** BR-POL-03: hide until undo window expires */
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(() => new Set());
   const deleteTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
@@ -511,6 +513,49 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
         <>
           <TreatmentChartPanel parts={parts} actions={actions} />
 
+          <div
+            className="flex justify-end"
+            role="group"
+            aria-label="نوع نمایش تاریخچه درمان"
+          >
+            <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setTreatmentView('accordion')}
+                aria-pressed={treatmentView === 'accordion'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  treatmentView === 'accordion'
+                    ? 'bg-brand-navy text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                نمای دوره‌ها
+              </button>
+              <button
+                type="button"
+                onClick={() => setTreatmentView('timeline')}
+                aria-pressed={treatmentView === 'timeline'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  treatmentView === 'timeline'
+                    ? 'bg-brand-navy text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                تایم‌لاین
+              </button>
+            </div>
+          </div>
+
+          {treatmentView === 'timeline' ? (
+            <TreatmentTimeline
+              periods={periods.filter((period) => !pendingDeleteIds.has(period.id))}
+              sessions={sessions.filter((session) => !pendingDeleteIds.has(session.id))}
+              parts={parts.filter((part) => !pendingDeleteIds.has(part.id))}
+              actions={actions.filter((action) => !pendingDeleteIds.has(action.id))}
+              payments={payments.filter((payment) => !pendingDeleteIds.has(payment.id))}
+            />
+          ) : (
+          <>
           {/* Periods — advanced management */}
           {periods.length === 0 ? (
         <div className="card">
@@ -1027,6 +1072,8 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
           )}
         </div>
       )}
+          </>
+          )}
 
       {/* Appointments section */}
       <div className="card p-5">

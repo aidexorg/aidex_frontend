@@ -196,7 +196,12 @@ export function MonthlyCalendar({ onOpenProfile, onSelectDate }: MonthlyCalendar
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigateMonth(-1)} className="btn-ghost p-2">
+          <button
+            type="button"
+            onClick={() => navigateMonth(-1)}
+            className="btn-ghost p-2"
+            aria-label="ماه قبل"
+          >
             <ChevronRight size={18} />
           </button>
           <div className="text-center min-w-[180px]">
@@ -207,7 +212,12 @@ export function MonthlyCalendar({ onOpenProfile, onSelectDate }: MonthlyCalendar
               {toFaDigits(totalAppointments)} نوبت در این ماه
             </p>
           </div>
-          <button onClick={() => navigateMonth(1)} className="btn-ghost p-2">
+          <button
+            type="button"
+            onClick={() => navigateMonth(1)}
+            className="btn-ghost p-2"
+            aria-label="ماه بعد"
+          >
             <ChevronLeft size={18} />
           </button>
           {!isToday(currentMonth) && (

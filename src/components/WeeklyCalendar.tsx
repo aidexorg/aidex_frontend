@@ -236,7 +236,12 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigateWeek(-1)} className="btn-ghost p-2">
+          <button
+            type="button"
+            onClick={() => navigateWeek(-1)}
+            className="btn-ghost p-2"
+            aria-label="هفته قبل"
+          >
             <ChevronRight size={18} />
           </button>
           <div className="text-center min-w-[200px]">
@@ -247,7 +252,12 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
               {formatDate(weekDates[0])} — {formatDate(weekDates[6])}
             </p>
           </div>
-          <button onClick={() => navigateWeek(1)} className="btn-ghost p-2">
+          <button
+            type="button"
+            onClick={() => navigateWeek(1)}
+            className="btn-ghost p-2"
+            aria-label="هفته بعد"
+          >
             <ChevronLeft size={18} />
           </button>
           {!weekDates.some(isToday) && (

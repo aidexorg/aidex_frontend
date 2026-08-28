@@ -278,7 +278,12 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
       {/* Header */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <button onClick={() => navigateDate(-1)} className="btn-ghost p-2">
+          <button
+            type="button"
+            onClick={() => navigateDate(-1)}
+            className="btn-ghost p-2"
+            aria-label="روز قبل"
+          >
             <ChevronRight size={18} />
           </button>
           <div className="text-center min-w-[200px]">
@@ -287,7 +292,12 @@ export function DailyCalendar({ onOpenProfile }: DailyCalendarProps) {
             </p>
             <p className="text-xs text-slate-400">{formatDate(selectedDate)}</p>
           </div>
-          <button onClick={() => navigateDate(1)} className="btn-ghost p-2">
+          <button
+            type="button"
+            onClick={() => navigateDate(1)}
+            className="btn-ghost p-2"
+            aria-label="روز بعد"
+          >
             <ChevronLeft size={18} />
           </button>
           {selectedDate !== todayISODate() && (
