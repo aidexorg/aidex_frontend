@@ -9,6 +9,7 @@ import {
   CalendarClock,
   ChevronLeft,
   ChevronRight,
+  Upload,
 } from 'lucide-react';
 import { useData } from '@/data';
 import { formatDate, toFaDigits } from '@/lib/format';
@@ -19,6 +20,8 @@ import type { Profile } from '@/types';
 import { EmptyState } from './ui';
 import { SkeletonProfileList } from './Skeleton';
 import { useToast } from './ToastProvider';
+import { ProfileImportWizard } from './ProfileImportWizard';
+import { useTranslation } from './LocaleProvider';
 import {
   DataTable,
   BulkActionBar,
@@ -74,6 +77,7 @@ function saveViewPreference(view: ViewMode): void {
 export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListProps) {
   const data = useData();
   const { showToast } = useToast();
+  const { t } = useTranslation();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingMeta, setLoadingMeta] = useState(false);
@@ -87,6 +91,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
   const [viewMode, setViewMode] = useState<ViewMode>(loadViewPreference);
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [importOpen, setImportOpen] = useState(false);
 
   const setView = useCallback((view: ViewMode) => {
     setViewMode(view);
@@ -312,17 +317,34 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
         title="فهرست پرونده‌ها"
         subtitle="مشاهده و مدیریت پرونده‌های بیماران"
         action={
-          <button
-            onClick={onCreateProfile}
-            className="btn-sage"
-            data-onboarding-target="create-profile"
-            aria-keyshortcuts="Alt+N"
-          >
-            <Plus size={16} />
-            پرونده جدید
-            <kbd className="hidden sm:inline text-[10px] text-white/80">Alt+N</kbd>
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setImportOpen(true)}
+              className="btn-secondary"
+            >
+              <Upload size={16} />
+              {t('import.open')}
+            </button>
+            <button
+              onClick={onCreateProfile}
+              className="btn-sage"
+              data-onboarding-target="create-profile"
+              aria-keyshortcuts="Alt+N"
+            >
+              <Plus size={16} />
+              پرونده جدید
+              <kbd className="hidden sm:inline text-[10px] text-white/80">Alt+N</kbd>
+            </button>
+          </div>
         }
+      />
+
+      <ProfileImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        existingProfiles={profiles}
+        onImported={() => void load()}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
