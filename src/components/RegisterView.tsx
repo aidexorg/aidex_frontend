@@ -67,13 +67,20 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
         <p className="text-sm text-slate-400 mt-1">حساب ورود جدا از پرونده بیمار است.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <ErrorBanner message={error} />}
+      <form
+        onSubmit={handleSubmit}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'register-error' : undefined}
+        className="space-y-4"
+      >
+        {error && <div id="register-error"><ErrorBanner message={error} /></div>}
         <div>
-          <label className="label">ایمیل *</label>
+          <label htmlFor="register-email" className="label">ایمیل *</label>
           <input
+            id="register-email"
             className="input"
             type="email"
+            required
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -82,8 +89,9 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
           />
         </div>
         <div>
-          <label className="label">نام نمایشی</label>
+          <label htmlFor="register-display-name" className="label">نام نمایشی</label>
           <input
+            id="register-display-name"
             className="input"
             type="text"
             autoComplete="name"
@@ -93,10 +101,12 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
           />
         </div>
         <div>
-          <label className="label">رمز عبور *</label>
+          <label htmlFor="register-password" className="label">رمز عبور *</label>
           <input
+            id="register-password"
             className="input"
             type="password"
+            required
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -104,10 +114,12 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
           />
         </div>
         <div>
-          <label className="label">تکرار رمز عبور *</label>
+          <label htmlFor="register-password-confirm" className="label">تکرار رمز عبور *</label>
           <input
+            id="register-password-confirm"
             className="input"
             type="password"
+            required
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}

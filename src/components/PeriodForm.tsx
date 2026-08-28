@@ -7,6 +7,7 @@ import { useData } from '@/data';
 import { AREA_OPTIONS, validatePeriodTeethAreas } from '@/types';
 import type { Period } from '@/types';
 import { CheckCircle2, Circle } from 'lucide-react';
+import { handleFormSaveShortcut } from '@/lib/accessibility';
 
 interface PeriodFormProps {
   open: boolean;
@@ -94,13 +95,22 @@ export function PeriodForm({
       title={editing ? 'ویرایش دوره درمان' : 'دوره درمان جدید'}
       size="xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {error && <ErrorBanner message={error} />}
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(event) =>
+          handleFormSaveShortcut(event, saving || (!editing && step === 1))
+        }
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'period-form-error' : undefined}
+        className="space-y-5"
+      >
+        {error && <div id="period-form-error"><ErrorBanner message={error} /></div>}
 
         {/* Step indicator */}
         {!editing && (
           <div className="flex items-center gap-3 text-sm">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" aria-current={step === 1 ? 'step' : undefined}>
               {step >= 1 ? (
                 <CheckCircle2 size={18} className="text-teal-600" />
               ) : (
@@ -111,7 +121,7 @@ export function PeriodForm({
               </span>
             </div>
             <div className="h-px flex-1 bg-slate-200" />
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5" aria-current={step === 2 ? 'step' : undefined}>
               {step >= 2 ? (
                 <CheckCircle2 size={18} className="text-teal-600" />
               ) : (
@@ -128,15 +138,15 @@ export function PeriodForm({
         <div className={`space-y-3 ${!editing && step > 1 ? 'hidden' : ''}`}>
           <div className="flex items-baseline justify-between gap-3">
             <div>
-              <label className="label mb-0 text-base font-semibold">
+              <h3 className="label mb-0 text-base font-semibold">
                 ۱. دندان‌های درگیر
-              </label>
+              </h3>
               <p className="text-xs text-slate-400 mt-1">
                 روی هر دندان در نمودار کلیک کنید
               </p>
             </div>
             {teeth.length > 0 && (
-              <span className="badge bg-teal-50 text-teal-700 border border-teal-200 text-sm">
+              <span aria-live="polite" className="badge bg-teal-50 text-teal-700 border border-teal-200 text-sm">
                 {teeth.length} دندان
               </span>
             )}
@@ -149,14 +159,16 @@ export function PeriodForm({
           {teeth.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {teeth.map((t) => (
-                <span
+                <button
                   key={t}
+                  type="button"
                   className="badge bg-teal-50 text-teal-700 border border-teal-200 cursor-pointer hover:bg-teal-100"
                   onClick={() => toggleTooth(t)}
+                  aria-label={`حذف دندان ${t} از انتخاب`}
                 >
                   {t}
-                  <span className="mr-1 text-teal-400">×</span>
-                </span>
+                  <span aria-hidden="true" className="mr-1 text-teal-400">×</span>
+                </button>
               ))}
             </div>
           )}
@@ -182,9 +194,9 @@ export function PeriodForm({
         {/* Step 2: Area selection */}
         <div className={`space-y-3 ${!editing && step < 2 ? 'hidden' : ''}`}>
           <div>
-            <label className="label mb-0 text-base font-semibold">
+            <h3 className="label mb-0 text-base font-semibold">
               {editing ? '۱. نواحی درمان' : '۲. نواحی درمان'}
-            </label>
+            </h3>
             <p className="text-xs text-slate-400 mt-1">
               ناحیه‌ای که درمان در آن انجام می‌شود را انتخاب کنید
             </p>
@@ -198,6 +210,7 @@ export function PeriodForm({
                   key={a.value}
                   type="button"
                   onClick={() => toggleArea(a.value)}
+                  aria-pressed={selected}
                   className={`rounded-xl border-2 p-4 text-center transition-all ${
                     selected
                       ? 'border-teal-500 bg-teal-50 shadow-sm'
@@ -249,8 +262,11 @@ export function PeriodForm({
                 type="submit"
                 disabled={saving || teeth.length === 0 || areas.length === 0}
                 className="btn-primary min-w-[140px]"
+                aria-keyshortcuts="Control+Enter Meta+Enter"
+                title="ذخیره (Ctrl+Enter)"
               >
                 {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد دوره'}
+                {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
               </button>
             </div>
           </div>

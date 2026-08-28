@@ -17,6 +17,8 @@ interface DataTableProps<T> {
   page?: number;
   totalPages?: number;
   onPageChange?: (page: number) => void;
+  ariaLabel?: string;
+  rowLabel?: (row: T) => string;
 }
 
 export function DataTable<T>({
@@ -28,11 +30,13 @@ export function DataTable<T>({
   page,
   totalPages,
   onPageChange,
+  ariaLabel = 'جدول اطلاعات',
+  rowLabel,
 }: DataTableProps<T>) {
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table aria-label={ariaLabel} className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/60">
               {columns.map((col) => (
@@ -57,6 +61,13 @@ export function DataTable<T>({
                 <tr
                   key={rowKey(row)}
                   onClick={() => onRowClick?.(row)}
+                  onKeyDown={(event) => {
+                    if (!onRowClick || (event.key !== 'Enter' && event.key !== ' ')) return;
+                    event.preventDefault();
+                    onRowClick(row);
+                  }}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  aria-label={rowLabel?.(row)}
                   className={`border-b border-slate-50 last:border-0 ${
                     onRowClick ? 'cursor-pointer hover:bg-sage-50/50 transition-colors' : ''
                   }`}
@@ -88,6 +99,8 @@ export function DataTable<T>({
               key={p}
               type="button"
               onClick={() => onPageChange(p)}
+              aria-current={p === page ? 'page' : undefined}
+              aria-label={`صفحه ${toFaDigits(p)}`}
               className={`min-w-[32px] h-8 rounded-lg text-sm font-medium ${
                 p === page ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'
               }`}

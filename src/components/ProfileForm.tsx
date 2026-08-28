@@ -13,6 +13,7 @@ import { ErrorBanner, Spinner } from './ui';
 import { useToast } from './ToastProvider';
 import { DataError, useData } from '@/data';
 import { toFaDigits } from '@/lib/format';
+import { handleFormSaveShortcut } from '@/lib/accessibility';
 import type { Profile } from '@/types';
 
 interface ProfileFormProps {
@@ -168,7 +169,14 @@ export function ProfileForm({
   };
 
   const formBody = (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(event) => handleFormSaveShortcut(event, saving)}
+      aria-keyshortcuts="Control+Enter Meta+Enter"
+      aria-invalid={Boolean(error)}
+      aria-describedby={error ? 'profile-form-error' : undefined}
+      className="space-y-5"
+    >
       {/* Header card — same for both variants */}
       <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-4 text-white flex flex-wrap items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-xl font-bold">
@@ -187,7 +195,7 @@ export function ProfileForm({
         </div>
       </div>
 
-      {error && <ErrorBanner message={error} />}
+      {error && <div id="profile-form-error"><ErrorBanner message={error} /></div>}
 
       {/* === MODAL VARIANT: original spacious layout === */}
       {variant === 'modal' && (
@@ -195,8 +203,10 @@ export function ProfileForm({
           <Section title="اطلاعات هویتی" icon={<User size={16} />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">نام *</label>
+                <label htmlFor="profile-first-name" className="label">نام *</label>
                 <input
+                  id="profile-first-name"
+                  required
                   className="input bg-white"
                   value={form.first_name}
                   onChange={(e) => update('first_name', e.target.value)}
@@ -205,8 +215,10 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label">نام خانوادگی *</label>
+                <label htmlFor="profile-last-name" className="label">نام خانوادگی *</label>
                 <input
+                  id="profile-last-name"
+                  required
                   className="input bg-white"
                   value={form.last_name}
                   onChange={(e) => update('last_name', e.target.value)}
@@ -216,8 +228,9 @@ export function ProfileForm({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="label">سال تولد</label>
+                <label htmlFor="profile-birth-year" className="label">سال تولد</label>
                 <input
+                  id="profile-birth-year"
                   className="input bg-white"
                   value={form.birth_year}
                   onChange={(e) => update('birth_year', e.target.value)}
@@ -225,8 +238,10 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label">شماره پرونده *</label>
+                <label htmlFor="profile-file-number" className="label">شماره پرونده *</label>
                 <input
+                  id="profile-file-number"
+                  required
                   className="input bg-white"
                   value={form.file_number}
                   onChange={(e) => update('file_number', e.target.value)}
@@ -234,8 +249,9 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label">کد ملی</label>
+                <label htmlFor="profile-national-id" className="label">کد ملی</label>
                 <input
+                  id="profile-national-id"
                   className="input bg-white"
                   value={form.national_id}
                   onChange={(e) => update('national_id', e.target.value)}
@@ -248,10 +264,11 @@ export function ProfileForm({
           <Section title="تماس و نشانی" icon={<Phone size={16} />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="label">شماره تماس</label>
+                <label htmlFor="profile-phone" className="label">شماره تماس</label>
                 <div className="relative">
                   <Phone size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
+                    id="profile-phone"
                     className="input bg-white pr-10"
                     value={form.phone}
                     onChange={(e) => update('phone', e.target.value)}
@@ -261,10 +278,11 @@ export function ProfileForm({
                 </div>
               </div>
               <div>
-                <label className="label">نشانی</label>
+                <label htmlFor="profile-address" className="label">نشانی</label>
                 <div className="relative">
                   <MapPin size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
+                    id="profile-address"
                     className="input bg-white pr-10"
                     value={form.address}
                     onChange={(e) => update('address', e.target.value)}
@@ -277,11 +295,12 @@ export function ProfileForm({
 
           <Section title="شرح و یادداشت بالینی" icon={<Stethoscope size={16} />}>
             <div>
-              <label className="label flex items-center gap-1.5">
+              <label htmlFor="profile-file-description" className="label flex items-center gap-1.5">
                 <FileText size={14} className="text-slate-400" />
                 شرح پرونده
               </label>
               <textarea
+                id="profile-file-description"
                 className="input min-h-[80px] bg-white resize-y"
                 value={form.file_description}
                 onChange={(e) => update('file_description', e.target.value)}
@@ -289,11 +308,12 @@ export function ProfileForm({
               />
             </div>
             <div>
-              <label className="label flex items-center gap-1.5">
+              <label htmlFor="profile-clinical-notes" className="label flex items-center gap-1.5">
                 <ClipboardList size={14} className="text-slate-400" />
                 یادداشت‌های بالینی
               </label>
               <textarea
+                id="profile-clinical-notes"
                 className="input min-h-[90px] bg-white resize-y"
                 value={form.clinical_notes}
                 onChange={(e) => update('clinical_notes', e.target.value)}
@@ -310,8 +330,10 @@ export function ProfileForm({
           <CompactSection title="اطلاعات هویتی" icon={<User size={14} />}>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div>
-                <label className="label text-xs">نام *</label>
+                <label htmlFor="profile-first-name" className="label text-xs">نام *</label>
                 <input
+                  id="profile-first-name"
+                  required
                   className="input bg-white text-sm py-2"
                   value={form.first_name}
                   onChange={(e) => update('first_name', e.target.value)}
@@ -320,8 +342,10 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label text-xs">نام خانوادگی *</label>
+                <label htmlFor="profile-last-name" className="label text-xs">نام خانوادگی *</label>
                 <input
+                  id="profile-last-name"
+                  required
                   className="input bg-white text-sm py-2"
                   value={form.last_name}
                   onChange={(e) => update('last_name', e.target.value)}
@@ -329,8 +353,10 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label text-xs">شماره پرونده *</label>
+                <label htmlFor="profile-file-number" className="label text-xs">شماره پرونده *</label>
                 <input
+                  id="profile-file-number"
+                  required
                   className="input bg-white text-sm py-2"
                   value={form.file_number}
                   onChange={(e) => update('file_number', e.target.value)}
@@ -338,8 +364,9 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label text-xs">سال تولد</label>
+                <label htmlFor="profile-birth-year" className="label text-xs">سال تولد</label>
                 <input
+                  id="profile-birth-year"
                   className="input bg-white text-sm py-2"
                   value={form.birth_year}
                   onChange={(e) => update('birth_year', e.target.value)}
@@ -349,8 +376,9 @@ export function ProfileForm({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label text-xs">کد ملی</label>
+                <label htmlFor="profile-national-id" className="label text-xs">کد ملی</label>
                 <input
+                  id="profile-national-id"
                   className="input bg-white text-sm py-2"
                   value={form.national_id}
                   onChange={(e) => update('national_id', e.target.value)}
@@ -363,8 +391,9 @@ export function ProfileForm({
           <CompactSection title="تماس و نشانی" icon={<Phone size={14} />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label text-xs">شماره تماس</label>
+                <label htmlFor="profile-phone" className="label text-xs">شماره تماس</label>
                 <input
+                  id="profile-phone"
                   className="input bg-white text-sm py-2"
                   value={form.phone}
                   onChange={(e) => update('phone', e.target.value)}
@@ -373,8 +402,9 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label text-xs">نشانی</label>
+                <label htmlFor="profile-address" className="label text-xs">نشانی</label>
                 <input
+                  id="profile-address"
                   className="input bg-white text-sm py-2"
                   value={form.address}
                   onChange={(e) => update('address', e.target.value)}
@@ -387,8 +417,9 @@ export function ProfileForm({
           <CompactSection title="شرح و یادداشت بالینی" icon={<Stethoscope size={14} />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label text-xs">شرح پرونده</label>
+                <label htmlFor="profile-file-description" className="label text-xs">شرح پرونده</label>
                 <textarea
+                  id="profile-file-description"
                   className="input min-h-[60px] bg-white resize-y text-sm py-2"
                   value={form.file_description}
                   onChange={(e) => update('file_description', e.target.value)}
@@ -396,8 +427,9 @@ export function ProfileForm({
                 />
               </div>
               <div>
-                <label className="label text-xs">یادداشت‌های بالینی</label>
+                <label htmlFor="profile-clinical-notes" className="label text-xs">یادداشت‌های بالینی</label>
                 <textarea
+                  id="profile-clinical-notes"
                   className="input min-h-[60px] bg-white resize-y text-sm py-2"
                   value={form.clinical_notes}
                   onChange={(e) => update('clinical_notes', e.target.value)}
@@ -417,8 +449,15 @@ export function ProfileForm({
         <button type="button" onClick={onClose} className="btn-secondary">
           انصراف
         </button>
-        <button type="submit" disabled={saving} className="btn-primary min-w-[140px]">
+        <button
+          type="submit"
+          disabled={saving}
+          className="btn-primary min-w-[140px]"
+          aria-keyshortcuts="Control+Enter Meta+Enter"
+          title="ذخیره (Ctrl+Enter)"
+        >
           {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ایجاد پرونده'}
+          {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
         </button>
       </div>
     </form>

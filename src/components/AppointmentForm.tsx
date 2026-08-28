@@ -12,6 +12,7 @@ import {
 import { toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { handleFormSaveShortcut } from '@/lib/accessibility';
 
 interface AppointmentFormProps {
   open: boolean;
@@ -357,7 +358,14 @@ export function AppointmentForm({
       title={editing ? 'ویرایش نوبت' : 'نوبت جدید'}
       size="xl"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(event) => handleFormSaveShortcut(event, saving)}
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'appointment-form-error' : undefined}
+        className="space-y-4"
+      >
         {/* Patient preview */}
         {selectedProfile && (
           <div className="rounded-xl bg-gradient-to-br from-teal-600 to-teal-700 p-3 text-white flex items-center gap-3">
@@ -387,15 +395,16 @@ export function AppointmentForm({
           </div>
         )}
 
-        {error && <ErrorBanner message={error} />}
+        {error && <div id="appointment-form-error"><ErrorBanner message={error} /></div>}
 
         {/* Patient selection — compact grid */}
         {!prefillProfileId && !editing && !selectedProfileId && (
           <div className="space-y-2">
-            <label className="label text-xs">انتخاب بیمار *</label>
+            <label htmlFor="appointment-profile-search" className="label text-xs">انتخاب بیمار *</label>
             <div className="relative">
               <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
+                id="appointment-profile-search"
                 className="input text-sm py-2 pr-8"
                 placeholder="جستجو بر اساس نام یا شماره پرونده…"
                 value={profileSearch}
@@ -449,29 +458,35 @@ export function AppointmentForm({
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label text-xs">تاریخ *</label>
+                <label htmlFor="appointment-date" className="label text-xs">تاریخ *</label>
                 <input
+                  id="appointment-date"
                   className="input text-sm py-2"
                   type="date"
+                  required
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                 />
               </div>
               <div>
-                <label className="label text-xs">ساعت *</label>
+                <label htmlFor="appointment-time" className="label text-xs">ساعت *</label>
                 <input
+                  id="appointment-time"
                   className="input text-sm py-2"
                   type="time"
+                  required
                   value={time}
                   onChange={(e) => setTime(e.target.value)}
                 />
               </div>
             </div>
             <div>
-              <label className="label text-xs">مدت (دقیقه) *</label>
+              <label htmlFor="appointment-duration" className="label text-xs">مدت (دقیقه) *</label>
               <input
+                id="appointment-duration"
                 className="input text-sm py-2"
                 type="number"
+                required
                 min={5}
                 max={480}
                 value={duration}
@@ -487,14 +502,15 @@ export function AppointmentForm({
 
           {/* Right column: Type, Notes */}
           <div className="space-y-3">
-            <div>
-              <label className="label text-xs">نوع نوبت *</label>
+            <fieldset>
+              <legend className="label text-xs">نوع نوبت *</legend>
               <div className="flex flex-wrap gap-1.5">
                 {APPOINTMENT_TYPES.map((t) => (
                   <button
                     key={t.value}
                     type="button"
                     onClick={() => handleTypeChange(t.value)}
+                    aria-pressed={type === t.value}
                     className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
                       type === t.value
                         ? 'bg-teal-600 text-white border-teal-600'
@@ -505,10 +521,11 @@ export function AppointmentForm({
                   </button>
                 ))}
               </div>
-            </div>
+            </fieldset>
             <div>
-              <label className="label text-xs">یادداشت</label>
+              <label htmlFor="appointment-notes" className="label text-xs">یادداشت</label>
               <textarea
+                id="appointment-notes"
                 className="input text-sm py-2 min-h-[50px] resize-y"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
@@ -523,6 +540,8 @@ export function AppointmentForm({
           <button
             type="button"
             onClick={() => setShowRecurrence(!showRecurrence)}
+            aria-expanded={showRecurrence}
+            aria-controls="appointment-recurrence-options"
             className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-teal-600 transition"
           >
             {showRecurrence ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -534,13 +553,14 @@ export function AppointmentForm({
             )}
           </button>
           {showRecurrence && (
-            <div className="mt-2 space-y-2 animate-fade-in">
+            <div id="appointment-recurrence-options" className="mt-2 space-y-2 animate-fade-in">
               <div className="flex flex-wrap gap-1.5">
                 {RECURRENCE_PATTERNS.map((p) => (
                   <button
                     key={p.value}
                     type="button"
                     onClick={() => setRecurrencePattern(p.value)}
+                    aria-pressed={recurrencePattern === p.value}
                     className={`text-xs px-2.5 py-1.5 rounded-lg border transition ${
                       recurrencePattern === p.value
                         ? 'bg-teal-600 text-white border-teal-600'
@@ -557,6 +577,7 @@ export function AppointmentForm({
                     <button
                       type="button"
                       onClick={() => setRecurrenceEndType('date')}
+                      aria-pressed={recurrenceEndType === 'date'}
                       className={`text-[10px] px-2 py-1 rounded-md border transition ${
                         recurrenceEndType === 'date'
                           ? 'bg-teal-600 text-white border-teal-600'
@@ -568,6 +589,7 @@ export function AppointmentForm({
                     <button
                       type="button"
                       onClick={() => setRecurrenceEndType('count')}
+                      aria-pressed={recurrenceEndType === 'count'}
                       className={`text-[10px] px-2 py-1 rounded-md border transition ${
                         recurrenceEndType === 'count'
                           ? 'bg-teal-600 text-white border-teal-600'
@@ -579,6 +601,7 @@ export function AppointmentForm({
                   </div>
                   {recurrenceEndType === 'date' ? (
                     <input
+                      aria-label="تاریخ پایان تکرار"
                       className="input text-sm py-1.5 w-36"
                       type="date"
                       value={recurrenceEndDate}
@@ -587,6 +610,7 @@ export function AppointmentForm({
                   ) : (
                     <div>
                       <input
+                        aria-label="تعداد تکرار نوبت"
                         className="input text-sm py-1.5 w-20"
                         type="number"
                         min={2}
@@ -605,7 +629,7 @@ export function AppointmentForm({
 
         {/* Conflict warnings */}
         {conflictWarnings.length > 0 && (
-          <div className="space-y-1">
+          <div role="status" aria-live="polite" className="space-y-1">
             {conflictWarnings.map((w, i) => (
               <div
                 key={i}
@@ -627,8 +651,15 @@ export function AppointmentForm({
           <button type="button" onClick={onClose} className="btn-secondary text-sm">
             انصراف
           </button>
-          <button type="submit" disabled={saving} className="btn-primary min-w-[120px] text-sm">
+          <button
+            type="submit"
+            disabled={saving}
+            className="btn-primary min-w-[120px] text-sm"
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            title="ذخیره (Ctrl+Enter)"
+          >
             {saving ? <Spinner /> : editing ? 'ذخیره' : 'ایجاد نوبت'}
+            {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
           </button>
         </div>
       </form>

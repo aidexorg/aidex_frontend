@@ -35,7 +35,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loadingProfiles, setLoadingProfiles] = useState(true);
   const [loadingMeta, setLoadingMeta] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [page, setPage] = useState(1);
   const [statusMap, setStatusMap] = useState<Map<string, PatientStatus>>(new Map());
@@ -152,9 +152,15 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
         title="فهرست پرونده‌ها"
         subtitle="مشاهده و مدیریت پرونده‌های بیماران"
         action={
-          <button onClick={onCreateProfile} className="btn-sage">
+          <button
+            onClick={onCreateProfile}
+            className="btn-sage"
+            data-onboarding-target="create-profile"
+            aria-keyshortcuts="Alt+N"
+          >
             <Plus size={16} />
             پرونده جدید
+            <kbd className="hidden sm:inline text-[10px] text-white/80">Alt+N</kbd>
           </button>
         }
       />
@@ -165,6 +171,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
             key={f.key}
             type="button"
             onClick={() => setStatusFilter(f.key)}
+            aria-pressed={statusFilter === f.key}
             className={statusFilter === f.key ? 'chip-active' : 'chip'}
           >
             {f.key === 'all' && <Filter size={14} className="inline ml-1" />}
@@ -186,9 +193,15 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
             }
             action={
               !search && statusFilter === 'all' && (
-                <button onClick={onCreateProfile} className="btn-sage mt-2">
+                <button
+                  onClick={onCreateProfile}
+                  className="btn-sage mt-2"
+                  data-onboarding-target="create-profile"
+                  aria-keyshortcuts="Alt+N"
+                >
                   <Plus size={16} />
                   ایجاد پرونده
+                  <kbd className="hidden sm:inline text-[10px] text-white/80">Alt+N</kbd>
                 </button>
               )
             }
@@ -196,9 +209,11 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
         </div>
       ) : (
         <DataTable
+          ariaLabel="فهرست پرونده‌های بیماران"
           columns={columns}
           rows={paginatedProfiles}
           rowKey={(p) => p.id}
+          rowLabel={(p) => `باز کردن پرونده ${p.first_name} ${p.last_name}`}
           onRowClick={onOpenProfile}
           page={safePage}
           totalPages={totalPages}

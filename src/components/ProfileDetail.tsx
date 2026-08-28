@@ -9,7 +9,6 @@ import {
   Wallet,
   CalendarDays,
   Layers,
-  Activity,
   AlertCircle,
   CheckCircle2,
   Clock,
@@ -35,6 +34,7 @@ import { ProfileTab } from './profile-detail/ProfileTab';
 import { ReviewTab } from './profile-detail/ReviewTab';
 import { FinancialTab } from './profile-detail/FinancialTab';
 import { TreatmentChartPanel } from './profile-detail/TreatmentChartPanel';
+import { shouldIgnoreShortcut } from '@/lib/accessibility';
 
 export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
 
@@ -87,6 +87,26 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
   /** BR-POL-03: hide until undo window expires */
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(() => new Set());
   const deleteTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (
+        shouldIgnoreShortcut(event) ||
+        document.querySelector('[role="dialog"][aria-modal="true"]') ||
+        !event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.code !== 'KeyP'
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setEditingPeriod(null);
+      setPeriodFormOpen(true);
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
 
   useEffect(() => {
     const timers = deleteTimersRef.current;
@@ -445,9 +465,12 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                 setPeriodFormOpen(true);
               }}
               className="btn-secondary text-xs"
+              data-onboarding-target="create-period"
+              aria-keyshortcuts="Alt+P"
             >
               <Plus size={14} />
               دوره جدید
+              <kbd className="hidden sm:inline text-[10px] text-slate-400">Alt+P</kbd>
             </button>
             <button
               onClick={() => setAppointmentFormOpen(true)}
@@ -509,6 +532,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
               <input
                 className="input pr-9 text-sm py-2"
                 placeholder="جستجو: شماره دوره، دندان، ناحیه، تاریخ جلسه…"
+                aria-label="جستجو در دوره‌های درمان"
                 value={periodSearch}
                 onChange={(e) => setPeriodSearch(e.target.value)}
               />
@@ -542,6 +566,8 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                 <button
                   type="button"
                   onClick={() => togglePeriod(period.id)}
+                  aria-expanded={expanded}
+                  aria-controls={`period-panel-${period.id}`}
                   className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-50 transition text-right"
                 >
                   <div className="flex items-center gap-3">
@@ -594,7 +620,10 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                 </div>
 
                 {expanded && (
-                  <div className="border-t border-slate-100 px-5 py-4 space-y-4 animate-fade-in">
+                  <div
+                    id={`period-panel-${period.id}`}
+                    className="border-t border-slate-100 px-5 py-4 space-y-4 animate-fade-in"
+                  >
                     {/* Financial summary */}
                     <div className="grid grid-cols-3 gap-3">
                       <div className="rounded-lg bg-slate-50 p-3 text-center">
@@ -676,6 +705,8 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                               <button
                                 type="button"
                                 onClick={() => toggleSession(session.id)}
+                                aria-expanded={sessExpanded}
+                                aria-controls={`session-panel-${session.id}`}
                                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition text-right"
                               >
                                 <div className="flex items-center gap-2.5">
@@ -697,7 +728,10 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                 </span>
                               </button>
                               {sessExpanded && (
-                                <div className="border-t border-slate-100 px-4 py-3 space-y-2 animate-fade-in">
+                                <div
+                                  id={`session-panel-${session.id}`}
+                                  className="border-t border-slate-100 px-4 py-3 space-y-2 animate-fade-in"
+                                >
                                   {sessParts.length === 0 ? (
                                     <p className="text-xs text-slate-400 text-center py-2">
                       بخشی وجود ندارد.
@@ -746,6 +780,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                 }}
                                                 className="text-slate-400 hover:text-teal-600 p-1 rounded"
                                                 title="ویرایش بخش"
+                                                aria-label={`ویرایش بخش ${toFaDigits(part.part_number)}`}
                                               >
                                                 <Pencil size={13} />
                                               </button>
@@ -758,6 +793,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                   })
                                                 }
                                                 className="text-red-500 hover:bg-red-50 p-1 rounded"
+                                                aria-label={`حذف بخش ${toFaDigits(part.part_number)}`}
                                               >
                                                 <Trash2 size={14} />
                                               </button>
@@ -776,6 +812,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                   setActionFormOpen(true);
                                                 }}
                                                 className="text-xs text-teal-600 hover:bg-teal-50 px-2 py-1 rounded"
+                                                data-onboarding-target="create-action"
                                               >
                                                 + اقدام
                                               </button>
@@ -820,6 +857,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                         setActionFormOpen(true);
                                                       }}
                                                       className="text-slate-400 hover:text-teal-600 p-1"
+                                                      aria-label={`ویرایش اقدام ${action.title}`}
                                                     >
                                                       <Pencil size={13} />
                                                     </button>
@@ -832,6 +870,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                         })
                                                       }
                                                       className="text-slate-400 hover:text-red-500 p-1"
+                                                      aria-label={`حذف اقدام ${action.title}`}
                                                     >
                                                       <Trash2 size={13} />
                                                     </button>
@@ -845,6 +884,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                   setActionFormOpen(true);
                                                 }}
                                                 className="text-xs text-teal-600 hover:bg-teal-50 px-2 py-1 rounded"
+                                                data-onboarding-target="create-action"
                                               >
                                                 + اقدام
                                               </button>
@@ -924,6 +964,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                     setPaymentFormOpen(true);
                                   }}
                                   className="text-slate-400 hover:text-teal-600 p-1"
+                                  aria-label={`ویرایش پرداخت ${formatPrice(pay.amount)}`}
                                 >
                                   <Pencil size={13} />
                                 </button>
@@ -936,6 +977,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                     })
                                   }
                                   className="text-slate-400 hover:text-red-500 p-1"
+                                  aria-label={`حذف پرداخت ${formatPrice(pay.amount)}`}
                                 >
                                   <Trash2 size={13} />
                                 </button>
@@ -1121,6 +1163,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                         }}
                         className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50"
                         title="ویرایش"
+                        aria-label="ویرایش نوبت"
                       >
                         <Pencil size={14} />
                       </button>

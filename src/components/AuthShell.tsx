@@ -8,7 +8,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <div className="relative z-10 mb-8">
         <AppLogo size="lg" />
       </div>
-      <div className="relative z-10 w-full max-w-md">{children}</div>
+      <main aria-label="ورود به AIDEX" className="relative z-10 w-full max-w-md">
+        {children}
+      </main>
       <p className="relative z-10 mt-8 text-[11px] text-slate-400">نسخه ۱.۰ — ورود اپراتور</p>
     </div>
   );

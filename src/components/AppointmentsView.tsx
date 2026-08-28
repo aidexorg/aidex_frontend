@@ -15,7 +15,6 @@ import {
   APPOINTMENT_TYPES,
   APPOINTMENT_STATUSES,
   getNextStatuses,
-  getStatusLabel,
   type Appointment,
   type AppointmentStatus,
 } from '@/types';
@@ -201,7 +200,11 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       />
 
       {/* View toggle */}
-      <div className="flex gap-1 rounded-xl border border-slate-200 p-0.5 bg-white w-fit">
+      <div
+        role="tablist"
+        aria-label="نوع نمایش نوبت‌ها"
+        className="flex gap-1 rounded-xl border border-slate-200 p-0.5 bg-white w-fit"
+      >
         {(
           [
             { key: 'calendar' as const, label: 'روزانه' },
@@ -212,7 +215,30 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         ).map((tab) => (
           <button
             key={tab.key}
+            type="button"
+            role="tab"
+            aria-selected={viewMode === tab.key}
+            tabIndex={viewMode === tab.key ? 0 : -1}
             onClick={() => setViewMode(tab.key)}
+            onKeyDown={(event) => {
+              const modes = ['calendar', 'weekly', 'monthly', 'list'] as const;
+              const index = modes.indexOf(tab.key);
+              let nextIndex: number | null = null;
+              if (event.key === 'ArrowLeft') nextIndex = (index + 1) % modes.length;
+              if (event.key === 'ArrowRight') {
+                nextIndex = (index - 1 + modes.length) % modes.length;
+              }
+              if (event.key === 'Home') nextIndex = 0;
+              if (event.key === 'End') nextIndex = modes.length - 1;
+              if (nextIndex === null) return;
+              event.preventDefault();
+              setViewMode(modes[nextIndex]);
+              const tabButtons =
+                event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>(
+                  '[role="tab"]'
+                );
+              tabButtons?.[nextIndex]?.focus();
+            }}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition flex items-center gap-1.5 ${
               viewMode === tab.key ? 'bg-sage-600 text-white' : 'text-slate-500 hover:bg-slate-50'
             }`}
@@ -230,7 +256,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       ) : viewMode === 'monthly' ? (
         <MonthlyCalendar
           onOpenProfile={handleOpenProfileFromPartial}
-          onSelectDate={(date) => {
+          onSelectDate={() => {
             // Store the selected date and switch to daily view
             // The DailyCalendar doesn't accept a date prop, so we navigate via state
             setViewMode('calendar');
@@ -239,7 +265,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       ) : (
       <>
       {/* Filter chips */}
-      <div className="flex flex-wrap gap-2">
+      <div role="group" aria-label="فیلتر وضعیت نوبت‌ها" className="flex flex-wrap gap-2">
         {[
           { key: 'all' as const, label: 'همه', count: rows.length },
           ...APPOINTMENT_STATUSES.map((s) => ({
@@ -252,7 +278,9 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
           .map((tab) => (
             <button
               key={tab.key}
+              type="button"
               onClick={() => setFilter(tab.key)}
+              aria-pressed={filter === tab.key}
               className={filter === tab.key ? 'chip-active' : 'chip'}
             >
               {tab.label} ({toFaDigits(tab.count)})
@@ -357,6 +385,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
                     onClick={() => onOpenProfile(row.profile!)}
                     className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50"
                     title="پرونده بیمار"
+                    aria-label={`باز کردن پرونده ${row.profile.first_name} ${row.profile.last_name}`}
                   >
                     <User size={15} />
                   </button>
@@ -366,6 +395,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
                     href={`tel:${row.profile.phone}`}
                     className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50"
                     title="تماس"
+                    aria-label={`تماس با ${row.profile.first_name} ${row.profile.last_name}`}
                   >
                     <Phone size={15} />
                   </a>
@@ -377,6 +407,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
                   }}
                   className="text-slate-400 hover:text-teal-600 p-1.5 rounded-lg hover:bg-slate-50"
                   title="ویرایش"
+                  aria-label="ویرایش نوبت"
                 >
                   <Pencil size={14} />
                 </button>
@@ -384,6 +415,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
                   onClick={() => setConfirmDelete(row)}
                   className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50"
                   title="حذف"
+                  aria-label="حذف نوبت"
                 >
                   <Trash2 size={14} />
                 </button>

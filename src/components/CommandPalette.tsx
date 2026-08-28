@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useId } from 'react';
 import {
   Search,
   Users,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useData } from '@/data';
 import { formatPrice } from '@/lib/format';
+import { useDialogFocus } from '@/lib/accessibility';
 import type { Profile, Action, Payment, Appointment } from '@/types';
 
 // ── Types ──
@@ -66,6 +67,10 @@ export function CommandPalette({
   const [results, setResults] = useState<SearchResult[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const listId = useId();
+  const statusId = useId();
 
   // ── Load data and search ──
 
@@ -211,66 +216,13 @@ export function CommandPalette({
     return () => clearTimeout(timer);
   }, [query, open, search]);
 
-  // Focus input on open
   useEffect(() => {
     if (open) {
       setQuery('');
       setResults([]);
       setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
-
-  // ── Keyboard navigation ──
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        const selected = results[selectedIndex];
-        if (selected) {
-          handleSelect(selected);
-        }
-      } else if (e.key === 'Escape') {
-        onClose();
-      }
-    },
-    [results, selectedIndex, onClose]
-  );
-
-  // Scroll selected item into view
-  useEffect(() => {
-    if (listRef.current) {
-      const selected = listRef.current.children[selectedIndex] as HTMLElement;
-      if (selected) {
-        selected.scrollIntoView({ block: 'nearest' });
-      }
-    }
-  }, [selectedIndex]);
-
-  // ── Select handler ──
-
-  const handleSelect = (result: SearchResult) => {
-    if (result.type === 'profile' && result.profile) {
-      onSelectProfile(result.profile);
-    } else if (result.type === 'payment' && result.profile) {
-      onSelectProfile(result.profile);
-      onSelectPayment?.(result.payment!);
-    } else if (result.profile) {
-      onSelectProfile(result.profile);
-    }
-    onClose();
-  };
-
-  // ── Render ──
-
-  if (!open) return null;
 
   const groupedResults = useMemo(() => {
     const groups: { type: ResultType; label: string; icon: typeof Users; items: SearchResult[] }[] = [];
@@ -289,7 +241,7 @@ export function CommandPalette({
     };
 
     for (const type of typeOrder) {
-      const items = results.filter((r) => r.type === type);
+      const items = results.filter((result) => result.type === type);
       if (items.length > 0) {
         groups.push({
           type,
@@ -302,7 +254,86 @@ export function CommandPalette({
     return groups;
   }, [results]);
 
+  const orderedResults = useMemo(
+    () => groupedResults.flatMap((group) => group.items),
+    [groupedResults]
+  );
+
+  const handleSelect = useCallback(
+    (result: SearchResult) => {
+      if (result.type === 'profile' && result.profile) {
+        onSelectProfile(result.profile);
+      } else if (result.type === 'payment' && result.profile) {
+        onSelectProfile(result.profile);
+        onSelectPayment?.(result.payment!);
+      } else if (result.profile) {
+        onSelectProfile(result.profile);
+      }
+      onClose();
+    },
+    [onClose, onSelectPayment, onSelectProfile]
+  );
+
+  // ── Keyboard navigation ──
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((i) =>
+          orderedResults.length === 0 ? 0 : Math.min(i + 1, orderedResults.length - 1)
+        );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        const selected = orderedResults[selectedIndex];
+        if (selected) {
+          handleSelect(selected);
+        }
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [handleSelect, onClose, orderedResults, selectedIndex]
+  );
+
+  // Scroll selected item into view
+  useEffect(() => {
+    if (listRef.current) {
+      const selected = listRef.current.querySelector<HTMLElement>(
+        '[role="option"][aria-selected="true"]'
+      );
+      if (selected) {
+        selected.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  }, [orderedResults, selectedIndex]);
+
+  useDialogFocus({
+    open,
+    containerRef: dialogRef,
+    onClose,
+    initialFocusRef: inputRef,
+    lockScroll: true,
+  });
+
+  // ── Render ──
+
+  if (!open) return null;
+
   let globalIndex = 0;
+  const selectedResult = orderedResults[selectedIndex];
+  const selectedResultId = selectedResult
+    ? `${listId}-${selectedResult.type}-${selectedResult.id}`
+    : undefined;
+  const resultStatus =
+    query.length < 2
+      ? 'برای جستجو حداقل دو حرف وارد کنید.'
+      : loading
+        ? 'در حال جستجو'
+        : `${results.length} نتیجه یافت شد.`;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
@@ -313,13 +344,29 @@ export function CommandPalette({
       />
 
       {/* Palette */}
-      <div className="relative w-full max-w-lg mx-4 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-fade-in">
+      <div
+        ref={dialogRef}
+        id="command-palette-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="relative w-full max-w-lg mx-4 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-fade-in"
+      >
+        <h2 id={titleId} className="sr-only">جستجوی سراسری</h2>
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-          <Search size={18} className="text-slate-400 shrink-0" />
+          <Search size={18} className="text-slate-400 shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
+            role="combobox"
+            aria-label="جستجوی پرونده، نوبت، اقدام یا پرداخت"
+            aria-autocomplete="list"
+            aria-expanded="true"
+            aria-controls={listId}
+            aria-activedescendant={selectedResultId}
+            aria-describedby={statusId}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -328,8 +375,10 @@ export function CommandPalette({
             dir="rtl"
           />
           <button
+            type="button"
             onClick={onClose}
             className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            aria-label="بستن جستجوی سراسری"
           >
             <X size={16} />
           </button>
@@ -338,6 +387,9 @@ export function CommandPalette({
         {/* Results */}
         <div
           ref={listRef}
+          id={listId}
+          role="listbox"
+          aria-label="نتایج جستجو"
           className="max-h-[300px] overflow-y-auto overscroll-contain"
         >
           {loading && query.length >= 2 ? (
@@ -370,9 +422,9 @@ export function CommandPalette({
             groupedResults.map((group) => {
               const Icon = group.icon;
               return (
-                <div key={group.type}>
+                <div key={group.type} role="group" aria-label={group.label}>
                   {/* Group header */}
-                  <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
+                  <div aria-hidden="true" className="px-4 py-2 bg-slate-50 border-t border-slate-100">
                     <span className="text-[11px] font-medium text-slate-500 flex items-center gap-1.5">
                       <Icon size={12} />
                       {group.label}
@@ -385,6 +437,10 @@ export function CommandPalette({
                     return (
                       <button
                         key={`${item.type}-${item.id}`}
+                        id={`${listId}-${item.type}-${item.id}`}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
                         onClick={() => handleSelect(item)}
                         onMouseEnter={() => setSelectedIndex(currentIndex)}
                         className={`w-full text-right px-4 py-3 flex items-center gap-3 transition-colors ${
@@ -429,6 +485,9 @@ export function CommandPalette({
             })
           )}
         </div>
+        <p id={statusId} className="sr-only" aria-live="polite">
+          {resultStatus}
+        </p>
 
         {/* Footer */}
         <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center gap-4 text-[10px] text-slate-400">

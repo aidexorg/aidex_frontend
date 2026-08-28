@@ -16,6 +16,7 @@ import {
   type Action,
   type ActionStatus,
 } from '@/types';
+import { handleFormSaveShortcut } from '@/lib/accessibility';
 
 interface ActionFormProps {
   open: boolean;
@@ -111,13 +112,22 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
       title={editing ? 'ویرایش اقدام' : 'اقدام درمانی جدید'}
       size="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <ErrorBanner message={error} />}
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(event) => handleFormSaveShortcut(event, saving)}
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'action-form-error' : undefined}
+        className="space-y-4"
+      >
+        {error && <div id="action-form-error"><ErrorBanner message={error} /></div>}
 
         <div>
-          <label className="label">عنوان اقدام *</label>
+          <label htmlFor="action-family" className="label">عنوان اقدام *</label>
           <select
+            id="action-family"
             className="input"
+            required
             value={form.familyId}
             onChange={(e) => update('familyId', e.target.value)}
           >
@@ -132,10 +142,11 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
 
         {needsParam && (
           <div>
-            <label className="label">
+            <label htmlFor="action-param" className="label">
               {family?.kind === 'aml' || family?.kind === 'com' ? 'کلاس ترمیم (1–6) *' : 'تعداد کانال (1–6) *'}
             </label>
             <select
+              id="action-param"
               className="input"
               value={form.param}
               onChange={(e) => update('param', e.target.value)}
@@ -151,8 +162,9 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="label">قیمت (تومان)</label>
+            <label htmlFor="action-price" className="label">قیمت (تومان)</label>
             <input
+              id="action-price"
               className="input"
               type="number"
               value={form.price}
@@ -161,8 +173,9 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
             />
           </div>
           <div>
-            <label className="label">تخفیف (تومان)</label>
+            <label htmlFor="action-discount" className="label">تخفیف (تومان)</label>
             <input
+              id="action-discount"
               className="input"
               type="number"
               value={form.discount}
@@ -173,8 +186,9 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
         </div>
 
         <div>
-          <label className="label">توضیحات</label>
+          <label htmlFor="action-description" className="label">توضیحات</label>
           <textarea
+            id="action-description"
             className="input min-h-[60px]"
             value={form.description}
             onChange={(e) => update('description', e.target.value)}
@@ -182,12 +196,13 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
           />
         </div>
 
-        <div>
-          <label className="label">وضعیت</label>
+        <fieldset>
+          <legend className="label">وضعیت</legend>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => update('status', 'incomplete')}
+              aria-pressed={form.status === 'incomplete'}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${
                 form.status === 'incomplete'
                   ? 'bg-amber-50 text-amber-700 border-amber-300'
@@ -198,6 +213,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
             </button>
             <button
               type="button"
+              aria-pressed={form.status === 'complete'}
               onClick={() => {
                 setForm((f) => ({ ...f, status: 'complete', incomplete_reason: '' }));
               }}
@@ -210,13 +226,15 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
               کامل
             </button>
           </div>
-        </div>
+        </fieldset>
 
         {form.status === 'incomplete' && (
           <div>
-            <label className="label">دلیل ناقص بودن *</label>
+            <label htmlFor="action-incomplete-reason" className="label">دلیل ناقص بودن *</label>
             <select
+              id="action-incomplete-reason"
               className="input"
+              required
               value={form.incomplete_reason}
               onChange={(e) => update('incomplete_reason', e.target.value)}
             >
@@ -244,8 +262,15 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
           <button type="button" onClick={onClose} className="btn-secondary">
             انصراف
           </button>
-          <button type="submit" disabled={saving} className="btn-primary">
+          <button
+            type="submit"
+            disabled={saving}
+            className="btn-primary"
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            title="ذخیره (Ctrl+Enter)"
+          >
             {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'افزودن اقدام'}
+            {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
           </button>
         </div>
       </form>

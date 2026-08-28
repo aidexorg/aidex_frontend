@@ -5,6 +5,7 @@ import { useToast } from './ToastProvider';
 import { useData } from '@/data';
 import { todayISO } from '@/lib/format';
 import type { Payment } from '@/types';
+import { handleFormSaveShortcut } from '@/lib/accessibility';
 
 interface PaymentFormProps {
   open: boolean;
@@ -77,13 +78,21 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
       title={editing ? 'ویرایش پرداخت' : 'ثبت پرداخت جدید'}
       size="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <ErrorBanner message={error} />}
+      <form
+        onSubmit={handleSubmit}
+        onKeyDown={(event) => handleFormSaveShortcut(event, saving)}
+        aria-keyshortcuts="Control+Enter Meta+Enter"
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'payment-form-error' : undefined}
+        className="space-y-4"
+      >
+        {error && <div id="payment-form-error"><ErrorBanner message={error} /></div>}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="label">تاریخ پرداخت</label>
+            <label htmlFor="payment-date" className="label">تاریخ پرداخت</label>
             <input
+              id="payment-date"
               className="input"
               type="date"
               required
@@ -92,10 +101,12 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
             />
           </div>
           <div>
-            <label className="label">مبلغ (تومان) *</label>
+            <label htmlFor="payment-amount" className="label">مبلغ (تومان) *</label>
             <input
+              id="payment-amount"
               className="input"
               type="number"
+              required
               value={form.amount}
               onChange={(e) => update('amount', e.target.value)}
               placeholder="۰"
@@ -104,8 +115,9 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         </div>
 
         <div>
-          <label className="label">کد رهگیری</label>
+          <label htmlFor="payment-tracking-code" className="label">کد رهگیری</label>
           <input
+            id="payment-tracking-code"
             className="input"
             value={form.tracking_code}
             onChange={(e) => update('tracking_code', e.target.value)}
@@ -114,8 +126,9 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         </div>
 
         <div>
-          <label className="label">توضیحات</label>
+          <label htmlFor="payment-description" className="label">توضیحات</label>
           <textarea
+            id="payment-description"
             className="input min-h-[60px]"
             value={form.description}
             onChange={(e) => update('description', e.target.value)}
@@ -137,8 +150,15 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
           <button type="button" onClick={onClose} className="btn-secondary">
             انصراف
           </button>
-          <button type="submit" disabled={saving} className="btn-primary">
+          <button
+            type="submit"
+            disabled={saving}
+            className="btn-primary"
+            aria-keyshortcuts="Control+Enter Meta+Enter"
+            title="ذخیره (Ctrl+Enter)"
+          >
             {saving ? <Spinner /> : editing ? 'ذخیره تغییرات' : 'ثبت پرداخت'}
+            {!saving && <kbd className="hidden sm:inline text-[10px] text-white/70">Ctrl+Enter</kbd>}
           </button>
         </div>
       </form>

@@ -50,15 +50,22 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
         <p className="text-sm text-slate-400 mt-1">با حساب اپراتور وارد شوید.</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {error && <ErrorBanner message={error} />}
+      <form
+        onSubmit={handleSubmit}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? 'login-error' : undefined}
+        className="space-y-4"
+      >
+        {error && <div id="login-error"><ErrorBanner message={error} /></div>}
         <div>
-          <label className="label">نام کاربری</label>
+          <label htmlFor="login-email" className="label">نام کاربری</label>
           <div className="relative">
             <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
+              id="login-email"
               className="input pl-10"
               type="email"
+              required
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -68,12 +75,14 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
           </div>
         </div>
         <div>
-          <label className="label">رمز عبور</label>
+          <label htmlFor="login-password" className="label">رمز عبور</label>
           <div className="relative">
             <Lock size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
+              id="login-password"
               className="input pr-10 pl-10"
               type={showPassword ? 'text' : 'password'}
+              required
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -83,7 +92,8 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
               type="button"
               onClick={() => setShowPassword(!showPassword)}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              tabIndex={-1}
+              aria-label={showPassword ? 'پنهان کردن رمز عبور' : 'نمایش رمز عبور'}
+              aria-pressed={showPassword}
             >
               {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>

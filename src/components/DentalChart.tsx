@@ -92,6 +92,8 @@ function DisplayToothButton({
     <button
       type="button"
       title={code}
+      aria-label={`دندان ${code}`}
+      aria-pressed={isSelected}
       onClick={() => onSelect(code)}
       className={`relative w-full aspect-[4/5] min-h-[1.75rem] max-h-11 text-[9px] sm:text-[10px] font-semibold transition-all border cursor-pointer ${
         arch === 'upper' ? 'rounded-t-[14px] rounded-b-[6px]' : 'rounded-b-[14px] rounded-t-[6px]'

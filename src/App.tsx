@@ -10,7 +10,9 @@ import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
 import { ToastProvider } from '@/components/ToastProvider';
 import { FollowupCountProvider } from '@/components/FollowupCountProvider';
+import { OnboardingOverlay } from '@/components/OnboardingOverlay';
 import { useData } from '@/data';
+import { shouldIgnoreShortcut } from '@/lib/accessibility';
 import type { Account, Profile } from '@/types';
 
 const AUTH_VIEWS: View[] = ['login', 'register'];
@@ -91,6 +93,34 @@ function App() {
     setView('profiles');
   };
 
+  const startCreatingProfile = useCallback(() => {
+    setActiveProfile(null);
+    setEditingProfile(false);
+    setProfileInitialTab('profile');
+    setCreatingProfile(true);
+    setView('profiles');
+  }, []);
+
+  useEffect(() => {
+    if (!account) return;
+    const handleShortcut = (event: KeyboardEvent) => {
+      if (
+        shouldIgnoreShortcut(event) ||
+        document.querySelector('[role="dialog"][aria-modal="true"]') ||
+        !event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.code !== 'KeyN'
+      ) {
+        return;
+      }
+      event.preventDefault();
+      startCreatingProfile();
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, [account, startCreatingProfile]);
+
   if (!account) {
     return (
       <AuthShell>
@@ -149,7 +179,7 @@ function App() {
       return (
         <ProfilesList
           onOpenProfile={(p) => openProfile(p)}
-          onCreateProfile={() => setCreatingProfile(true)}
+          onCreateProfile={startCreatingProfile}
         />
       );
     }
@@ -169,6 +199,11 @@ function App() {
           onSelectProfile={(p) => openProfile(p)}
         >
           {renderView()}
+          <OnboardingOverlay
+            accountId={account.id}
+            currentView={view}
+            onNavigate={navigate}
+          />
         </Layout>
       </FollowupCountProvider>
     </ToastProvider>

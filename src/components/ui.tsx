@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { Loader2, CheckCircle2, XCircle, Info } from 'lucide-react';
+import { Modal } from './Modal';
 
 export function Spinner({ className = '', size = 20 }: { className?: string; size?: number }) {
   return <Loader2 className={`animate-spin ${className}`} size={size} />;
@@ -45,11 +46,12 @@ export function ErrorBanner({
   onRetry?: () => void;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
+    <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">
       <XCircle size={18} className="shrink-0" />
       <span className="flex-1">{message}</span>
       {onRetry && (
         <button
+          type="button"
           onClick={onRetry}
           className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition shrink-0"
         >
@@ -62,7 +64,7 @@ export function ErrorBanner({
 
 export function SuccessBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
+    <div role="status" className="flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
       <CheckCircle2 size={18} className="shrink-0" />
       <span>{message}</span>
     </div>
@@ -71,7 +73,7 @@ export function SuccessBanner({ message }: { message: string }) {
 
 export function InfoBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-sm text-sky-700">
+    <div role="status" className="flex items-center gap-2 rounded-xl bg-sky-50 border border-sky-100 px-4 py-3 text-sm text-sky-700">
       <Info size={18} className="shrink-0" />
       <span>{message}</span>
     </div>
@@ -99,23 +101,20 @@ export function ConfirmDialog({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onCancel} />
-      <div className="relative w-full max-w-sm card animate-fade-in p-5 text-center">
-        <h3 className="text-base font-semibold text-slate-900 mb-2">{title}</h3>
-        <p className="text-sm text-slate-600 mb-5">{message}</p>
-        <div className="flex gap-2 justify-center">
-          <button onClick={onCancel} className="btn-secondary">
-            {cancelLabel}
-          </button>
-          <button
-            onClick={onConfirm}
-            className={danger ? 'btn bg-red-600 text-white hover:bg-red-700' : 'btn-primary'}
-          >
-            {confirmLabel}
-          </button>
-        </div>
+    <Modal open={open} onClose={onCancel} title={title} size="sm">
+      <p className="text-sm text-slate-600 mb-5">{message}</p>
+      <div className="flex gap-2 justify-end">
+        <button type="button" onClick={onCancel} className="btn-secondary">
+          {cancelLabel}
+        </button>
+        <button
+          type="button"
+          onClick={onConfirm}
+          className={danger ? 'btn bg-red-600 text-white hover:bg-red-700' : 'btn-primary'}
+        >
+          {confirmLabel}
+        </button>
       </div>
-    </div>
+    </Modal>
   );
 }

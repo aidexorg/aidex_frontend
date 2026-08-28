@@ -1,8 +1,9 @@
-import { type ReactNode, useState, useEffect } from 'react';
+import { type ReactNode, useState, useEffect, useRef } from 'react';
 import { FolderOpen, CalendarDays, LayoutDashboard, LogOut, Search, ChevronDown, Menu, X } from 'lucide-react';
 import type { Account, Profile } from '@/types';
 import { AppLogo, DecorativeBg } from './design';
 import { CommandPalette } from './CommandPalette';
+import { useDialogFocus } from '@/lib/accessibility';
 
 export type View =
   | 'dashboard'
@@ -45,12 +46,28 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
   const authed = account !== null;
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLElement>(null);
+  useDialogFocus({
+    open: mobileMenuOpen,
+    containerRef: mobileMenuRef,
+    onClose: () => setMobileMenuOpen(false),
+    lockScroll: true,
+  });
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if (
+        !e.defaultPrevented &&
+        !e.repeat &&
+        !e.isComposing &&
+        (e.ctrlKey || e.metaKey) &&
+        e.key.toLowerCase() === 'k'
+      ) {
         e.preventDefault();
-        if (authed) setPaletteOpen((prev) => !prev);
+        if (authed) {
+          setMobileMenuOpen(false);
+          setPaletteOpen((prev) => !prev);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -68,6 +85,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
           onNavigate(item.key);
           setMobileMenuOpen(false);
         }}
+        aria-current={active ? 'page' : undefined}
         className={active ? 'nav-item-active w-full' : `nav-item w-full ${mobile ? '' : ''}`}
       >
         <Icon size={18} className={active ? 'text-sage-600' : 'text-slate-400'} />
@@ -78,6 +96,12 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] flex flex-col md:flex-row relative">
+      <a
+        href="#main-content"
+        className="fixed right-4 top-3 z-[100] -translate-y-20 rounded-lg bg-brand-navy px-4 py-2 text-sm font-medium text-white shadow-lg transition-transform focus:translate-y-0"
+      >
+        رفتن به محتوای اصلی
+      </a>
       <DecorativeBg />
 
       {/* Desktop sidebar */}
@@ -86,7 +110,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
           <AppLogo size="md" />
         </div>
         {authed && (
-          <nav className="flex-1 px-3 py-2 space-y-1">
+          <nav aria-label="ناوبری اصلی" className="flex-1 px-3 py-2 space-y-1">
             {NAV_ITEMS.map((item) => navButton(item))}
           </nav>
         )}
@@ -105,6 +129,8 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
               className="md:hidden p-2 rounded-lg hover:bg-slate-100"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="منو"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation-drawer"
             >
               <Menu size={20} />
             </button>
@@ -115,6 +141,10 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
               <button
                 type="button"
                 onClick={() => setPaletteOpen(true)}
+                aria-label="باز کردن جستجوی سراسری"
+                aria-keyshortcuts="Control+K Meta+K"
+                aria-expanded={paletteOpen}
+                aria-controls="command-palette-dialog"
                 className="flex-1 md:max-w-xl flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-200 bg-slate-50/80 text-sm text-slate-400 hover:border-sage-300 hover:bg-white transition"
               >
                 <Search size={16} className="shrink-0" />
@@ -141,6 +171,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
                     className="flex items-center gap-1"
                     onClick={onLogout}
                     title="خروج"
+                    aria-label="خروج از حساب"
                   >
                     <div className="w-10 h-10 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-sm font-bold border-2 border-white shadow-sm">
                       {initials(account)}
@@ -157,14 +188,27 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
         {mobileMenuOpen && (
           <div className="md:hidden fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/30" onClick={() => setMobileMenuOpen(false)} />
-            <aside className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-xl flex flex-col">
+            <aside
+              ref={mobileMenuRef}
+              id="mobile-navigation-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="منوی ناوبری"
+              tabIndex={-1}
+              className="absolute right-0 top-0 bottom-0 w-[280px] bg-white shadow-xl flex flex-col"
+            >
               <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100">
                 <AppLogo size="sm" />
-                <button type="button" onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-lg hover:bg-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-lg hover:bg-slate-100"
+                  aria-label="بستن منو"
+                >
                   <X size={20} />
                 </button>
               </div>
-              <nav className="flex-1 px-3 py-4 space-y-1">
+              <nav aria-label="ناوبری اصلی موبایل" className="flex-1 px-3 py-4 space-y-1">
                 {NAV_ITEMS.map((item) => navButton(item, true))}
               </nav>
               {account && (
@@ -179,7 +223,11 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
           </div>
         )}
 
-        <main className={`flex-1 min-w-0 ${authed ? 'pb-20 md:pb-0' : ''}`}>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={`flex-1 min-w-0 ${authed ? 'pb-20 md:pb-0' : ''}`}
+        >
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 animate-fade-in">
             {children}
           </div>
@@ -188,7 +236,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
 
       {/* Mobile bottom nav */}
       {authed && (
-        <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-30 grid grid-cols-3 shadow-[0_-4px_20px_rgb(0_0_0_/_0.06)]">
+        <nav aria-label="ناوبری پایین موبایل" className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-30 grid grid-cols-3 shadow-[0_-4px_20px_rgb(0_0_0_/_0.06)]">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = current === item.key;
@@ -197,6 +245,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
                 key={item.key}
                 type="button"
                 onClick={() => onNavigate(item.key)}
+                aria-current={active ? 'page' : undefined}
                 className={`flex flex-col items-center justify-center gap-0.5 py-2.5 transition ${
                   active ? 'text-sage-600' : 'text-slate-400'
                 }`}
