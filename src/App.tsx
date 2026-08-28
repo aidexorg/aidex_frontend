@@ -11,6 +11,9 @@ import { AuthShell } from '@/components/AuthShell';
 import { ToastProvider } from '@/components/ToastProvider';
 import { FollowupCountProvider } from '@/components/FollowupCountProvider';
 import { OnboardingOverlay } from '@/components/OnboardingOverlay';
+import { OfflineBanner } from '@/components/OfflineBanner';
+import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
+import { MutationQueueSync } from '@/components/MutationQueueSync';
 import { useData } from '@/data';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 import type { Account, Profile } from '@/types';
@@ -64,7 +67,7 @@ function App() {
       }
       setView(v);
     },
-    [account]
+    [account],
   );
 
   const enterApp = (next: Account) => {
@@ -121,18 +124,6 @@ function App() {
     return () => window.removeEventListener('keydown', handleShortcut);
   }, [account, startCreatingProfile]);
 
-  if (!account) {
-    return (
-      <AuthShell>
-        {view === 'register' ? (
-          <RegisterView onGoLogin={() => setView('login')} onAuthenticated={enterApp} />
-        ) : (
-          <LoginView onGoRegister={() => setView('register')} onAuthenticated={enterApp} />
-        )}
-      </AuthShell>
-    );
-  }
-
   const renderView = () => {
     if (view === 'dashboard') {
       return <DashboardView onNavigate={navigate} onOpenProfile={(p) => openProfile(p)} />;
@@ -186,26 +177,41 @@ function App() {
     return <DashboardView onNavigate={navigate} onOpenProfile={(p) => openProfile(p)} />;
   };
 
+  const shell = !account ? (
+    <AuthShell>
+      {view === 'register' ? (
+        <RegisterView onGoLogin={() => setView('login')} onAuthenticated={enterApp} />
+      ) : (
+        <LoginView onGoRegister={() => setView('register')} onAuthenticated={enterApp} />
+      )}
+    </AuthShell>
+  ) : (
+    <FollowupCountProvider view={view}>
+      <Layout
+        current={view}
+        onNavigate={navigate}
+        account={account}
+        onLogout={() => {
+          void handleLogout();
+        }}
+        onSelectProfile={(p) => openProfile(p)}
+      >
+        {renderView()}
+        <OnboardingOverlay
+          accountId={account.id}
+          currentView={view}
+          onNavigate={navigate}
+        />
+      </Layout>
+    </FollowupCountProvider>
+  );
+
   return (
     <ToastProvider>
-      <FollowupCountProvider view={view}>
-        <Layout
-          current={view}
-          onNavigate={navigate}
-          account={account}
-          onLogout={() => {
-            void handleLogout();
-          }}
-          onSelectProfile={(p) => openProfile(p)}
-        >
-          {renderView()}
-          <OnboardingOverlay
-            accountId={account.id}
-            currentView={view}
-            onNavigate={navigate}
-          />
-        </Layout>
-      </FollowupCountProvider>
+      <MutationQueueSync />
+      {shell}
+      <OfflineBanner offset={account ? 'layout' : 'auth'} />
+      <PwaUpdateNotice />
     </ToastProvider>
   );
 }
