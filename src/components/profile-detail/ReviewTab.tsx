@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Copy, Check, Calendar, ChevronLeft } from 'lucide-react';
+import { Copy, Check, Calendar, ChevronLeft, Printer } from 'lucide-react';
 import { generateProfileOutput } from '@/lib/profileOutput';
 import { useData } from '@/data';
 import type { Profile, Session } from '@/types';
-import { formatDate, toFaDigits } from '@/lib/format';
+import { formatDate, toFaDigits, todayISO } from '@/lib/format';
 import { Spinner } from '../ui';
+import { PrintableSummary } from './PrintableSummary';
 
 interface ReviewTabProps {
   profile: Profile;
@@ -47,6 +48,10 @@ export function ReviewTab({ profile, sessions }: ReviewTabProps) {
     } catch {
       // ignore
     }
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const selectedSession = sortedSessions.find((s) => s.id === selectedSessionId) ?? sortedSessions[0];
@@ -98,10 +103,22 @@ export function ReviewTab({ profile, sessions }: ReviewTabProps) {
               <p className="text-sm text-slate-500 mt-1">{formatDate(selectedSession.session_date)}</p>
             )}
           </div>
-          <button type="button" onClick={copyText} disabled={!text} className="btn-secondary text-xs">
-            {copied ? <Check size={14} /> : <Copy size={14} />}
-            {copied ? 'کپی شد' : 'کپی'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={!text || generating}
+              className="btn-secondary text-xs"
+              aria-label="چاپ یا خروجی PDF خلاصه پرونده"
+            >
+              <Printer size={14} />
+              چاپ / PDF
+            </button>
+            <button type="button" onClick={copyText} disabled={!text} className="btn-secondary text-xs">
+              {copied ? <Check size={14} /> : <Copy size={14} />}
+              {copied ? 'کپی شد' : 'کپی'}
+            </button>
+          </div>
         </div>
         {generating ? (
           <div className="flex justify-center py-12">
@@ -117,6 +134,8 @@ export function ReviewTab({ profile, sessions }: ReviewTabProps) {
           تولید مجدد
         </button>
       </div>
+
+      <PrintableSummary profile={profile} content={text} generatedAt={todayISO()} />
     </div>
   );
 }
