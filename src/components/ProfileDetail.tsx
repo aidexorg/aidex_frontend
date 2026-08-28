@@ -11,7 +11,6 @@ import {
   Layers,
   AlertCircle,
   CheckCircle2,
-  Clock,
   CircleDot,
   Search,
   ChevronRight,
@@ -39,6 +38,9 @@ import { ToothHistoryView } from './profile-detail/ToothHistoryView';
 import { TreatmentPlanView } from './profile-detail/TreatmentPlanView';
 import { PeriodProgressBar } from './profile-detail/PeriodProgressBar';
 import { LifetimeFinancialStrip } from './profile-detail/LifetimeFinancialStrip';
+import { InlineSessionDateEdit } from './profile-detail/InlineSessionDateEdit';
+import { InlineActionStatusToggle } from './profile-detail/InlineActionStatusToggle';
+import { InlinePaymentAmountEdit } from './profile-detail/InlinePaymentAmountEdit';
 import { useTranslation } from './LocaleProvider';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 import type { ActionStatus } from '@/types';
@@ -398,6 +400,60 @@ export function ProfileDetail({
       setApplyingGap(null);
     }
   };
+
+  const saveSessionDateInline = useCallback(
+    async (sessionId: string, sessionDate: string) => {
+      const previous = sessions.find((s) => s.id === sessionId);
+      if (!previous) return;
+      setSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, session_date: sessionDate } : s)),
+      );
+      try {
+        await data.updateSession(sessionId, { session_date: sessionDate });
+        showToast({ variant: 'success', message: t('inlineEdit.saveSuccess') });
+      } catch {
+        setSessions((prev) => prev.map((s) => (s.id === sessionId ? previous : s)));
+        showToast({ variant: 'error', message: t('inlineEdit.saveError') });
+        throw new Error('inline save failed');
+      }
+    },
+    [sessions, data, showToast, t],
+  );
+
+  const saveActionStatusInline = useCallback(
+    async (actionId: string, status: ActionStatus) => {
+      const previous = actions.find((a) => a.id === actionId);
+      if (!previous) return;
+      setActions((prev) => prev.map((a) => (a.id === actionId ? { ...a, status } : a)));
+      try {
+        await data.updateAction(actionId, { status });
+        showToast({ variant: 'success', message: t('inlineEdit.saveSuccess') });
+        refreshFollowupCount();
+      } catch {
+        setActions((prev) => prev.map((a) => (a.id === actionId ? previous : a)));
+        showToast({ variant: 'error', message: t('inlineEdit.saveError') });
+        throw new Error('inline save failed');
+      }
+    },
+    [actions, data, showToast, t, refreshFollowupCount],
+  );
+
+  const savePaymentAmountInline = useCallback(
+    async (paymentId: string, amount: number) => {
+      const previous = payments.find((p) => p.id === paymentId);
+      if (!previous) return;
+      setPayments((prev) => prev.map((p) => (p.id === paymentId ? { ...p, amount } : p)));
+      try {
+        await data.updatePayment(paymentId, { amount });
+        showToast({ variant: 'success', message: t('inlineEdit.saveSuccess') });
+      } catch {
+        setPayments((prev) => prev.map((p) => (p.id === paymentId ? previous : p)));
+        showToast({ variant: 'error', message: t('inlineEdit.saveError') });
+        throw new Error('inline save failed');
+      }
+    },
+    [payments, data, showToast, t],
+  );
 
   const deleteSuccessMessage: Record<
     NonNullable<typeof confirmDelete>['type'],
@@ -916,9 +972,12 @@ export function ProfileDetail({
                                   <span className="text-sm font-medium text-slate-700">
                                     جلسه {toFaDigits(session.session_number)}
                                   </span>
-                                  <span className="text-xs text-slate-400">
-                                    {formatDate(session.session_date)}
-                                  </span>
+                                  <InlineSessionDateEdit
+                                    value={session.session_date}
+                                    onSave={(sessionDate) =>
+                                      saveSessionDateInline(session.id, sessionDate)
+                                    }
+                                  />
                                 </div>
                                 <span className="text-xs text-slate-400">
                                   {sessParts.length} بخش
@@ -1023,22 +1082,13 @@ export function ProfileDetail({
                                                   className="flex items-center justify-between bg-white rounded-lg border border-slate-100 px-3 py-2"
                                                 >
                                                   <div className="flex items-center gap-2 min-w-0">
-                                                    {action.status === 'complete' ? (
-                                                      <CheckCircle2
-                                                        size={15}
-                                                        className="text-emerald-500 shrink-0"
-                                                      />
-                                                    ) : action.status === 'planned' ? (
-                                                      <CircleDot
-                                                        size={15}
-                                                        className="text-sky-500 shrink-0"
-                                                      />
-                                                    ) : (
-                                                      <Clock
-                                                        size={15}
-                                                        className="text-amber-500 shrink-0"
-                                                      />
-                                                    )}
+                                                    <InlineActionStatusToggle
+                                                      status={action.status}
+                                                      actionTitle={action.title}
+                                                      onToggle={(nextStatus) =>
+                                                        saveActionStatusInline(action.id, nextStatus)
+                                                      }
+                                                    />
                                                     <span className="text-sm text-slate-700 truncate">
                                                       {action.title}
                                                     </span>
@@ -1108,16 +1158,6 @@ export function ProfileDetail({
                                     </button>
                                   )}
                                   <button
-                                    onClick={() => {
-                                      // TODO: Open session edit form
-                                      showToast({ message: 'ویرایش جلسه به‌زودی اضافه می‌شود.', variant: 'info' });
-                                    }}
-                                    className="text-xs text-slate-500 hover:text-teal-600 hover:bg-teal-50 px-2 py-1 rounded"
-                                  >
-                                    <Pencil size={12} className="inline" />
-                                    ویرایش
-                                  </button>
-                                  <button
                                     onClick={() =>
                                       setConfirmDelete({
                                         type: 'session',
@@ -1150,8 +1190,11 @@ export function ProfileDetail({
                               key={pay.id}
                               className="flex items-center justify-between bg-emerald-50/50 rounded-lg px-3 py-2"
                             >
-                              <div className="text-sm">
-                                <span className="text-slate-700">{formatPrice(pay.amount)}</span>
+                              <div className="text-sm flex items-center gap-2 flex-wrap">
+                                <InlinePaymentAmountEdit
+                                  value={pay.amount}
+                                  onSave={(amount) => savePaymentAmountInline(pay.id, amount)}
+                                />
                                 <span className="text-xs text-slate-400 mr-2">
                                   {formatDate(pay.payment_date)}
                                 </span>
