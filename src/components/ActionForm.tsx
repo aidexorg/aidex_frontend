@@ -27,9 +27,11 @@ interface ActionFormProps {
   onSaved: (action: Action) => void;
   partId: string;
   editing?: Action | null;
+  /** When creating from plan mode, default to planned status. */
+  defaultStatus?: ActionStatus;
 }
 
-function initialFromEditing(editing?: Action | null) {
+function initialFromEditing(editing?: Action | null, defaultStatus: ActionStatus = 'incomplete') {
   const parsed = editing?.title ? parseActionTitle(editing.title) : null;
   return {
     familyId: parsed?.familyId ?? '',
@@ -37,7 +39,7 @@ function initialFromEditing(editing?: Action | null) {
     price: editing?.price != null ? String(editing.price) : '',
     discount: editing?.discount != null ? String(editing.discount) : '0',
     description: editing?.description ?? '',
-    status: (editing?.status ?? 'incomplete') as ActionStatus,
+    status: (editing?.status ?? defaultStatus) as ActionStatus,
     incomplete_reason:
       editing?.incomplete_reason && isValidIncompleteReason(editing.incomplete_reason)
         ? editing.incomplete_reason
@@ -46,11 +48,11 @@ function initialFromEditing(editing?: Action | null) {
   };
 }
 
-export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFormProps) {
+export function ActionForm({ open, onClose, onSaved, partId, editing, defaultStatus = 'incomplete' }: ActionFormProps) {
   const data = useData();
   const { showToast } = useToast();
   const { refresh: refreshFollowupCount } = useFollowupCount();
-  const initialForm = useMemo(() => initialFromEditing(editing), [editing]);
+  const initialForm = useMemo(() => initialFromEditing(editing, defaultStatus), [editing, defaultStatus]);
   const [form, setForm] = useState(initialForm);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -69,9 +71,9 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
 
   useEffect(() => {
     if (!open) return;
-    setForm(initialFromEditing(editing));
+    setForm(initialFromEditing(editing, defaultStatus));
     setError(null);
-  }, [open, editing, partId]);
+  }, [open, editing, partId, defaultStatus]);
 
   const family = ACTION_FAMILIES.find((f) => f.id === form.familyId);
   const needsParam = family != null && family.kind !== 'fixed';
@@ -108,8 +110,9 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
         discount: Number(form.discount) || 0,
         description: form.description.trim() || null,
         status: form.status,
-        incomplete_reason: form.status === 'incomplete' ? form.incomplete_reason : null,
-        needs_followup: form.needs_followup,
+        incomplete_reason:
+          form.status === 'incomplete' ? form.incomplete_reason : null,
+        needs_followup: form.status === 'planned' ? false : form.needs_followup,
       };
       const row = editing
         ? await data.updateAction(editing.id, payload)
@@ -229,7 +232,21 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => update('status', 'incomplete')}
+              onClick={() => update('status', 'planned')}
+              aria-pressed={form.status === 'planned'}
+              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${
+                form.status === 'planned'
+                  ? 'bg-sky-50 text-sky-700 border-sky-300'
+                  : 'bg-white text-slate-500 border-slate-200'
+              }`}
+            >
+              برنامه‌ریزی
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setForm((f) => ({ ...f, status: 'incomplete', incomplete_reason: f.incomplete_reason || '' }))
+              }
               aria-pressed={form.status === 'incomplete'}
               className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium border transition ${
                 form.status === 'incomplete'
@@ -276,6 +293,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
           </div>
         )}
 
+        {form.status !== 'planned' && (
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -285,6 +303,7 @@ export function ActionForm({ open, onClose, onSaved, partId, editing }: ActionFo
           />
           <span className="text-sm text-slate-700">نیازمند پیگیری</span>
         </label>
+        )}
 
         <div className="flex gap-2 justify-end pt-2 border-t border-slate-100">
           <button type="button" onClick={handleClose} className="btn-secondary">

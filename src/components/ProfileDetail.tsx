@@ -36,8 +36,10 @@ import { FinancialTab } from './profile-detail/FinancialTab';
 import { TreatmentChartPanel } from './profile-detail/TreatmentChartPanel';
 import { TreatmentTimeline } from './profile-detail/TreatmentTimeline';
 import { ToothHistoryView } from './profile-detail/ToothHistoryView';
+import { TreatmentPlanView } from './profile-detail/TreatmentPlanView';
 import { useTranslation } from './LocaleProvider';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
+import type { ActionStatus } from '@/types';
 
 export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
 
@@ -71,6 +73,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
   const [periodFormOpen, setPeriodFormOpen] = useState(false);
   const [editingPeriod, setEditingPeriod] = useState<Period | null>(null);
   const [actionFormOpen, setActionFormOpen] = useState(false);
+  const [actionFormDefaultStatus, setActionFormDefaultStatus] = useState<ActionStatus>('incomplete');
   const [editingAction, setEditingAction] = useState<Action | null>(null);
   const [actionPartId, setActionPartId] = useState<string | null>(null);
   const [paymentFormOpen, setPaymentFormOpen] = useState(false);
@@ -87,7 +90,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
-  const [treatmentView, setTreatmentView] = useState<'accordion' | 'timeline' | 'toothHistory'>('accordion');
+  const [treatmentView, setTreatmentView] = useState<'accordion' | 'timeline' | 'toothHistory' | 'planMode'>('accordion');
   const { t } = useTranslation();
   /** BR-POL-03: hide until undo window expires */
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(() => new Set());
@@ -535,12 +538,12 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
 
       {activeTab === 'treatment' && (
         <>
-          {treatmentView !== 'toothHistory' && (
+          {treatmentView !== 'toothHistory' && treatmentView !== 'planMode' && (
             <TreatmentChartPanel parts={parts} actions={actions} />
           )}
 
           <div
-            className="flex justify-end mb-4"
+            className="flex justify-end mb-4 overflow-x-auto"
             role="group"
             aria-label={t('toothHistory.viewGroupLabel')}
           >
@@ -581,10 +584,41 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
               >
                 {t('toothHistory.viewToggle')}
               </button>
+              <button
+                type="button"
+                onClick={() => setTreatmentView('planMode')}
+                aria-pressed={treatmentView === 'planMode'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  treatmentView === 'planMode'
+                    ? 'bg-brand-navy text-white shadow-sm dark:bg-sage-600'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
+                }`}
+              >
+                {t('planMode.viewToggle')}
+              </button>
             </div>
           </div>
 
-          {treatmentView === 'toothHistory' ? (
+          {treatmentView === 'planMode' ? (
+            <TreatmentPlanView
+              periods={periods.filter((period) => !pendingDeleteIds.has(period.id))}
+              sessions={sessions.filter((session) => !pendingDeleteIds.has(session.id))}
+              parts={parts.filter((part) => !pendingDeleteIds.has(part.id))}
+              actions={actions.filter((action) => !pendingDeleteIds.has(action.id))}
+              onAddPlanned={(partId) => {
+                setActionPartId(partId);
+                setEditingAction(null);
+                setActionFormDefaultStatus('planned');
+                setActionFormOpen(true);
+              }}
+              onExecuteAction={(action) => {
+                setActionPartId(action.part_id);
+                setEditingAction(action);
+                setActionFormDefaultStatus('incomplete');
+                setActionFormOpen(true);
+              }}
+            />
+          ) : treatmentView === 'toothHistory' ? (
             <ToothHistoryView
               periods={periods.filter((period) => !pendingDeleteIds.has(period.id))}
               sessions={sessions.filter((session) => !pendingDeleteIds.has(session.id))}
@@ -899,6 +933,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                 onClick={() => {
                                                   setActionPartId(part.id);
                                                   setEditingAction(null);
+                                                  setActionFormDefaultStatus('incomplete');
                                                   setActionFormOpen(true);
                                                 }}
                                                 className="text-xs text-teal-600 hover:bg-teal-50 px-2 py-1 rounded"
@@ -919,6 +954,11 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                       <CheckCircle2
                                                         size={15}
                                                         className="text-emerald-500 shrink-0"
+                                                      />
+                                                    ) : action.status === 'planned' ? (
+                                                      <CircleDot
+                                                        size={15}
+                                                        className="text-sky-500 shrink-0"
                                                       />
                                                     ) : (
                                                       <Clock
@@ -944,6 +984,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                       onClick={() => {
                                                         setActionPartId(part.id);
                                                         setEditingAction(action);
+                                                        setActionFormDefaultStatus(action.status);
                                                         setActionFormOpen(true);
                                                       }}
                                                       className="text-slate-400 hover:text-teal-600 p-1"
@@ -971,6 +1012,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
                                                 onClick={() => {
                                                   setActionPartId(part.id);
                                                   setEditingAction(null);
+                                                  setActionFormDefaultStatus('incomplete');
                                                   setActionFormOpen(true);
                                                 }}
                                                 className="text-xs text-teal-600 hover:bg-teal-50 px-2 py-1 rounded"
@@ -1360,15 +1402,18 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
             setActionFormOpen(false);
             setEditingAction(null);
             setActionPartId(null);
+            setActionFormDefaultStatus('incomplete');
           }}
           onSaved={() => {
             setActionFormOpen(false);
             setEditingAction(null);
             setActionPartId(null);
+            setActionFormDefaultStatus('incomplete');
             loadAll();
           }}
           partId={actionPartId}
           editing={editingAction}
+          defaultStatus={actionFormDefaultStatus}
         />
       )}
       {paymentFormOpen && paymentPeriodId && (

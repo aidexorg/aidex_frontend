@@ -198,6 +198,7 @@ export class HttpDataProvider implements DataProvider {
   }
 
   createAction(data: ActionWrite): Promise<Action> {
+    // Remote API may reject status=planned until paired SUR-02 migration ships.
     return this.fetchJson<Action>('/actions', {
       method: 'POST',
       body: JSON.stringify(data),

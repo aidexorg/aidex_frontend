@@ -49,8 +49,9 @@ export function FinancialTab({ actions, payments }: FinancialTabProps) {
 
   const costSegments = [
     { label: 'درمان‌های انجام شده', value: fin.performed, color: 'bg-sage-400' },
-    { label: 'درمان‌های برنامه‌ریزی', value: fin.planned, color: 'bg-blue-300' },
-    { label: 'سایر هزینه‌ها', value: fin.otherCosts, color: 'bg-amber-300' },
+    { label: 'طرح درمان (برآورد)', value: fin.planned, color: 'bg-sky-300' },
+    { label: 'درمان‌های ناتمام', value: fin.inProgress, color: 'bg-amber-300' },
+    { label: 'سایر هزینه‌ها', value: fin.otherCosts, color: 'bg-slate-300' },
   ];
 
   const paySegments = [

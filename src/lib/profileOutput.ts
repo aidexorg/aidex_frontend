@@ -1,4 +1,4 @@
-import { formatPrice, toFaDigits } from '@/lib/format';
+import { toFaDigits } from '@/lib/format';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import type { DataProvider } from '@/data/types';
 
@@ -237,7 +237,9 @@ export function buildToothStatusMap(
       status = 'appointment_needed';
     } else if (partActions.every((a) => a.status === 'complete')) {
       status = 'treated';
-    } else {
+    } else if (partActions.some((a) => a.status === 'incomplete' || a.status === 'complete')) {
+      status = 'in_treatment';
+    } else if (partActions.some((a) => a.status === 'planned')) {
       status = 'in_treatment';
     }
     const existing = map[part.tooth];
@@ -249,13 +251,15 @@ export function buildToothStatusMap(
 }
 
 export function computeFinancialSummary(actions: Action[], payments: Payment[]) {
-  const performed = actions.filter((a) => a.status === 'complete').reduce((s, a) => s + (a.price - a.discount), 0);
-  const planned = actions.filter((a) => a.status !== 'complete').reduce((s, a) => s + (a.price - a.discount), 0);
+  const net = (action: Action) => action.price - action.discount;
+  const performed = actions.filter((a) => a.status === 'complete').reduce((s, a) => s + net(a), 0);
+  const planned = actions.filter((a) => a.status === 'planned').reduce((s, a) => s + net(a), 0);
+  const inProgress = actions.filter((a) => a.status === 'incomplete').reduce((s, a) => s + net(a), 0);
   const otherCosts = 0;
-  const totalCosts = performed + planned + otherCosts;
+  const totalCosts = performed + planned + inProgress + otherCosts;
   const paid = payments.reduce((s, p) => s + p.amount, 0);
   const discounts = actions.reduce((s, a) => s + a.discount, 0);
   const insurance = 0;
   const debt = totalCosts - paid - discounts;
-  return { performed, planned, otherCosts, totalCosts, paid, discounts, insurance, debt };
+  return { performed, planned, inProgress, otherCosts, totalCosts, paid, discounts, insurance, debt };
 }

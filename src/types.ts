@@ -45,7 +45,7 @@ export interface Part {
   updated_at: string;
 }
 
-export type ActionStatus = 'complete' | 'incomplete';
+export type ActionStatus = 'complete' | 'incomplete' | 'planned';
 
 export interface Action {
   id: string;
@@ -413,6 +413,14 @@ export function validateAction(
     return {
       valid: false,
       error: 'وضعیت ناقص نیاز به دلیل دارد.',
+    };
+  }
+
+  // Planned actions are estimates — no incomplete reason
+  if (status === 'planned' && incompleteReason) {
+    return {
+      valid: false,
+      error: 'اقدام برنامه‌ریزی‌شده نباید دلیل ناقص بودن داشته باشد.',
     };
   }
 
