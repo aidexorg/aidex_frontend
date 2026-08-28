@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useLayoutEffect, useRef } from 'react';
+import { useState, useEffect, useCallback, useLayoutEffect, useRef, useMemo } from 'react';
 import {
   ArrowRight,
   Plus,
@@ -38,10 +38,12 @@ import { TreatmentTimeline } from './profile-detail/TreatmentTimeline';
 import { ToothHistoryView } from './profile-detail/ToothHistoryView';
 import { TreatmentPlanView } from './profile-detail/TreatmentPlanView';
 import { PeriodProgressBar } from './profile-detail/PeriodProgressBar';
+import { LifetimeFinancialStrip } from './profile-detail/LifetimeFinancialStrip';
 import { useTranslation } from './LocaleProvider';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 import type { ActionStatus } from '@/types';
 import { computePeriodProgress } from '@/lib/periodProgress';
+import { computeFinancialSummary } from '@/lib/profileOutput';
 
 export type ProfileDetailTab = 'profile' | 'review' | 'treatment' | 'financial';
 
@@ -278,6 +280,20 @@ export function ProfileDetail({
   const periodPaid = (periodId: string) =>
     periodPayments(periodId).reduce((sum, p) => sum + p.amount, 0);
   const periodRemaining = (periodId: string) => periodTotal(periodId) - periodPaid(periodId);
+
+  const visibleActions = useMemo(
+    () => actions.filter((action) => !pendingDeleteIds.has(action.id)),
+    [actions, pendingDeleteIds],
+  );
+  const visiblePayments = useMemo(
+    () => payments.filter((payment) => !pendingDeleteIds.has(payment.id)),
+    [payments, pendingDeleteIds],
+  );
+
+  const lifetimeFinancial = useMemo(
+    () => computeFinancialSummary(visibleActions, visiblePayments),
+    [visibleActions, visiblePayments],
+  );
 
   const periodDisplayNum = (periodId: string) =>
     periods.findIndex((p) => p.id === periodId) + 1;
@@ -561,6 +577,8 @@ export function ProfileDetail({
         </div>
       </div>
 
+      <LifetimeFinancialStrip summary={lifetimeFinancial} />
+
       <TabBar tabs={profileTabs} active={activeTab} onChange={setActiveTab} />
 
       {error && <ErrorBanner message={error} onRetry={loadAll} />}
@@ -582,7 +600,7 @@ export function ProfileDetail({
       )}
 
       {activeTab === 'financial' && (
-        <FinancialTab actions={actions} payments={payments} />
+        <FinancialTab actions={visibleActions} payments={visiblePayments} />
       )}
 
       {activeTab === 'treatment' && (

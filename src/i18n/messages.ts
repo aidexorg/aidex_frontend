@@ -199,6 +199,11 @@ export const messages = {
     'profileQuickActions.noPeriodForPayment': 'ابتدا یک دوره درمانی برای این پرونده ایجاد کنید.',
     'profileQuickActions.noPeriodForSession': 'ابتدا یک دوره درمانی برای ثبت جلسه ایجاد کنید.',
     'profileQuickActions.newSessionHint': 'دوره باز شد — از دکمه «جلسه جدید» استفاده کنید.',
+
+    'lifetimeFinancial.regionLabel': 'خلاصه مالی کل پرونده',
+    'lifetimeFinancial.totalBilled': 'جمع کل هزینه‌ها',
+    'lifetimeFinancial.totalPaid': 'جمع کل پرداخت‌ها',
+    'lifetimeFinancial.remaining': 'مانده بدهی',
   },
   en: {
     'common.loading': 'Loading…',
@@ -398,6 +403,11 @@ export const messages = {
     'profileQuickActions.noPeriodForPayment': 'Create a treatment period for this record first.',
     'profileQuickActions.noPeriodForSession': 'Create a treatment period before adding a session.',
     'profileQuickActions.newSessionHint': 'Period expanded — use “New session” to continue.',
+
+    'lifetimeFinancial.regionLabel': 'Lifetime financial summary',
+    'lifetimeFinancial.totalBilled': 'Total billed',
+    'lifetimeFinancial.totalPaid': 'Total paid',
+    'lifetimeFinancial.remaining': 'Remaining balance',
   },
 } as const satisfies Record<AppLocale, Record<string, string>>;
 
