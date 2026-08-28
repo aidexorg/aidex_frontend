@@ -6,7 +6,7 @@ import { DentalChart } from './DentalChart';
 import { useData } from '@/data';
 import { AREA_OPTIONS, validatePeriodTeethAreas } from '@/types';
 import type { Period } from '@/types';
-import { CheckCircle2, Circle } from 'lucide-react';
+import { CheckCircle2, Circle, ArrowRight } from 'lucide-react';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
 
 interface PeriodFormProps {
@@ -17,6 +17,8 @@ interface PeriodFormProps {
   existingTeeth?: string[];
   existingAreas?: string[];
   editing?: Period | null;
+  /** BR-UX-06: full-page create/edit vs legacy modal. */
+  variant?: 'modal' | 'page';
 }
 
 export function PeriodForm({
@@ -27,6 +29,7 @@ export function PeriodForm({
   existingTeeth = [],
   existingAreas = [],
   editing,
+  variant = 'modal',
 }: PeriodFormProps) {
   const data = useData();
   const { showToast } = useToast();
@@ -88,13 +91,7 @@ export function PeriodForm({
     }
   };
 
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={editing ? 'ویرایش دوره درمان' : 'دوره درمان جدید'}
-      size="xl"
-    >
+  const formBody = (
       <form
         onSubmit={handleSubmit}
         onKeyDown={(event) =>
@@ -272,6 +269,33 @@ export function PeriodForm({
           </div>
         )}
       </form>
+  );
+
+  if (variant === 'page') {
+    return (
+      <div className="max-w-5xl mx-auto space-y-4">
+        <button type="button" onClick={onClose} className="btn-ghost">
+          <ArrowRight size={18} />
+          بازگشت به پرونده
+        </button>
+        <div className="card p-5 md:p-6">
+          <h1 className="text-lg font-bold text-slate-900 mb-4">
+            {editing ? 'ویرایش دوره درمان' : 'دوره درمان جدید'}
+          </h1>
+          {formBody}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={editing ? 'ویرایش دوره درمان' : 'دوره درمان جدید'}
+      size="xl"
+    >
+      {formBody}
     </Modal>
   );
 }

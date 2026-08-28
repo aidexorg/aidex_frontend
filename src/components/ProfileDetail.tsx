@@ -94,6 +94,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
     const handleShortcut = (event: KeyboardEvent) => {
       if (
         shouldIgnoreShortcut(event) ||
+        periodFormOpen ||
         document.querySelector('[role="dialog"][aria-modal="true"]') ||
         !event.altKey ||
         event.ctrlKey ||
@@ -108,7 +109,7 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
     };
     window.addEventListener('keydown', handleShortcut);
     return () => window.removeEventListener('keydown', handleShortcut);
-  }, []);
+  }, [periodFormOpen]);
 
   useEffect(() => {
     const timers = deleteTimersRef.current;
@@ -424,6 +425,26 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
   };
 
   if (loading) return <SkeletonProfileDetail />;
+
+  if (periodFormOpen) {
+    return (
+      <PeriodForm
+        variant="page"
+        open
+        onClose={() => {
+          setPeriodFormOpen(false);
+          setEditingPeriod(null);
+        }}
+        onSaved={() => {
+          setPeriodFormOpen(false);
+          setEditingPeriod(null);
+          loadAll();
+        }}
+        profileId={profile.id}
+        editing={editingPeriod}
+      />
+    );
+  }
 
   const profileTabs = [
     { key: 'profile' as const, label: 'پروفایل' },
@@ -1308,22 +1329,6 @@ export function ProfileDetail({ profile, onBack, onEditProfile, initialTab = 'pr
       )}
 
       {/* Forms */}
-      {periodFormOpen && (
-        <PeriodForm
-          open={periodFormOpen}
-          onClose={() => {
-            setPeriodFormOpen(false);
-            setEditingPeriod(null);
-          }}
-          onSaved={() => {
-            setPeriodFormOpen(false);
-            setEditingPeriod(null);
-            loadAll();
-          }}
-          profileId={profile.id}
-          editing={editingPeriod}
-        />
-      )}
       {actionFormOpen && actionPartId && (
         <ActionForm
           open={actionFormOpen}
