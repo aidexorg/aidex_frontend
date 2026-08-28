@@ -11,7 +11,7 @@ import { useTranslation } from '../LocaleProvider';
 import { formatDate, formatPrice, toFaDigits } from '@/lib/format';
 import { buildToothStatusMap } from '@/lib/profileOutput';
 import { buildToothHistory, type ToothHistoryEntry } from '@/lib/toothHistory';
-import type { Part, Period, Session } from '@/types';
+import type { Action, Part, Period, Session } from '@/types';
 
 interface ToothHistoryViewProps {
   periods: Period[];
