@@ -1,16 +1,19 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { Loader2, CheckCircle2, XCircle, Info, AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
+import { useTranslation } from './LocaleProvider';
 
 export function Spinner({ className = '', size = 20 }: { className?: string; size?: number }) {
   return <Loader2 className={`animate-spin ${className}`} size={size} />;
 }
 
-export function LoadingState({ label = 'در حال بارگذاری…' }: { label?: string }) {
+export function LoadingState({ label }: { label?: string }) {
+  const { t } = useTranslation();
+  const resolvedLabel = label ?? t('common.loading');
   return (
     <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
       <Spinner className="text-teal-600" size={28} />
-      <p className="text-sm">{label}</p>
+      <p className="text-sm">{resolvedLabel}</p>
     </div>
   );
 }
@@ -41,10 +44,14 @@ export function EmptyState({
 export function ErrorBanner({
   message,
   onRetry,
+  retryLabel,
 }: {
   message: string;
   onRetry?: () => void;
+  retryLabel?: string;
 }) {
+  const { t } = useTranslation();
+  const resolvedRetryLabel = retryLabel ?? t('common.retry');
   return (
     <div role="alert" className="flex items-center gap-2 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700 dark:bg-red-950/40 dark:border-red-900/50 dark:text-red-300">
       <XCircle size={18} className="shrink-0" />
@@ -55,7 +62,7 @@ export function ErrorBanner({
           onClick={onRetry}
           className="text-xs font-medium px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition shrink-0 dark:bg-red-900/50 dark:text-red-200 dark:hover:bg-red-900/70"
         >
-          تلاش مجدد
+          {resolvedRetryLabel}
         </button>
       )}
     </div>

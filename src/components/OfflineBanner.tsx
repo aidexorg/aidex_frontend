@@ -3,10 +3,13 @@ import { useEffect, useState } from 'react';
 import { useConnectivity } from './ConnectivityProvider';
 import { useData } from '@/data';
 import { pendingMutationCount } from '@/data/mutationQueue';
+import { useTranslation } from './LocaleProvider';
+import { formatDigits } from '@/lib/format';
 
 export function OfflineBanner({ offset = 'layout' }: { offset?: 'layout' | 'auth' }) {
   const { online } = useConnectivity();
   const data = useData();
+  const { t, locale } = useTranslation();
   const [pending, setPending] = useState(0);
 
   useEffect(() => {
@@ -20,10 +23,10 @@ export function OfflineBanner({ offset = 'layout' }: { offset?: 'layout' | 'auth
 
   const message =
     data.driver === 'local'
-      ? 'حالت آفلاین — داده محلی'
+      ? t('offline.local')
       : pending > 0
-        ? `آفلاین — ${pending} تغییر در صف همگام‌سازی`
-        : 'اتصال اینترنت قطع است — تغییرات ذخیره می‌شوند و پس از اتصال ارسال می‌شوند';
+        ? t('offline.pending', { count: formatDigits(pending, locale) })
+        : t('offline.generic');
 
   const topClass = offset === 'layout' ? 'top-[64px]' : 'top-3';
 

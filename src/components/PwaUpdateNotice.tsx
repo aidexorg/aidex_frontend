@@ -1,8 +1,10 @@
 import { RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { reloadForPwaUpdate, setPwaRefreshHandler } from '@/lib/registerPwa';
+import { useTranslation } from './LocaleProvider';
 
 export function PwaUpdateNotice() {
+  const { t } = useTranslation();
   const [updateReady, setUpdateReady] = useState(false);
 
   useEffect(() => {
@@ -19,13 +21,13 @@ export function PwaUpdateNotice() {
     >
       <div className="flex items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 shadow-lg dark:border-sky-800/50 dark:bg-sky-950/60 dark:text-sky-100">
         <RefreshCw size={16} className="shrink-0" aria-hidden="true" />
-        <span className="flex-1">نسخه جدید اپلیکیشن آماده است</span>
+        <span className="flex-1">{t('pwa.updateReady')}</span>
         <button
           type="button"
           onClick={() => reloadForPwaUpdate()}
           className="shrink-0 rounded-lg bg-sky-600 px-3 py-1 text-xs font-medium text-white hover:bg-sky-700 transition"
         >
-          بارگذاری مجدد
+          {t('pwa.reload')}
         </button>
       </div>
     </div>

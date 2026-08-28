@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { DataError, useData } from '@/data';
 import type { Account } from '@/types';
 import { ErrorBanner, Spinner } from './ui';
+import { useTranslation } from './LocaleProvider';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -12,6 +13,7 @@ interface RegisterViewProps {
 
 export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) {
   const data = useData();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [password, setPassword] = useState('');
@@ -25,15 +27,15 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
     const trimmedName = displayName.trim();
 
     if (!trimmedEmail || !password || !confirm) {
-      setError('ایمیل، رمز عبور و تکرار رمز الزامی است.');
+      setError(t('register.required'));
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setError(`رمز عبور باید حداقل ${MIN_PASSWORD_LENGTH} نویسه باشد.`);
+      setError(t('register.passwordMin', { min: MIN_PASSWORD_LENGTH }));
       return;
     }
     if (password !== confirm) {
-      setError('رمز عبور و تکرار آن یکسان نیستند.');
+      setError(t('register.passwordMismatch'));
       return;
     }
 
@@ -49,9 +51,9 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
       setConfirm('');
       onAuthenticated?.(account);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'ثبت‌نام ناموفق بود.';
+      const msg = err instanceof Error ? err.message : t('register.failed');
       if (err instanceof DataError && err.code === '23505') {
-        setError('این ایمیل قبلاً ثبت شده است.');
+        setError(t('register.emailTaken'));
       } else {
         setError(msg);
       }
@@ -63,8 +65,8 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
   return (
     <div className="card p-8 space-y-6 shadow-lg">
       <div className="text-center">
-        <h2 className="text-xl font-bold text-brand-navy">ثبت‌نام</h2>
-        <p className="text-sm text-slate-400 mt-1">حساب ورود جدا از پرونده بیمار است.</p>
+        <h2 className="text-xl font-bold text-brand-navy">{t('register.title')}</h2>
+        <p className="text-sm text-slate-400 mt-1">{t('register.subtitle')}</p>
       </div>
 
       <form
@@ -75,7 +77,7 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
       >
         {error && <div id="register-error"><ErrorBanner message={error} /></div>}
         <div>
-          <label htmlFor="register-email" className="label">ایمیل *</label>
+          <label htmlFor="register-email" className="label">{t('register.email')}</label>
           <input
             id="register-email"
             className="input"
@@ -89,7 +91,7 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
           />
         </div>
         <div>
-          <label htmlFor="register-display-name" className="label">نام نمایشی</label>
+          <label htmlFor="register-display-name" className="label">{t('register.displayName')}</label>
           <input
             id="register-display-name"
             className="input"
@@ -97,11 +99,11 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
             autoComplete="name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="اختیاری"
+            placeholder={t('common.optional')}
           />
         </div>
         <div>
-          <label htmlFor="register-password" className="label">رمز عبور *</label>
+          <label htmlFor="register-password" className="label">{t('register.password')}</label>
           <input
             id="register-password"
             className="input"
@@ -110,11 +112,11 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="حداقل ۸ نویسه"
+            placeholder={t('register.passwordPlaceholder')}
           />
         </div>
         <div>
-          <label htmlFor="register-password-confirm" className="label">تکرار رمز عبور *</label>
+          <label htmlFor="register-password-confirm" className="label">{t('register.confirmPassword')}</label>
           <input
             id="register-password-confirm"
             className="input"
@@ -126,11 +128,11 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
           />
         </div>
         <button type="submit" disabled={saving} className="btn-primary w-full py-3">
-          {saving ? <Spinner /> : 'ایجاد حساب'}
+          {saving ? <Spinner /> : t('register.submit')}
         </button>
         {onGoLogin && (
           <button type="button" className="btn-ghost w-full text-sm" onClick={onGoLogin}>
-            حساب دارید؟ ورود
+            {t('register.goLogin')}
           </button>
         )}
       </form>

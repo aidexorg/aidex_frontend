@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { CheckCircle2, Info, X, XCircle } from 'lucide-react';
+import { useTranslation } from './LocaleProvider';
 
 export type ToastVariant = 'success' | 'error' | 'info';
 
@@ -47,18 +48,25 @@ const DEFAULT_DURATION: Record<ToastVariant, number> = {
 
 const MAX_VISIBLE = 4;
 
-function ToastStack({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: number) => void }) {
+function ToastStack({
+  toasts,
+  onDismiss,
+  closeLabel,
+}: {
+  toasts: ToastItem[];
+  onDismiss: (id: number) => void;
+  closeLabel: string;
+}) {
   if (toasts.length === 0) return null;
 
   return (
     <div
-      className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:right-6 z-[100] flex flex-col gap-2 md:max-w-sm pointer-events-none"
-      dir="rtl"
+      className="fixed bottom-20 md:bottom-6 left-4 right-4 md:left-auto md:end-6 z-[100] flex flex-col gap-2 md:max-w-sm pointer-events-none"
       aria-live="polite"
       aria-relevant="additions"
     >
       {toasts.map((toast) => (
-        <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} />
+        <ToastCard key={toast.id} toast={toast} onDismiss={onDismiss} closeLabel={closeLabel} />
       ))}
     </div>
   );
@@ -67,9 +75,11 @@ function ToastStack({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id
 function ToastCard({
   toast,
   onDismiss,
+  closeLabel,
 }: {
   toast: ToastItem;
   onDismiss: (id: number) => void;
+  closeLabel: string;
 }) {
   const styles =
     toast.variant === 'success'
@@ -106,7 +116,7 @@ function ToastCard({
         type="button"
         onClick={() => onDismiss(toast.id)}
         className="shrink-0 rounded-lg p-0.5 opacity-60 hover:opacity-100 transition-opacity"
-        aria-label="بستن"
+        aria-label={closeLabel}
       >
         <X size={16} />
       </button>
@@ -115,6 +125,7 @@ function ToastCard({
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
@@ -163,11 +174,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         message,
         variant: 'info',
         durationMs,
-        actionLabel: 'بازگردانی',
+        actionLabel: t('toast.undo'),
         onAction: onUndo,
       });
     },
-    [showToast]
+    [showToast, t],
   );
 
   useEffect(() => {
@@ -183,7 +194,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastStack toasts={toasts} onDismiss={dismiss} />
+      <ToastStack toasts={toasts} onDismiss={dismiss} closeLabel={t('common.close')} />
     </ToastContext.Provider>
   );
 }
