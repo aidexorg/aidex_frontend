@@ -13,7 +13,6 @@ import { FollowupCountProvider } from '@/components/FollowupCountProvider';
 import { OnboardingOverlay } from '@/components/OnboardingOverlay';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
-import { MutationQueueSync } from '@/components/MutationQueueSync';
 import { useData } from '@/data';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 import type { Account, Profile } from '@/types';
@@ -223,7 +222,6 @@ function App() {
 
   return (
     <ToastProvider>
-      <MutationQueueSync />
       {shell}
       <OfflineBanner offset={account ? 'layout' : 'auth'} />
       <PwaUpdateNotice />

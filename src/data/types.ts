@@ -37,13 +37,9 @@ export type AccountLogin = {
   password: string;
 };
 
-/**
- * App-wide persistence contract.
- * Demo: LocalStorageDataProvider.
- * Later: swap factory in `src/data/index.ts` for an HTTP/backend implementation.
- */
+/** App-wide persistence contract — implemented by HttpDataProvider (REST API). */
 export interface DataProvider {
-  readonly driver: 'local' | 'remote';
+  readonly driver: 'remote';
 
   listProfiles(): Promise<Profile[]>;
   createProfile(data: ProfileWrite): Promise<Profile>;
