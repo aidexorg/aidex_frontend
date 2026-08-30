@@ -1,4 +1,5 @@
 import { toFaDigits } from '@/lib/format';
+import { formatJalaliSlash } from '@/lib/jalaliFormat';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import type { DataProvider } from '@/data/types';
 
@@ -44,18 +45,6 @@ function toothPositionLabel(tooth: string): string {
     UR: 'Upper Right', UL: 'Upper Left', LR: 'Lower Right', LL: 'Lower Left',
   };
   return labels[pos] ?? pos;
-}
-
-const PERSIAN_MONTHS_FA = [
-  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
-];
-
-function toPersianJalaliDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  const year = d.getFullYear() - 621;
-  const monthName = PERSIAN_MONTHS_FA[d.getMonth()];
-  return `${toPersianDigits(String(d.getDate()))}/${monthName}/${toPersianDigits(String(year))}`;
 }
 
 export type OutputType = 'profile' | 'review';
@@ -169,7 +158,7 @@ export async function generateProfileOutput(
 
       for (const session of pSessions) {
         lines.push(` **◆ جلسه ${toFaDigits(session.session_number)}**`);
-        lines.push(toPersianJalaliDate(session.session_date));
+        lines.push(formatJalaliSlash(session.session_date));
 
         const sessParts = parts.filter((p) => p.session_id === session.id);
         for (const part of sessParts) {

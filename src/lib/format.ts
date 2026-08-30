@@ -2,6 +2,7 @@
 
 import { getActiveLocale, localeIntlTag, type AppLocale } from '@/lib/locale';
 import { translate } from '@/i18n/messages';
+import { formatJalaliLong, formatJalaliSlash } from '@/lib/jalaliFormat';
 
 const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
@@ -28,6 +29,7 @@ export function formatPrice(amount: number, locale: AppLocale = getActiveLocale(
 
 export function formatDate(iso: string | null, locale: AppLocale = getActiveLocale()): string {
   if (!iso) return translate(locale, 'common.emDash');
+  if (locale === 'fa') return formatJalaliLong(iso);
   try {
     const date = new Date(iso);
     return new Intl.DateTimeFormat(localeIntlTag(locale), {
@@ -42,6 +44,7 @@ export function formatDate(iso: string | null, locale: AppLocale = getActiveLoca
 
 export function formatDateShort(iso: string | null, locale: AppLocale = getActiveLocale()): string {
   if (!iso) return translate(locale, 'common.emDash');
+  if (locale === 'fa') return formatJalaliSlash(iso);
   try {
     const date = new Date(iso);
     return new Intl.DateTimeFormat(localeIntlTag(locale), {
@@ -55,7 +58,8 @@ export function formatDateShort(iso: string | null, locale: AppLocale = getActiv
 }
 
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 export function formatMonthYear(iso: string, locale: AppLocale = getActiveLocale()): string {

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { FileText, Copy, Check, User, ClipboardList } from 'lucide-react';
 import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
+import { formatJalaliSlash } from '@/lib/jalaliFormat';
 import type { Profile, Period, Session, Part, Action, Payment } from '@/types';
 import { LoadingState, EmptyState } from './ui';
 
@@ -70,28 +71,6 @@ function toothPositionLabel(tooth: string): string {
     LR: 'Lower Right', LL: 'Lower Left',
   };
   return labels[pos] ?? pos;
-}
-
-/** Persian month names */
-const PERSIAN_MONTHS = [
-  'ژانویه', 'فوریه', 'مارس', 'آوریل', 'مه', 'ژوئن',
-  'ژوئیه', 'اوت', 'سپتامبر', 'اکتبر', 'نوامبر', 'دسامبر',
-];
-const PERSIAN_MONTHS_FA = [
-  'فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور',
-  'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند',
-];
-
-/** Convert date to Persian jalali-ish format for Review: ۱۲/بهمن/۱۴۰۴ */
-function toPersianJalaliDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  // Approximate jalali: subtract 621 years from Gregorian for year
-  // This is a rough approximation; real jalali conversion needs a library
-  const year = d.getFullYear() - 621;
-  const monthIdx = d.getMonth();
-  const day = d.getDate();
-  const monthName = PERSIAN_MONTHS_FA[monthIdx] ?? PERSIAN_MONTHS[monthIdx];
-  return `${toPersianDigits(String(day))}/${monthName}/${toPersianDigits(String(year))}`;
 }
 
 interface OutputsViewProps {
@@ -264,7 +243,7 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
           lines.push(`💠 **دوره‌ی ${periodLabel}**`);
 
           for (const session of pSessions) {
-            const persianDate = toPersianJalaliDate(session.session_date);
+            const persianDate = formatJalaliSlash(session.session_date);
             lines.push(` **◆ جلسه ${toFaDigits(session.session_number)}**`);
             lines.push(persianDate);
 
@@ -300,7 +279,7 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
           const sessionDates = new Set(pSessions.map((s) => new Date(s.session_date).toDateString()));
           const otherPayments = periodPayments.filter((p) => !sessionDates.has(new Date(p.payment_date).toDateString()));
           for (const pay of otherPayments) {
-            const payDate = toPersianJalaliDate(pay.payment_date);
+            const payDate = formatJalaliSlash(pay.payment_date);
             lines.push(`*${pay.amount.toFixed(1)} (${payDate})`);
           }
 

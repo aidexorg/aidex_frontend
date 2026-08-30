@@ -15,6 +15,7 @@ import { toFaDigits } from '@/lib/format';
 import type { Profile } from '@/types';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
+import { DatePicker } from './DatePicker';
 
 interface AppointmentFormProps {
   open: boolean;
@@ -571,13 +572,12 @@ export function AppointmentForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="appointment-date" className="label text-xs">تاریخ *</label>
-                <input
+                <DatePicker
                   id="appointment-date"
-                  className="input text-sm py-2"
-                  type="date"
-                  required
+                  aria-label="تاریخ نوبت"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={setDate}
+                  className="text-sm"
                 />
               </div>
               <div>
@@ -712,12 +712,11 @@ export function AppointmentForm({
                     </button>
                   </div>
                   {recurrenceEndType === 'date' ? (
-                    <input
+                    <DatePicker
                       aria-label="تاریخ پایان تکرار"
-                      className="input text-sm py-1.5 w-36"
-                      type="date"
                       value={recurrenceEndDate}
-                      onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                      onChange={setRecurrenceEndDate}
+                      className="w-36 text-sm"
                     />
                   ) : (
                     <div>

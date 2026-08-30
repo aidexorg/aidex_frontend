@@ -40,6 +40,7 @@ import { PeriodCompareView } from './profile-detail/PeriodCompareView';
 import { PeriodProgressBar } from './profile-detail/PeriodProgressBar';
 import { LifetimeFinancialStrip } from './profile-detail/LifetimeFinancialStrip';
 import { InlineSessionDateEdit } from './profile-detail/InlineSessionDateEdit';
+import { DatePicker } from './DatePicker';
 import { InlineActionStatusToggle } from './profile-detail/InlineActionStatusToggle';
 import { InlinePaymentAmountEdit } from './profile-detail/InlinePaymentAmountEdit';
 import { useTranslation } from './LocaleProvider';
@@ -111,6 +112,10 @@ export function ProfileDetail({
   const [treatmentView, setTreatmentView] = useState<
     'accordion' | 'timeline' | 'toothHistory' | 'planMode' | 'compareMode'
   >('accordion');
+  const [pendingSessionCreate, setPendingSessionCreate] = useState<{
+    periodId: string;
+    date: string;
+  } | null>(null);
   const { t } = useTranslation();
   /** BR-POL-03: hide until undo window expires */
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(() => new Set());
@@ -519,21 +524,33 @@ export function ProfileDetail({
     });
   };
 
-  const addSession = async (periodId: string) => {
+  const startSessionCreate = (periodId: string) => {
+    setPendingSessionCreate({ periodId, date: todayISO() });
+    setExpandedPeriod(periodId);
+  };
+
+  const confirmSessionCreate = async () => {
+    if (!pendingSessionCreate) return;
+    const { periodId, date } = pendingSessionCreate;
     const existing = sessions.filter((s) => s.period_id === periodId);
     const nextNum = existing.length > 0 ? Math.max(...existing.map((s) => s.session_number)) + 1 : 1;
     try {
       await data.createSession({
         period_id: periodId,
         session_number: nextNum,
-        session_date: todayISO(),
+        session_date: date,
       });
+      setPendingSessionCreate(null);
       loadAll();
       setExpandedSession(null);
       setExpandedPeriod(periodId);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا در ایجاد جلسه.');
     }
+  };
+
+  const cancelSessionCreate = () => {
+    setPendingSessionCreate(null);
   };
 
   const addPart = async (sessionId: string) => {
@@ -926,7 +943,10 @@ export function ProfileDetail({
 
                     {/* Action buttons */}
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => addSession(period.id)} className="btn-secondary text-xs">
+                      <button
+                        onClick={() => startSessionCreate(period.id)}
+                        className="btn-secondary text-xs"
+                      >
                         <Plus size={14} />
                         جلسه جدید
                       </button>
@@ -965,6 +985,38 @@ export function ProfileDetail({
                         حذف دوره
                       </button>
                     </div>
+
+                    {pendingSessionCreate?.periodId === period.id && (
+                      <div className="mt-3 rounded-lg border border-teal-200 bg-teal-50/50 p-3 space-y-3">
+                        <label htmlFor={`session-create-date-${period.id}`} className="label text-xs">
+                          تاریخ جلسه
+                        </label>
+                        <DatePicker
+                          id={`session-create-date-${period.id}`}
+                          aria-label="تاریخ جلسه جدید"
+                          value={pendingSessionCreate.date}
+                          onChange={(date) =>
+                            setPendingSessionCreate({ periodId: period.id, date })
+                          }
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void confirmSessionCreate()}
+                            className="btn-primary text-xs"
+                          >
+                            ایجاد جلسه
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelSessionCreate}
+                            className="btn-secondary text-xs"
+                          >
+                            لغو
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Sessions */}
                     {periodSess.length === 0 ? (

@@ -8,6 +8,7 @@ import { todayISO } from '@/lib/format';
 import { useFormDraft } from '@/lib/useFormDraft';
 import type { Payment } from '@/types';
 import { handleFormSaveShortcut } from '@/lib/accessibility';
+import { DatePicker } from './DatePicker';
 
 function paymentFormInitial(editing?: Payment | null) {
   return {
@@ -117,13 +118,11 @@ export function PaymentForm({ open, onClose, onSaved, periodId, editing }: Payme
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label htmlFor="payment-date" className="label">تاریخ پرداخت</label>
-            <input
+            <DatePicker
               id="payment-date"
-              className="input"
-              type="date"
-              required
+              aria-label="تاریخ پرداخت"
               value={form.payment_date}
-              onChange={(e) => update('payment_date', e.target.value)}
+              onChange={(date) => update('payment_date', date)}
             />
           </div>
           <div>

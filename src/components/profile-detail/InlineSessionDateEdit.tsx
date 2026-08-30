@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { formatDate } from '@/lib/format';
+import { DatePicker } from '@/components/DatePicker';
 import { useTranslation } from '../LocaleProvider';
 
 interface InlineSessionDateEditProps {
@@ -10,8 +11,6 @@ interface InlineSessionDateEditProps {
 
 export function InlineSessionDateEdit({ value, onSave, disabled = false }: InlineSessionDateEditProps) {
   const { t } = useTranslation();
-  const inputId = useId();
-  const inputRef = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -20,23 +19,19 @@ export function InlineSessionDateEdit({ value, onSave, disabled = false }: Inlin
     if (!editing) setDraft(value);
   }, [value, editing]);
 
-  useEffect(() => {
-    if (editing) inputRef.current?.focus();
-  }, [editing]);
-
   const cancel = () => {
     setDraft(value);
     setEditing(false);
   };
 
-  const commit = async () => {
-    if (draft === value) {
+  const commit = async (nextDate: string) => {
+    if (nextDate === value) {
       setEditing(false);
       return;
     }
     setSaving(true);
     try {
-      await onSave(draft);
+      await onSave(nextDate);
       setEditing(false);
     } catch {
       setDraft(value);
@@ -47,29 +42,28 @@ export function InlineSessionDateEdit({ value, onSave, disabled = false }: Inlin
 
   if (editing) {
     return (
-      <input
-        ref={inputRef}
-        id={inputId}
-        type="date"
-        value={draft}
-        disabled={saving}
-        aria-label={t('inlineEdit.sessionDateAria')}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={() => void commit()}
+      <div
+        className="inline-flex items-center gap-1"
+        onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           event.stopPropagation();
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            void commit();
-          }
           if (event.key === 'Escape') {
             event.preventDefault();
             cancel();
           }
         }}
-        onClick={(event) => event.stopPropagation()}
-        className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
-      />
+      >
+        <DatePicker
+          aria-label={t('inlineEdit.sessionDateAria')}
+          value={draft}
+          disabled={saving}
+          onChange={(date) => {
+            setDraft(date);
+            void commit(date);
+          }}
+          className="min-w-[9rem] text-xs"
+        />
+      </div>
     );
   }
 
