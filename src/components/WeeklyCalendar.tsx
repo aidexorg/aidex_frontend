@@ -231,6 +231,29 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
 
   const monthLabel = jalaliMonthYear(weekDates[0]);
 
+  if (formOpen) {
+    return (
+      <AppointmentForm
+        variant="page"
+        backLabel="بازگشت به تقویم"
+        open
+        onClose={() => {
+          setFormOpen(false);
+          setEditingAppt(null);
+          setFormPrefill({});
+        }}
+        onSaved={() => {
+          setFormOpen(false);
+          setEditingAppt(null);
+          setFormPrefill({});
+          load();
+        }}
+        editing={editingAppt}
+        prefillProfileId={formPrefill.profileId}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -424,26 +447,6 @@ export function WeeklyCalendar({ onOpenProfile }: WeeklyCalendarProps) {
             );
           })}
         </div>
-      )}
-
-      {/* Form */}
-      {formOpen && (
-        <AppointmentForm
-          open={formOpen}
-          onClose={() => {
-            setFormOpen(false);
-            setEditingAppt(null);
-            setFormPrefill({});
-          }}
-          onSaved={() => {
-            setFormOpen(false);
-            setEditingAppt(null);
-            setFormPrefill({});
-            load();
-          }}
-          editing={editingAppt}
-          prefillProfileId={formPrefill.profileId}
-        />
       )}
 
       {contextMenu && (

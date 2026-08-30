@@ -274,6 +274,26 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
     [onOpenProfile, rows]
   );
 
+  if (formOpen) {
+    return (
+      <AppointmentForm
+        variant="page"
+        backLabel="بازگشت به نوبت‌ها"
+        open
+        onClose={() => {
+          setFormOpen(false);
+          setEditing(null);
+        }}
+        onSaved={() => {
+          setFormOpen(false);
+          setEditing(null);
+          load();
+        }}
+        editing={editing}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5 animate-fade-in">
       <PageHeader
@@ -587,23 +607,6 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
           icon={TrendingUp}
         />
       </div>
-
-      {/* Form */}
-      {formOpen && (
-        <AppointmentForm
-          open={formOpen}
-          onClose={() => {
-            setFormOpen(false);
-            setEditing(null);
-          }}
-          onSaved={() => {
-            setFormOpen(false);
-            setEditing(null);
-            load();
-          }}
-          editing={editing}
-        />
-      )}
 
       {/* Delete confirm */}
       <ConfirmDialog

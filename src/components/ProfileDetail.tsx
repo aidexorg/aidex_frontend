@@ -593,6 +593,27 @@ export function ProfileDetail({
     );
   }
 
+  if (appointmentFormOpen) {
+    return (
+      <AppointmentForm
+        variant="page"
+        backLabel="بازگشت به پرونده"
+        open
+        onClose={() => {
+          setAppointmentFormOpen(false);
+          setEditingAppointment(null);
+        }}
+        onSaved={() => {
+          setAppointmentFormOpen(false);
+          setEditingAppointment(null);
+          loadAll();
+        }}
+        prefillProfileId={editingAppointment ? undefined : profile.id}
+        editing={editingAppointment}
+      />
+    );
+  }
+
   const profileTabs = [
     { key: 'profile' as const, label: 'پروفایل' },
     { key: 'review' as const, label: 'ریویو' },
@@ -1625,23 +1646,6 @@ export function ProfileDetail({
           }}
           periodId={paymentPeriodId}
           editing={editingPayment}
-        />
-      )}
-
-      {appointmentFormOpen && (
-        <AppointmentForm
-          open={appointmentFormOpen}
-          onClose={() => {
-            setAppointmentFormOpen(false);
-            setEditingAppointment(null);
-          }}
-          onSaved={() => {
-            setAppointmentFormOpen(false);
-            setEditingAppointment(null);
-            loadAll();
-          }}
-          prefillProfileId={editingAppointment ? undefined : profile.id}
-          editing={editingAppointment}
         />
       )}
 
