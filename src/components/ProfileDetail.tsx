@@ -36,6 +36,7 @@ import { TreatmentChartPanel } from './profile-detail/TreatmentChartPanel';
 import { TreatmentTimeline } from './profile-detail/TreatmentTimeline';
 import { ToothHistoryView } from './profile-detail/ToothHistoryView';
 import { TreatmentPlanView } from './profile-detail/TreatmentPlanView';
+import { PeriodCompareView } from './profile-detail/PeriodCompareView';
 import { PeriodProgressBar } from './profile-detail/PeriodProgressBar';
 import { LifetimeFinancialStrip } from './profile-detail/LifetimeFinancialStrip';
 import { InlineSessionDateEdit } from './profile-detail/InlineSessionDateEdit';
@@ -107,7 +108,9 @@ export function ProfileDetail({
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [periodSearch, setPeriodSearch] = useState('');
   const [periodPage, setPeriodPage] = useState(1);
-  const [treatmentView, setTreatmentView] = useState<'accordion' | 'timeline' | 'toothHistory' | 'planMode'>('accordion');
+  const [treatmentView, setTreatmentView] = useState<
+    'accordion' | 'timeline' | 'toothHistory' | 'planMode' | 'compareMode'
+  >('accordion');
   const { t } = useTranslation();
   /** BR-POL-03: hide until undo window expires */
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(() => new Set());
@@ -661,7 +664,9 @@ export function ProfileDetail({
 
       {activeTab === 'treatment' && (
         <>
-          {treatmentView !== 'toothHistory' && treatmentView !== 'planMode' && (
+          {treatmentView !== 'toothHistory' &&
+            treatmentView !== 'planMode' &&
+            treatmentView !== 'compareMode' && (
             <TreatmentChartPanel parts={parts} actions={actions} />
           )}
 
@@ -719,10 +724,30 @@ export function ProfileDetail({
               >
                 {t('planMode.viewToggle')}
               </button>
+              <button
+                type="button"
+                onClick={() => setTreatmentView('compareMode')}
+                aria-pressed={treatmentView === 'compareMode'}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  treatmentView === 'compareMode'
+                    ? 'bg-brand-navy text-white shadow-sm dark:bg-sage-600'
+                    : 'text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700'
+                }`}
+              >
+                {t('periodCompare.viewToggle')}
+              </button>
             </div>
           </div>
 
-          {treatmentView === 'planMode' ? (
+          {treatmentView === 'compareMode' ? (
+            <PeriodCompareView
+              periods={periods.filter((period) => !pendingDeleteIds.has(period.id))}
+              sessions={sessions.filter((session) => !pendingDeleteIds.has(session.id))}
+              parts={parts.filter((part) => !pendingDeleteIds.has(part.id))}
+              actions={actions.filter((action) => !pendingDeleteIds.has(action.id))}
+              payments={payments.filter((payment) => !pendingDeleteIds.has(payment.id))}
+            />
+          ) : treatmentView === 'planMode' ? (
             <TreatmentPlanView
               periods={periods.filter((period) => !pendingDeleteIds.has(period.id))}
               sessions={sessions.filter((session) => !pendingDeleteIds.has(session.id))}
