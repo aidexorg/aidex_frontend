@@ -1,49 +1,24 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useData } from '@/data';
 import { toFaDigits } from '@/lib/format';
 import type { Appointment } from '@/types';
-
-// ── Helpers ──
-
-function todayISODate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
-}
-
-function getMonthStart(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
-}
-
-function addMonths(dateStr: string, delta: number): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  d.setMonth(d.getMonth() + delta);
-  d.setDate(1);
-  return d.toISOString().slice(0, 10);
-}
+import { LoadingState } from './ui';
+import {
+  STATUS_DOT,
+  WEEKDAY_HEADERS,
+  todayISODate,
+  addDays,
+  getMonthStart,
+  addMonths,
+  jalaliMonthYear,
+  isSameMonth,
+  CalendarDateNav,
+  CalendarLegend,
+} from './calendar';
 
 function getDaysInMonth(dateStr: string): number {
   const d = new Date(dateStr + 'T12:00:00');
   return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-}
-
-function jalaliMonthYear(dateStr: string): string {
-  try {
-    const d = new Date(dateStr + 'T12:00:00');
-    return new Intl.DateTimeFormat('fa-IR', {
-      month: 'long',
-      year: 'numeric',
-    }).format(d);
-  } catch {
-    return '';
-  }
 }
 
 function jalaliDayNumber(dateStr: string): string {
@@ -56,32 +31,31 @@ function jalaliDayNumber(dateStr: string): string {
   }
 }
 
-// ── Constants ──
-
-const WEEKDAY_HEADERS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
-
-const STATUS_COUNT_COLORS: Record<string, string> = {
-  scheduled: 'bg-slate-400',
-  confirmed: 'bg-sky-500',
-  arrived: 'bg-amber-500',
-  in_progress: 'bg-teal-500',
-  completed: 'bg-emerald-500',
-  no_show: 'bg-red-500',
-  cancelled: 'bg-slate-300',
-};
-
-// ── Types ──
-
 interface MonthlyCalendarProps {
-  onOpenProfile?: (profile: { id: string; first_name: string; last_name: string; file_number?: string | null; phone?: string | null }) => void;
+  onOpenProfile?: (profile: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    file_number?: string | null;
+    phone?: string | null;
+  }) => void;
   onSelectDate?: (date: string) => void;
+  embedded?: boolean;
+  currentMonth?: string;
+  onCurrentMonthChange?: (monthStart: string) => void;
 }
 
-// ── Component ──
-
-export function MonthlyCalendar({ onOpenProfile, onSelectDate }: MonthlyCalendarProps) {
+export function MonthlyCalendar({
+  onSelectDate,
+  embedded = false,
+  currentMonth: controlledMonth,
+  onCurrentMonthChange,
+}: MonthlyCalendarProps) {
   const data = useData();
-  const [currentMonth, setCurrentMonth] = useState(getMonthStart(todayISODate()));
+  const [internalMonth, setInternalMonth] = useState(getMonthStart(todayISODate()));
+  const currentMonth = controlledMonth ?? internalMonth;
+  const setCurrentMonth = onCurrentMonthChange ?? setInternalMonth;
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,20 +63,16 @@ export function MonthlyCalendar({ onOpenProfile, onSelectDate }: MonthlyCalendar
     setLoading(true);
     try {
       const allAppts = await data.listAppointments();
-      // Filter to current month view (show +/- 1 month padding for grid)
-      const monthStart = new Date(currentMonth + 'T00:00:00');
-      const monthEnd = new Date(monthStart);
-      monthEnd.setMonth(monthEnd.getMonth() + 1);
-      // Include padding days
       const viewStart = addDays(currentMonth, -7);
       const viewEnd = addDays(currentMonth, 42);
       const startMs = new Date(viewStart + 'T00:00:00').getTime();
       const endMs = new Date(viewEnd + 'T23:59:59').getTime();
-      const filtered = allAppts.filter((a) => {
-        const t = new Date(a.start_time).getTime();
-        return t >= startMs && t <= endMs;
-      });
-      setAppointments(filtered);
+      setAppointments(
+        allAppts.filter((a) => {
+          const t = new Date(a.start_time).getTime();
+          return t >= startMs && t <= endMs;
+        })
+      );
     } catch {
       setAppointments([]);
     } finally {
@@ -114,148 +84,99 @@ export function MonthlyCalendar({ onOpenProfile, onSelectDate }: MonthlyCalendar
     load();
   }, [load]);
 
-  // ── Compute grid ──
-
   const gridDates = useMemo(() => {
-    // First day of month
     const firstDay = new Date(currentMonth + 'T12:00:00');
-    const dayOfWeek = firstDay.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    // We want Saturday=0, Sunday=1, ..., Friday=6
-    const startOffset = (dayOfWeek + 1) % 7; // Sat=0 offset
-
+    const dayOfWeek = firstDay.getDay();
+    const startOffset = (dayOfWeek + 1) % 7;
     const daysInMonth = getDaysInMonth(currentMonth);
     const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-    
+
     const cells: { dateStr: string; isCurrentMonth: boolean }[] = [];
     for (let i = 0; i < totalCells; i++) {
       const dayNum = i - startOffset + 1;
       const d = new Date(currentMonth + 'T12:00:00');
       d.setDate(dayNum);
-      const dateStr = d.toISOString().slice(0, 10);
       cells.push({
-        dateStr,
+        dateStr: d.toISOString().slice(0, 10),
         isCurrentMonth: dayNum >= 1 && dayNum <= daysInMonth,
       });
     }
-    // Pad to 6 rows = 42 cells
     while (cells.length < 42) {
       const lastDate = cells[cells.length - 1]?.dateStr ?? currentMonth;
-      const nextDate = addDays(lastDate, 1);
-      cells.push({ dateStr: nextDate, isCurrentMonth: false });
+      cells.push({ dateStr: addDays(lastDate, 1), isCurrentMonth: false });
     }
-
     return cells;
   }, [currentMonth]);
 
-  // ── Appointment count per day ──
-
   const appointmentsByDate = useMemo(() => {
     const map = new Map<string, Appointment[]>();
-    for (const cell of gridDates) {
-      map.set(cell.dateStr, []);
-    }
+    for (const cell of gridDates) map.set(cell.dateStr, []);
     for (const appt of appointments) {
-      const dateStr = appt.start_time.slice(0, 10);
-      const list = map.get(dateStr);
+      const list = map.get(appt.start_time.slice(0, 10));
       if (list) list.push(appt);
     }
     return map;
   }, [appointments, gridDates]);
 
-  // ── Handlers ──
-
-  const navigateMonth = (delta: number) => {
-    setCurrentMonth(addMonths(currentMonth, delta));
-  };
-
-  const goToToday = () => setCurrentMonth(getMonthStart(todayISODate()));
-
-  const handleDayClick = (dateStr: string) => {
-    if (onSelectDate) {
-      onSelectDate(dateStr);
-    }
-  };
-
-  const today = todayISODate();
-  const isToday = (dateStr: string) => dateStr === today;
-
-  // ── Status summary for current month ──
-
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const appt of appointments) {
-      counts[appt.status] = (counts[appt.status] || 0) + 1;
+      if (isSameMonth(appt.start_time.slice(0, 10), currentMonth)) {
+        counts[appt.status] = (counts[appt.status] || 0) + 1;
+      }
     }
     return counts;
-  }, [appointments]);
+  }, [appointments, currentMonth]);
 
-  const totalAppointments = appointments.length;
+  const monthTotal = useMemo(
+    () =>
+      appointments.filter((a) => isSameMonth(a.start_time.slice(0, 10), currentMonth)).length,
+    [appointments, currentMonth]
+  );
+
+  const navigateMonth = (delta: number) => setCurrentMonth(addMonths(currentMonth, delta));
+  const goToToday = () => setCurrentMonth(getMonthStart(todayISODate()));
+  const today = todayISODate();
+  const isToday = (dateStr: string) => dateStr === today;
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigateMonth(-1)}
-            className="btn-ghost p-2"
-            aria-label="ماه قبل"
-          >
-            <ChevronRight size={18} />
-          </button>
-          <div className="text-center min-w-[180px]">
-            <p className="text-sm font-semibold text-slate-800">
-              {jalaliMonthYear(currentMonth)}
-            </p>
-            <p className="text-xs text-slate-400">
-              {toFaDigits(totalAppointments)} نوبت در این ماه
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigateMonth(1)}
-            className="btn-ghost p-2"
-            aria-label="ماه بعد"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          {!isToday(currentMonth) && (
-            <button onClick={goToToday} className="btn-secondary text-xs">
-              امروز
-            </button>
-          )}
-        </div>
+      {!embedded && (
+        <CalendarDateNav
+          title={jalaliMonthYear(currentMonth)}
+          subtitle={`${toFaDigits(monthTotal)} نوبت در این ماه`}
+          showToday={!isSameMonth(today, currentMonth)}
+          onPrev={() => navigateMonth(-1)}
+          onNext={() => navigateMonth(1)}
+          onToday={goToToday}
+          prevLabel="ماه قبل"
+          nextLabel="ماه بعد"
+        />
+      )}
 
-        {/* Status summary */}
-        <div className="flex gap-2">
+      {Object.keys(statusCounts).length > 0 && (
+        <div className="flex flex-wrap gap-3">
           {Object.entries(statusCounts).map(([status, count]) => (
-            <div
-              key={status}
-              className="flex items-center gap-1 text-[10px] text-slate-500"
-            >
+            <div key={status} className="flex items-center gap-1 text-[10px] text-slate-500 dark:text-slate-400">
               <span
-                className={`w-2 h-2 rounded-full ${
-                  STATUS_COUNT_COLORS[status] ?? 'bg-slate-300'
-                }`}
+                className={`h-2 w-2 rounded-full ${STATUS_DOT[status as keyof typeof STATUS_DOT] ?? 'bg-slate-300'}`}
               />
               {toFaDigits(count)}
             </div>
           ))}
         </div>
-      </div>
+      )}
 
       {loading ? (
-        <div className="card p-8 text-center text-slate-400 text-sm">در حال بارگذاری...</div>
+        <LoadingState />
       ) : (
-        <div className="card overflow-hidden">
-          {/* Day-of-week headers */}
-          <div className="grid grid-cols-7 border-b border-slate-100">
+        <div className="card overflow-hidden dark:border-slate-600">
+          <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-700">
             {WEEKDAY_HEADERS.map((day, i) => (
               <div
                 key={day}
                 className={`py-2.5 text-center text-xs font-medium ${
-                  i === 6 ? 'text-red-400' : 'text-slate-500'
+                  i === 6 ? 'text-red-400 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
                 {day}
@@ -263,7 +184,6 @@ export function MonthlyCalendar({ onOpenProfile, onSelectDate }: MonthlyCalendar
             ))}
           </div>
 
-          {/* Month grid */}
           <div className="grid grid-cols-7">
             {gridDates.map((cell, idx) => {
               const dayAppts = appointmentsByDate.get(cell.dateStr) ?? [];
@@ -272,68 +192,65 @@ export function MonthlyCalendar({ onOpenProfile, onSelectDate }: MonthlyCalendar
               const isFriday = new Date(cell.dateStr + 'T12:00:00').getDay() === 5;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={`${cell.dateStr}-${idx}`}
-                  className={`min-h-[80px] border-b border-r border-slate-100 p-1.5 cursor-pointer transition-colors ${
+                  className={`min-h-[72px] border-b border-r border-slate-100 p-1.5 text-right transition-colors sm:min-h-[88px] ${
                     !cell.isCurrentMonth
-                      ? 'bg-slate-50/50'
+                      ? 'bg-slate-50/50 dark:bg-slate-900/30'
                       : todayHighlight
-                      ? 'bg-teal-50/50'
-                      : 'hover:bg-slate-50'
+                        ? 'bg-teal-50/50 dark:bg-teal-950/20'
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }`}
-                  onClick={() => handleDayClick(cell.dateStr)}
+                  onClick={() => onSelectDate?.(cell.dateStr)}
+                  aria-label={`${jalaliDayNumber(cell.dateStr)} — ${toFaDigits(count)} نوبت`}
                 >
-                  {/* Date number */}
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="mb-1 flex items-center justify-between">
                     <span
                       className={`text-xs font-medium ${
                         todayHighlight
-                          ? 'bg-teal-600 text-white w-6 h-6 rounded-full flex items-center justify-center'
+                          ? 'flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white'
                           : isFriday
-                          ? 'text-red-400'
-                          : cell.isCurrentMonth
-                          ? 'text-slate-700'
-                          : 'text-slate-300'
+                            ? 'text-red-400'
+                            : cell.isCurrentMonth
+                              ? 'text-slate-700 dark:text-slate-200'
+                              : 'text-slate-300 dark:text-slate-600'
                       }`}
                     >
                       {toFaDigits(jalaliDayNumber(cell.dateStr))}
                     </span>
+                    {count > 0 && (
+                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">
+                        {toFaDigits(count)}
+                      </span>
+                    )}
                   </div>
 
-                  {/* Appointment indicators */}
                   {count > 0 && (
                     <div className="space-y-0.5">
-                      {/* Show up to 3 appointment dots */}
                       {dayAppts.slice(0, 3).map((appt) => (
                         <div
                           key={appt.id}
                           className={`h-1.5 rounded-full ${
-                            STATUS_COUNT_COLORS[appt.status] ?? 'bg-slate-300'
+                            STATUS_DOT[appt.status] ?? 'bg-slate-300'
                           }`}
                         />
                       ))}
                       {count > 3 && (
-                        <span className="text-[9px] text-slate-400">
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500">
                           +{toFaDigits(count - 3)}
                         </span>
                       )}
                     </div>
                   )}
-
-                  {/* Count badge */}
-                  {count > 0 && (
-                    <div className="mt-1">
-                      <span className="text-[10px] font-medium text-slate-500">
-                        {toFaDigits(count)}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
       )}
+
+      {!embedded && <CalendarLegend />}
     </div>
   );
 }
