@@ -22,6 +22,40 @@ import {
   type ProfileWrite,
   type SessionWrite,
 } from './types';
+import {
+  accountLoginToWire,
+  accountRegisterToWire,
+  actionWriteToWire,
+  appointmentWriteToWire,
+  partialActionWriteToWire,
+  partialAppointmentWriteToWire,
+  partialPartWriteToWire,
+  partialPaymentWriteToWire,
+  partialProfileWriteToWire,
+  partialSessionWriteToWire,
+  partWriteToWire,
+  paymentWriteToWire,
+  periodPatchToWire,
+  periodWriteToWire,
+  profileWriteToWire,
+  sessionWriteToWire,
+  wireToAccount,
+  wireToAction,
+  wireToAppointment,
+  wireToPart,
+  wireToPayment,
+  wireToPeriod,
+  wireToProfile,
+  wireToSession,
+  type WireAccount,
+  type WireAction,
+  type WireAppointment,
+  type WirePart,
+  type WirePayment,
+  type WirePeriod,
+  type WireProfile,
+  type WireSession,
+} from './mappers';
 
 function csvParam(ids?: string[]): string | undefined {
   return ids?.length ? ids.join(',') : undefined;
@@ -106,186 +140,220 @@ export class HttpDataProvider implements DataProvider {
     }
   }
 
-  listProfiles(): Promise<Profile[]> {
-    return this.fetchJson<Profile[]>('/profiles');
+  async listProfiles(): Promise<Profile[]> {
+    const wire = await this.fetchJson<WireProfile[]>('/profiles');
+    return wire.map(wireToProfile);
   }
 
-  createProfile(data: ProfileWrite): Promise<Profile> {
-    return this.fetchJson<Profile>('/profiles', {
+  async createProfile(data: ProfileWrite): Promise<Profile> {
+    const wire = await this.fetchJson<WireProfile>('/profiles', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(profileWriteToWire(data)),
     });
+    return wireToProfile(wire);
   }
 
-  updateProfile(id: string, data: Partial<ProfileWrite>): Promise<Profile> {
-    return this.fetchJson<Profile>(`/profiles/${id}`, {
+  async updateProfile(id: string, data: Partial<ProfileWrite>): Promise<Profile> {
+    const wire = await this.fetchJson<WireProfile>(`/profiles/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(partialProfileWriteToWire(data)),
     });
+    return wireToProfile(wire);
   }
 
-  listPeriods(profileId?: string): Promise<Period[]> {
-    return this.fetchJson<Period[]>(withQuery('/periods', { profile_id: profileId }));
+  async listPeriods(profileId?: string): Promise<Period[]> {
+    const wire = await this.fetchJson<WirePeriod[]>(
+      withQuery('/periods', { profile_id: profileId }),
+    );
+    return wire.map(wireToPeriod);
   }
 
-  createPeriod(data: PeriodWrite): Promise<Period> {
-    return this.fetchJson<Period>('/periods', {
+  async createPeriod(data: PeriodWrite): Promise<Period> {
+    const wire = await this.fetchJson<WirePeriod>('/periods', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(periodWriteToWire(data)),
     });
+    return wireToPeriod(wire);
   }
 
-  updatePeriod(
+  async updatePeriod(
     id: string,
     data: Partial<Pick<PeriodWrite, 'teeth' | 'areas'>>,
   ): Promise<Period> {
-    return this.fetchJson<Period>(`/periods/${id}`, {
+    const wire = await this.fetchJson<WirePeriod>(`/periods/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(periodPatchToWire(data)),
     });
+    return wireToPeriod(wire);
   }
 
   deletePeriod(id: string) {
     return this.fetchVoid(`/periods/${id}`, { method: 'DELETE' });
   }
 
-  listSessions(periodIds?: string[]): Promise<Session[]> {
-    return this.fetchJson<Session[]>(withQuery('/sessions', { period_ids: csvParam(periodIds) }));
+  async listSessions(periodIds?: string[]): Promise<Session[]> {
+    const wire = await this.fetchJson<WireSession[]>(
+      withQuery('/sessions', { period_ids: csvParam(periodIds) }),
+    );
+    return wire.map(wireToSession);
   }
 
-  createSession(data: SessionWrite): Promise<Session> {
-    return this.fetchJson<Session>('/sessions', {
+  async createSession(data: SessionWrite): Promise<Session> {
+    const wire = await this.fetchJson<WireSession>('/sessions', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(sessionWriteToWire(data)),
     });
+    return wireToSession(wire);
   }
 
-  updateSession(id: string, data: Partial<SessionWrite>): Promise<Session> {
-    return this.fetchJson<Session>(`/sessions/${id}`, {
+  async updateSession(id: string, data: Partial<SessionWrite>): Promise<Session> {
+    const wire = await this.fetchJson<WireSession>(`/sessions/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(partialSessionWriteToWire(data)),
     });
+    return wireToSession(wire);
   }
 
   deleteSession(id: string) {
     return this.fetchVoid(`/sessions/${id}`, { method: 'DELETE' });
   }
 
-  listParts(sessionIds?: string[]): Promise<Part[]> {
-    return this.fetchJson<Part[]>(withQuery('/parts', { session_ids: csvParam(sessionIds) }));
+  async listParts(sessionIds?: string[]): Promise<Part[]> {
+    const wire = await this.fetchJson<WirePart[]>(
+      withQuery('/parts', { session_ids: csvParam(sessionIds) }),
+    );
+    return wire.map(wireToPart);
   }
 
-  createPart(data: PartWrite): Promise<Part> {
-    return this.fetchJson<Part>('/parts', {
+  async createPart(data: PartWrite): Promise<Part> {
+    const wire = await this.fetchJson<WirePart>('/parts', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(partWriteToWire(data)),
     });
+    return wireToPart(wire);
   }
 
-  updatePart(id: string, data: Partial<PartWrite>): Promise<Part> {
-    return this.fetchJson<Part>(`/parts/${id}`, {
+  async updatePart(id: string, data: Partial<PartWrite>): Promise<Part> {
+    const wire = await this.fetchJson<WirePart>(`/parts/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(partialPartWriteToWire(data)),
     });
+    return wireToPart(wire);
   }
 
   deletePart(id: string) {
     return this.fetchVoid(`/parts/${id}`, { method: 'DELETE' });
   }
 
-  listActions(partIds?: string[]): Promise<Action[]> {
-    return this.fetchJson<Action[]>(withQuery('/actions', { part_ids: csvParam(partIds) }));
+  async listActions(partIds?: string[]): Promise<Action[]> {
+    const wire = await this.fetchJson<WireAction[]>(
+      withQuery('/actions', { part_ids: csvParam(partIds) }),
+    );
+    return wire.map(wireToAction);
   }
 
-  createAction(data: ActionWrite): Promise<Action> {
+  async createAction(data: ActionWrite): Promise<Action> {
     // Remote API may reject status=planned until paired SUR-02 migration ships.
-    return this.fetchJson<Action>('/actions', {
+    const wire = await this.fetchJson<WireAction>('/actions', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(actionWriteToWire(data)),
     });
+    return wireToAction(wire);
   }
 
-  updateAction(id: string, data: Partial<ActionWrite>): Promise<Action> {
-    return this.fetchJson<Action>(`/actions/${id}`, {
+  async updateAction(id: string, data: Partial<ActionWrite>): Promise<Action> {
+    const wire = await this.fetchJson<WireAction>(`/actions/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(partialActionWriteToWire(data)),
     });
+    return wireToAction(wire);
   }
 
   deleteAction(id: string) {
     return this.fetchVoid(`/actions/${id}`, { method: 'DELETE' });
   }
 
-  listPayments(periodIds?: string[]): Promise<Payment[]> {
-    return this.fetchJson<Payment[]>(withQuery('/payments', { period_ids: csvParam(periodIds) }));
+  async listPayments(periodIds?: string[]): Promise<Payment[]> {
+    const wire = await this.fetchJson<WirePayment[]>(
+      withQuery('/payments', { period_ids: csvParam(periodIds) }),
+    );
+    return wire.map(wireToPayment);
   }
 
-  createPayment(data: PaymentWrite): Promise<Payment> {
-    return this.fetchJson<Payment>('/payments', {
+  async createPayment(data: PaymentWrite): Promise<Payment> {
+    const wire = await this.fetchJson<WirePayment>('/payments', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(paymentWriteToWire(data)),
     });
+    return wireToPayment(wire);
   }
 
-  updatePayment(id: string, data: Partial<PaymentWrite>): Promise<Payment> {
-    return this.fetchJson<Payment>(`/payments/${id}`, {
+  async updatePayment(id: string, data: Partial<PaymentWrite>): Promise<Payment> {
+    const wire = await this.fetchJson<WirePayment>(`/payments/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(partialPaymentWriteToWire(data)),
     });
+    return wireToPayment(wire);
   }
 
   deletePayment(id: string) {
     return this.fetchVoid(`/payments/${id}`, { method: 'DELETE' });
   }
 
-  listAppointments(filters?: {
+  async listAppointments(filters?: {
     profileId?: string;
     date?: string;
     status?: AppointmentStatus;
   }): Promise<Appointment[]> {
-    return this.fetchJson<Appointment[]>(
+    const wire = await this.fetchJson<WireAppointment[]>(
       withQuery('/appointments', {
         profile_id: filters?.profileId,
         date: filters?.date,
         status: filters?.status,
       }),
     );
+    return wire.map(wireToAppointment);
   }
 
-  createAppointment(data: AppointmentWrite): Promise<Appointment> {
-    return this.fetchJson<Appointment>('/appointments', {
+  async createAppointment(data: AppointmentWrite): Promise<Appointment> {
+    const wire = await this.fetchJson<WireAppointment>('/appointments', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(appointmentWriteToWire(data)),
     });
+    return wireToAppointment(wire);
   }
 
-  updateAppointment(id: string, data: Partial<AppointmentWrite>): Promise<Appointment> {
-    return this.fetchJson<Appointment>(`/appointments/${id}`, {
+  async updateAppointment(id: string, data: Partial<AppointmentWrite>): Promise<Appointment> {
+    const wire = await this.fetchJson<WireAppointment>(`/appointments/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(data),
+      body: JSON.stringify(partialAppointmentWriteToWire(data)),
     });
+    return wireToAppointment(wire);
   }
 
   deleteAppointment(id: string) {
     return this.fetchVoid(`/appointments/${id}`, { method: 'DELETE' });
   }
 
-  registerAccount(data: AccountRegister): Promise<Account> {
-    return this.fetchJson<Account>('/auth/register', {
+  async registerAccount(data: AccountRegister): Promise<Account> {
+    const wire = await this.fetchJson<WireAccount>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(accountRegisterToWire(data)),
     });
+    return wireToAccount(wire);
   }
 
-  loginAccount(data: AccountLogin): Promise<Account> {
-    return this.fetchJson<Account>('/auth/login', {
+  async loginAccount(data: AccountLogin): Promise<Account> {
+    const wire = await this.fetchJson<WireAccount>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(accountLoginToWire(data)),
     });
+    return wireToAccount(wire);
   }
 
   async getCurrentAccount(): Promise<Account | null> {
-    return this.fetchJson<Account | null>('/auth/me');
+    const wire = await this.fetchJson<WireAccount | null>('/auth/me');
+    return wire ? wireToAccount(wire) : null;
   }
 
   logoutAccount() {
