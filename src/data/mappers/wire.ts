@@ -32,6 +32,7 @@ export type WireProfile = {
   file_number: string | null;
   national_id: string | null;
   file_description: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -46,6 +47,7 @@ export type WireProfileWrite = {
   file_number: string | null;
   national_id: string | null;
   file_description: string | null;
+  avatar_url: string | null;
 };
 
 export type WirePeriod = {

@@ -14,6 +14,7 @@ export function wireToProfile(w: WireProfile): Profile {
     file_number: w.file_number,
     national_id: w.national_id,
     file_description: w.file_description,
+    avatar_url: w.avatar_url ?? null,
     created_at: w.created_at,
     updated_at: w.updated_at,
   };
@@ -30,6 +31,7 @@ export function profileWriteToWire(d: ProfileWrite): WireProfileWrite {
     file_number: d.file_number,
     national_id: d.national_id,
     file_description: d.file_description,
+    avatar_url: d.avatar_url ?? null,
   };
 }
 
@@ -44,5 +46,6 @@ export function partialProfileWriteToWire(d: Partial<ProfileWrite>): Partial<Wir
   if (d.file_number !== undefined) out.file_number = d.file_number;
   if (d.national_id !== undefined) out.national_id = d.national_id;
   if (d.file_description !== undefined) out.file_description = d.file_description;
+  if (d.avatar_url !== undefined) out.avatar_url = d.avatar_url;
   return out;
 }
