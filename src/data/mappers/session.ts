@@ -9,6 +9,7 @@ export function wireToSession(w: WireSession): Session {
     session_number: w.session_number,
     session_date: w.session_date,
     notes: w.notes ?? null,
+    duration_minutes: w.duration_minutes ?? null,
     created_at: w.created_at,
     updated_at: w.updated_at,
   };
@@ -20,6 +21,7 @@ export function sessionWriteToWire(d: SessionWrite): WireSessionWrite {
     session_number: d.session_number,
     session_date: d.session_date,
     notes: d.notes ?? null,
+    duration_minutes: d.duration_minutes ?? null,
   };
 }
 
@@ -29,5 +31,6 @@ export function partialSessionWriteToWire(d: Partial<SessionWrite>): Partial<Wir
   if (d.session_number !== undefined) out.session_number = d.session_number;
   if (d.session_date !== undefined) out.session_date = d.session_date;
   if (d.notes !== undefined) out.notes = d.notes;
+  if (d.duration_minutes !== undefined) out.duration_minutes = d.duration_minutes;
   return out;
 }

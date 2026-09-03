@@ -76,6 +76,7 @@ export type WireSession = {
   session_number: number;
   session_date: string;
   notes: string | null;
+  duration_minutes: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -85,6 +86,7 @@ export type WireSessionWrite = {
   session_number: number;
   session_date: string;
   notes?: string | null;
+  duration_minutes?: number | null;
 };
 
 export type WirePart = {

@@ -32,6 +32,7 @@ export interface Session {
   session_number: number;
   session_date: string; // ISO date
   notes: string | null;
+  duration_minutes: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -166,6 +167,19 @@ export interface Account {
   id: string;
   email: string;
   display_name: string | null;
+  created_at: string;
+}
+
+/** Audit trail entry — read-only, created by middleware (POL-26). */
+export interface AuditLog {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  field: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  account_id: string;
   created_at: string;
 }
 

@@ -3,6 +3,7 @@ import type {
   Action,
   Appointment,
   AppointmentStatus,
+  AuditLog,
   Part,
   Payment,
   Period,
@@ -75,6 +76,8 @@ export interface DataProvider {
   deletePart(id: string): Promise<void>;
   deleteAction(id: string): Promise<void>;
   deletePayment(id: string): Promise<void>;
+
+  listAuditLogs(filters?: { entity_type?: string; entity_id?: string; limit?: number }): Promise<AuditLog[]>;
 
   registerAccount(data: AccountRegister): Promise<Account>;
   loginAccount(data: AccountLogin): Promise<Account>;

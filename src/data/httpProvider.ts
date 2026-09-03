@@ -3,6 +3,7 @@ import type {
   Action,
   Appointment,
   AppointmentStatus,
+  AuditLog,
   Part,
   Payment,
   Period,
@@ -358,5 +359,14 @@ export class HttpDataProvider implements DataProvider {
 
   logoutAccount() {
     return this.fetchVoid('/auth/logout', { method: 'POST' });
+  }
+
+  async listAuditLogs(filters?: { entity_type?: string; entity_id?: string; limit?: number }): Promise<AuditLog[]> {
+    const params: string[] = [];
+    if (filters?.entity_type) params.push(`entity_type=${encodeURIComponent(filters.entity_type)}`);
+    if (filters?.entity_id) params.push(`entity_id=${encodeURIComponent(filters.entity_id)}`);
+    if (filters?.limit) params.push(`limit=${filters.limit}`);
+    const qs = params.length > 0 ? `?${params.join('&')}` : '';
+    return this.fetchJson<AuditLog[]>(`/audit-logs${qs}`);
   }
 }
