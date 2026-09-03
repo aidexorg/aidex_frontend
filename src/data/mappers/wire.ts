@@ -144,6 +144,7 @@ export type WirePayment = {
   amount: number;
   direct_to_dentist: boolean;
   description: string | null;
+  payment_method: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -155,6 +156,7 @@ export type WirePaymentWrite = {
   amount: number;
   direct_to_dentist: boolean;
   description: string | null;
+  payment_method?: string | null;
 };
 
 export type WireAppointmentType =

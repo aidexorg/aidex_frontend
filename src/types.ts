@@ -73,9 +73,18 @@ export interface Payment {
   /** ◆ واریزی مستقیم به حساب دندانپزشک (text.txt §1_1) */
   direct_to_dentist: boolean;
   description: string | null;
+  payment_method: string | null;
   created_at: string;
   updated_at: string;
 }
+
+export const PAYMENT_METHODS: { value: string; label: string }[] = [
+  { value: 'cash', label: 'نقدی' },
+  { value: 'card', label: 'کارت' },
+  { value: 'transfer', label: 'انتقال bankی' },
+  { value: 'insurance', label: 'بیمه' },
+  { value: 'other', label: 'سایر' },
+];
 
 export type AppointmentType = 'consultation' | 'treatment' | 'followup' | 'emergency' | 'hygiene';
 

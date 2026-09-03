@@ -11,6 +11,7 @@ export function wireToPayment(w: WirePayment): Payment {
     amount: w.amount,
     direct_to_dentist: w.direct_to_dentist,
     description: w.description,
+    payment_method: w.payment_method ?? null,
     created_at: w.created_at,
     updated_at: w.updated_at,
   };
@@ -24,6 +25,7 @@ export function paymentWriteToWire(d: PaymentWrite): WirePaymentWrite {
     amount: d.amount,
     direct_to_dentist: d.direct_to_dentist,
     description: d.description,
+    payment_method: d.payment_method ?? null,
   };
 }
 
@@ -35,5 +37,6 @@ export function partialPaymentWriteToWire(d: Partial<PaymentWrite>): Partial<Wir
   if (d.amount !== undefined) out.amount = d.amount;
   if (d.direct_to_dentist !== undefined) out.direct_to_dentist = d.direct_to_dentist;
   if (d.description !== undefined) out.description = d.description;
+  if (d.payment_method !== undefined) out.payment_method = d.payment_method;
   return out;
 }
