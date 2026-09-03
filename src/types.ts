@@ -30,6 +30,7 @@ export interface Session {
   period_id: string;
   session_number: number;
   session_date: string; // ISO date
+  notes: string | null;
   created_at: string;
   updated_at: string;
 }

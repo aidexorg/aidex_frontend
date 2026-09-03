@@ -115,6 +115,7 @@ export function ProfileDetail({
   const [pendingSessionCreate, setPendingSessionCreate] = useState<{
     periodId: string;
     date: string;
+    notes: string;
   } | null>(null);
   const { t } = useTranslation();
   /** BR-POL-03: hide until undo window expires */
@@ -525,13 +526,13 @@ export function ProfileDetail({
   };
 
   const startSessionCreate = (periodId: string) => {
-    setPendingSessionCreate({ periodId, date: todayISO() });
+    setPendingSessionCreate({ periodId, date: todayISO(), notes: '' });
     setExpandedPeriod(periodId);
   };
 
   const confirmSessionCreate = async () => {
     if (!pendingSessionCreate) return;
-    const { periodId, date } = pendingSessionCreate;
+    const { periodId, date, notes } = pendingSessionCreate;
     const existing = sessions.filter((s) => s.period_id === periodId);
     const nextNum = existing.length > 0 ? Math.max(...existing.map((s) => s.session_number)) + 1 : 1;
     try {
@@ -539,6 +540,7 @@ export function ProfileDetail({
         period_id: periodId,
         session_number: nextNum,
         session_date: date,
+        notes: notes.trim() || null,
       });
       setPendingSessionCreate(null);
       loadAll();
@@ -1021,8 +1023,22 @@ export function ProfileDetail({
                           aria-label="تاریخ جلسه جدید"
                           value={pendingSessionCreate.date}
                           onChange={(date) =>
-                            setPendingSessionCreate({ periodId: period.id, date })
+                            setPendingSessionCreate({ ...pendingSessionCreate, date })
                           }
+                        />
+                        <label htmlFor={`session-create-notes-${period.id}`} className="label text-xs">
+                          یادداشت جلسه
+                        </label>
+                        <textarea
+                          id={`session-create-notes-${period.id}`}
+                          dir="rtl"
+                          rows={2}
+                          placeholder="اختیاری"
+                          value={pendingSessionCreate.notes}
+                          onChange={(e) =>
+                            setPendingSessionCreate({ ...pendingSessionCreate, notes: e.target.value })
+                          }
+                          className="input text-xs w-full"
                         />
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -1080,6 +1096,11 @@ export function ProfileDetail({
                                       saveSessionDateInline(session.id, sessionDate)
                                     }
                                   />
+                                  {session.notes && (
+                                    <span className="text-xs text-slate-400 truncate max-w-[120px]" title={session.notes}>
+                                      📝 {session.notes}
+                                    </span>
+                                  )}
                                 </div>
                                 <span className="text-xs text-slate-400">
                                   {sessParts.length} بخش
@@ -1090,6 +1111,11 @@ export function ProfileDetail({
                                   id={`session-panel-${session.id}`}
                                   className="border-t border-slate-100 px-4 py-3 space-y-2 animate-fade-in"
                                 >
+                                  {session.notes && (
+                                    <div className="rounded bg-slate-50 px-3 py-2 text-xs text-slate-600 whitespace-pre-wrap">
+                                      📝 {session.notes}
+                                    </div>
+                                  )}
                                   {sessParts.length === 0 ? (
                                     <p className="text-xs text-slate-400 text-center py-2">
                       بخشی وجود ندارد.
