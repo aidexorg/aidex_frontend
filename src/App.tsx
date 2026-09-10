@@ -1,21 +1,25 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { Layout, type View } from '@/components/Layout';
-import { ProfilesList } from '@/components/ProfilesList';
-import { ProfileDetail, type ProfileDetailTab, type ProfileDetailIntent } from '@/components/ProfileDetail';
-import { ProfileForm } from '@/components/ProfileForm';
-import { AppointmentsView } from '@/components/AppointmentsView';
-import { DashboardView } from '@/components/dashboard';
-import { RegisterView } from '@/components/RegisterView';
-import { LoginView } from '@/components/LoginView';
 import { AuthShell } from '@/components/AuthShell';
 import { ToastProvider } from '@/components/ToastProvider';
 import { FollowupCountProvider } from '@/components/FollowupCountProvider';
-import { OnboardingOverlay } from '@/components/OnboardingOverlay';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
+import { LoadingState } from '@/components/ui';
 import { useData } from '@/data';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
 import type { Account, Profile } from '@/types';
+import type { ProfileDetailTab, ProfileDetailIntent } from '@/components/ProfileDetail';
+
+// Lazy-load heavy view components to split the bundle
+const DashboardView = lazy(() => import('@/components/dashboard').then(m => ({ default: m.DashboardView })));
+const ProfilesList = lazy(() => import('@/components/ProfilesList').then(m => ({ default: m.ProfilesList })));
+const ProfileDetail = lazy(() => import('@/components/ProfileDetail').then(m => ({ default: m.ProfileDetail })));
+const ProfileForm = lazy(() => import('@/components/ProfileForm').then(m => ({ default: m.ProfileForm })));
+const AppointmentsView = lazy(() => import('@/components/AppointmentsView').then(m => ({ default: m.AppointmentsView })));
+const LoginView = lazy(() => import('@/components/LoginView').then(m => ({ default: m.LoginView })));
+const RegisterView = lazy(() => import('@/components/RegisterView').then(m => ({ default: m.RegisterView })));
+const OnboardingOverlay = lazy(() => import('@/components/OnboardingOverlay').then(m => ({ default: m.OnboardingOverlay })));
 
 const AUTH_VIEWS: View[] = ['login', 'register'];
 
@@ -193,11 +197,13 @@ function App() {
 
   const shell = !account ? (
     <AuthShell>
-      {view === 'register' ? (
-        <RegisterView onGoLogin={() => setView('login')} onAuthenticated={enterApp} />
-      ) : (
-        <LoginView onGoRegister={() => setView('register')} onAuthenticated={enterApp} />
-      )}
+      <Suspense fallback={<LoadingState />}>
+        {view === 'register' ? (
+          <RegisterView onGoLogin={() => setView('login')} onAuthenticated={enterApp} />
+        ) : (
+          <LoginView onGoRegister={() => setView('register')} onAuthenticated={enterApp} />
+        )}
+      </Suspense>
     </AuthShell>
   ) : (
     <FollowupCountProvider view={view}>
@@ -210,12 +216,16 @@ function App() {
         }}
         onSelectProfile={(p) => openProfile(p)}
       >
-        {renderView()}
-        <OnboardingOverlay
-          accountId={account.id}
-          currentView={view}
-          onNavigate={navigate}
-        />
+        <Suspense fallback={<LoadingState />}>
+          {renderView()}
+        </Suspense>
+        <Suspense fallback={null}>
+          <OnboardingOverlay
+            accountId={account.id}
+            currentView={view}
+            onNavigate={navigate}
+          />
+        </Suspense>
       </Layout>
     </FollowupCountProvider>
   );

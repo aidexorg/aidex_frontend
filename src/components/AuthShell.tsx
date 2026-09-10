@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { AppLogo, DecorativeBg } from './design';
+import { AppLogo } from './design';
 import { LocaleSwitcher } from './LocaleSwitcher';
 import { useTranslation } from './LocaleProvider';
 
@@ -8,7 +8,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[rgb(var(--color-bg))] flex flex-col items-center justify-center px-4 py-10">
-      <DecorativeBg />
+      <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-sage-200/30 blur-3xl dark:bg-sage-800/15 pointer-events-none" aria-hidden />
+      <div className="absolute -bottom-40 left-8 w-[28rem] h-[28rem] rounded-full bg-sage-200/20 blur-3xl dark:bg-sage-800/10 pointer-events-none" aria-hidden />
       <div className="relative z-10 mb-4 flex items-center gap-3">
         <AppLogo size="lg" />
         <LocaleSwitcher />

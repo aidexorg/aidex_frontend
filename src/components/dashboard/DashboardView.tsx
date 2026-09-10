@@ -36,7 +36,9 @@ interface ActionStatProps {
   variant?: 'default' | 'danger';
 }
 
-function ActionStat({ label, value, icon, hint, ariaLabel, onClick, variant }: ActionStatProps) {
+import { memo } from 'react';
+
+const ActionStat = memo(function ActionStat({ label, value, icon, hint, ariaLabel, onClick, variant }: ActionStatProps) {
   return (
     <button
       type="button"
@@ -59,9 +61,9 @@ function ActionStat({ label, value, icon, hint, ariaLabel, onClick, variant }: A
       />
     </button>
   );
-}
+})
 
-function FollowupsPanel({
+const FollowupsPanel = memo(function FollowupsPanel({
   items,
   onOpenProfile,
 }: {
@@ -123,9 +125,9 @@ function FollowupsPanel({
       )}
     </section>
   );
-}
+})
 
-function NeedsAttentionPanel({
+const NeedsAttentionPanel = memo(function NeedsAttentionPanel({
   profiles,
   onOpenProfile,
 }: {
@@ -174,7 +176,7 @@ function NeedsAttentionPanel({
       )}
     </section>
   );
-}
+})
 
 export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps) {
   const {
