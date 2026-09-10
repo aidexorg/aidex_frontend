@@ -6,6 +6,7 @@ import { AppLogo, DecorativeBg } from './design';
 import { CommandPalette } from './CommandPalette';
 import { ThemeToggle } from './ThemeToggle';
 import { LocaleSwitcher } from './LocaleSwitcher';
+import { OfflineModeToggle } from './OfflineModeToggle';
 import { useTranslation } from './LocaleProvider';
 import { useDialogFocus } from '@/lib/accessibility';
 
@@ -168,6 +169,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
 
             {authed && account && (
               <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <OfflineModeToggle />
                 <LocaleSwitcher />
                 <ThemeToggle />
                 <div className="hidden sm:block text-start">
