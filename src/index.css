@@ -201,6 +201,32 @@ input[type="tel"] {
   text-align: right;
 }
 
+/* Mobile responsive utilities */
+@media (max-width: 639px) {
+  /* Stack horizontally-scrolling views on very small screens */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Tighter padding on small screens */
+  .card {
+    border-radius: 0.75rem;
+  }
+
+  /* Better touch targets */
+  button,
+  [role="button"] {
+    min-height: 2rem;
+  }
+}
+
+/* Safe area for mobile bottom nav */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .md\:hidden.fixed.bottom-0 {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 /* POL-13: print/PDF export — show only the printable document, hide app chrome. */
 .print-root {
   display: none;

@@ -367,7 +367,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
         }
       />
 
-      <div className="card space-y-3 p-3 dark:border-slate-600 sm:p-4">
+      <div className="card space-y-3 p-2 sm:p-3 dark:border-slate-600 sm:p-4">
         <CalendarViewTabs value={viewMode} onChange={setViewMode} />
         {dateNavConfig && (
           <CalendarDateNav {...dateNavConfig} onToday={handleGoToToday} />
@@ -611,7 +611,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
       )}
 
       {(viewMode === 'list' || viewMode === 'arrivals') && (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-6">
           <StatCard
             label="جمع دریافتی"
             value={formatPrice(financialStats.totalReceived)}

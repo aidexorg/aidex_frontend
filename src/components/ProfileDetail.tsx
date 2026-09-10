@@ -625,30 +625,32 @@ export function ProfileDetail({
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
-        <button onClick={onBack} className="btn-ghost">
+        <button onClick={onBack} className="btn-ghost text-xs sm:text-sm">
           <ArrowRight size={18} />
-          بازگشت به پرونده‌ها
+          <span className="hidden sm:inline">بازگشت به پرونده‌ها</span>
+          <span className="sm:hidden">بازگشت</span>
         </button>
       </div>
 
       {/* Patient header */}
-      <div className="card p-5">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-lg font-bold shrink-0 border-2 border-white shadow-sm dark:bg-sage-900/50 dark:text-sage-300 dark:border-slate-700">
+      <div className="card p-4 sm:p-5">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-full bg-sage-100 text-sage-700 flex items-center justify-center text-base sm:text-lg font-bold shrink-0 border-2 border-white shadow-sm dark:bg-sage-900/50 dark:text-sage-300 dark:border-slate-700">
             {profile.first_name.charAt(0)}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-slate-400">
+            <p className="text-[10px] sm:text-xs text-slate-400">
               {profile.file_number ? `No${toFaDigits(profile.file_number)}` : 'پرونده بیمار'}
             </p>
-            <h2 className="text-xl font-bold text-brand-navy dark:text-slate-100">
+            <h2 className="text-base sm:text-xl font-bold text-brand-navy dark:text-slate-100 truncate">
               {profile.first_name} {profile.last_name}
             </h2>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
             <button onClick={onEditProfile} className="btn-secondary text-xs">
               <Pencil size={14} />
-              ویرایش
+              <span className="hidden sm:inline">ویرایش</span>
+              <span className="sm:hidden">ویرایش</span>
             </button>
             <button
               onClick={() => {
@@ -660,7 +662,8 @@ export function ProfileDetail({
               aria-keyshortcuts="Alt+P"
             >
               <Plus size={14} />
-              دوره جدید
+              <span className="hidden sm:inline">دوره جدید</span>
+              <span className="sm:hidden">جدید</span>
               <kbd className="hidden sm:inline text-[10px] text-slate-400">Alt+P</kbd>
             </button>
             <button
@@ -668,7 +671,8 @@ export function ProfileDetail({
               className="btn-sage text-xs"
             >
               <CalendarDays size={14} />
-              نوبت
+              <span className="hidden sm:inline">نوبت</span>
+              <span className="sm:hidden">نوبت</span>
             </button>
           </div>
         </div>

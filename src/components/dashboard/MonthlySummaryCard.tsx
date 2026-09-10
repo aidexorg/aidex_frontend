@@ -9,7 +9,7 @@ export function MonthlySummaryCard({ monthly }: MonthlySummaryCardProps) {
   return (
     <div>
       <h3 className="text-sm font-semibold text-slate-700 mb-3">خلاصه مالی ماهانه</h3>
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div className="card p-3 text-center">
           <p className="text-[10px] text-slate-500 mb-1">تولید</p>
           <p className="text-lg font-bold text-teal-600">
@@ -51,7 +51,7 @@ export function MonthlySummaryCard({ monthly }: MonthlySummaryCardProps) {
       {monthly.dailyTotals.length > 0 && (
         <div className="card p-4">
           <h4 className="text-xs font-semibold text-slate-600 mb-3">۷ روز اخیر</h4>
-          <div className="flex items-end gap-2 h-32">
+          <div className="flex items-end gap-1 sm:gap-2 h-24 sm:h-32">
             {monthly.dailyTotals.map((day) => {
               const maxVal = Math.max(
                 ...monthly.dailyTotals.map((d) => Math.max(d.production, d.collections)),
@@ -65,12 +65,12 @@ export function MonthlySummaryCard({ monthly }: MonthlySummaryCardProps) {
                 <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
                   <div className="flex items-end gap-0.5 h-24">
                     <div
-                      className="w-3 bg-teal-400 rounded-t"
+                      className="w-2 sm:w-3 bg-teal-400 rounded-t"
                       style={{ height: `${prodHeight}%` }}
                       title={`تولید: ${formatPrice(day.production)}`}
                     />
                     <div
-                      className="w-3 bg-emerald-400 rounded-t"
+                      className="w-2 sm:w-3 bg-emerald-400 rounded-t"
                       style={{ height: `${collHeight}%` }}
                       title={`وصول: ${formatPrice(day.collections)}`}
                     />

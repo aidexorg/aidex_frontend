@@ -59,6 +59,7 @@ export function ReviewTab({ profile, sessions }: ReviewTabProps) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
       <div className="lg:col-span-4 space-y-2">
+        <h3 className="text-sm font-semibold text-brand-navy mb-3 hidden sm:block">لیست جلسات</h3>
         <h3 className="text-sm font-semibold text-brand-navy mb-3">لیست جلسات</h3>
         {sortedSessions.length === 0 ? (
           <p className="text-sm text-slate-400">جلسه‌ای ثبت نشده.</p>
@@ -92,8 +93,8 @@ export function ReviewTab({ profile, sessions }: ReviewTabProps) {
         )}
       </div>
 
-      <div className="lg:col-span-8 card p-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="lg:col-span-8 card p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
           <div>
             <p className="text-xs text-slate-400">Review</p>
             <h3 className="text-lg font-bold text-brand-navy">
@@ -103,7 +104,7 @@ export function ReviewTab({ profile, sessions }: ReviewTabProps) {
               <p className="text-sm text-slate-500 mt-1">{formatDate(selectedSession.session_date)}</p>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <button
               type="button"
               onClick={handlePrint}
@@ -112,11 +113,13 @@ export function ReviewTab({ profile, sessions }: ReviewTabProps) {
               aria-label="چاپ یا خروجی PDF خلاصه پرونده"
             >
               <Printer size={14} />
-              چاپ / PDF
+              <span className="hidden sm:inline">چاپ / PDF</span>
+              <span className="sm:hidden">PDF</span>
             </button>
             <button type="button" onClick={copyText} disabled={!text} className="btn-secondary text-xs">
               {copied ? <Check size={14} /> : <Copy size={14} />}
-              {copied ? 'کپی شد' : 'کپی'}
+              <span className="hidden sm:inline">{copied ? 'کپی شد' : 'کپی'}</span>
+              <span className="sm:hidden">{copied ? '✓' : '📋'}</span>
             </button>
           </div>
         </div>

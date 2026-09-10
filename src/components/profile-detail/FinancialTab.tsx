@@ -62,8 +62,8 @@ export function FinancialTab({ actions, payments }: FinancialTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="card p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+      <div className="card p-4 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 items-center">
           <div>
             <h4 className="text-sm font-semibold text-brand-navy mb-4 text-center">هزینه‌ها</h4>
             <CapsuleBar segments={costSegments} />
@@ -83,7 +83,7 @@ export function FinancialTab({ actions, payments }: FinancialTabProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard label="جمع کل هزینه‌ها" value={formatPrice(fin.totalCosts)} icon={Receipt} />
         <StatCard label="جمع کل پرداخت‌ها" value={formatPrice(fin.paid)} icon={CreditCard} />
         <StatCard label="تخفیف‌ها" value={formatPrice(fin.discounts)} icon={Tag} />

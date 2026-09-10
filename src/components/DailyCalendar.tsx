@@ -215,8 +215,8 @@ export function DailyCalendar({
         />
       )}
 
-      <div className="card p-3 dark:border-slate-600">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+      <div className="card p-2 sm:p-3 dark:border-slate-600">
+        <div className="flex flex-wrap items-center gap-x-3 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 text-[10px] sm:text-xs">
           <span className="font-medium text-slate-500 dark:text-slate-400">وضعیت صندلی‌ها:</span>
           {chairSummary.map((chair) => (
             <div key={chair.id} className="flex items-center gap-1.5">

@@ -195,7 +195,7 @@ export function MonthlyCalendar({
                 <button
                   type="button"
                   key={`${cell.dateStr}-${idx}`}
-                  className={`min-h-[72px] border-b border-r border-slate-100 p-1.5 text-right transition-colors sm:min-h-[88px] ${
+                  className={`min-h-[56px] sm:min-h-[72px] border-b border-r border-slate-100 p-1 sm:p-1.5 text-right transition-colors md:min-h-[88px] ${
                     !cell.isCurrentMonth
                       ? 'bg-slate-50/50 dark:bg-slate-900/30'
                       : todayHighlight
@@ -207,9 +207,9 @@ export function MonthlyCalendar({
                 >
                   <div className="mb-1 flex items-center justify-between">
                     <span
-                      className={`text-xs font-medium ${
+                      className={`text-[10px] sm:text-xs font-medium ${
                         todayHighlight
-                          ? 'flex h-6 w-6 items-center justify-center rounded-full bg-teal-600 text-white'
+                          ? 'flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-teal-600 text-white'
                           : isFriday
                             ? 'text-red-400'
                             : cell.isCurrentMonth

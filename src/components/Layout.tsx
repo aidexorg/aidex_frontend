@@ -253,7 +253,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
 
       {/* Mobile bottom nav */}
       {authed && (
-        <nav aria-label={t('layout.nav.bottom')} className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-30 grid grid-cols-3 shadow-[0_-4px_20px_rgb(0_0_0_/_0.06)] dark:bg-slate-900 dark:border-slate-800 dark:shadow-[0_-4px_20px_rgb(0_0_0_/_0.25)]">
+        <nav aria-label={t('layout.nav.bottom')} className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-slate-100 z-30 grid grid-cols-3 shadow-[0_-4px_20px_rgb(0_0_0_/_0.06)] dark:bg-slate-900 dark:border-slate-800 dark:shadow-[0_-4px_20px_rgb(0_0_0_/_0.25)]" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}>
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = current === item.key;

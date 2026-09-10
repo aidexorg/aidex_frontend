@@ -42,7 +42,7 @@ export function TabBar<T extends string>({
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className={`flex items-center gap-1 border-b border-slate-200/80 ${className}`}
+      className={`flex items-center gap-1 border-b border-slate-200/80 overflow-x-auto ${className}`}
     >
       {tabs.map((tab, index) => {
         const Icon = tab.icon;

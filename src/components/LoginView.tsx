@@ -46,7 +46,7 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
   };
 
   return (
-    <div className="card p-8 space-y-6 shadow-lg">
+    <div className="card p-5 sm:p-8 space-y-5 sm:space-y-6 shadow-lg">
       <div className="text-center">
         <h2 className="text-xl font-bold text-brand-navy">{t('login.title')}</h2>
         <p className="text-sm text-slate-400 mt-1">{t('login.subtitle')}</p>
