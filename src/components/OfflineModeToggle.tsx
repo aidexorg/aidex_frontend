@@ -33,7 +33,7 @@ function formatBytes(bytes: number): string {
 }
 
 export function OfflineModeToggle() {
-  const { mode, setMode } = useDataProviderMode();
+  const { mode, locked, setMode } = useDataProviderMode();
   const { showToast } = useToast();
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -120,14 +120,19 @@ export function OfflineModeToggle() {
           <span className="hidden sm:inline text-xs font-medium">
             {isOffline ? 'آفلاین' : 'آنلاین'}
           </span>
-          <ChevronDown size={12} className="hidden sm:block" />
+          {!locked && <ChevronDown size={12} className="hidden sm:block" />}
         </button>
 
         {menuOpen && (
           <div className="absolute end-0 top-full mt-2 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-lg z-50 dark:border-slate-700 dark:bg-slate-800 animate-fade-in">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">حالت اتصال</span>
-              {isOffline && (
+              {locked && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400">
+                  قفل شده (VITE_APP_MODE)
+                </span>
+              )}
+              {!locked && isOffline && (
                 <span className="text-[10px] text-amber-600 dark:text-amber-400">
                   {formatBytes(storageSize)}
                 </span>
@@ -137,7 +142,10 @@ export function OfflineModeToggle() {
             <button
               type="button"
               onClick={handleModeToggle}
+              disabled={locked}
               className={`w-full flex items-center gap-3 p-3 rounded-lg transition text-right ${
+                locked ? 'opacity-60 cursor-not-allowed' : ''
+              } ${
                 isOffline
                   ? 'bg-amber-50 border border-amber-200 dark:bg-amber-950/40 dark:border-amber-800/50'
                   : 'bg-sage-50 border border-sage-200 dark:bg-sage-950/40 dark:border-sage-800/50'
@@ -153,9 +161,11 @@ export function OfflineModeToggle() {
                   {isOffline ? 'آفلاین' : 'آنلاین'}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {isOffline
-                    ? 'تمام داده‌ها سمت مرورگر ذخیره می‌شوند'
-                    : 'اتصال به سرور REST API'}
+                  {locked
+                    ? `قفل شده توسط متغیر محیطی VITE_APP_MODE=${isOffline ? 'offline' : 'remote'}`
+                    : isOffline
+                      ? 'تمام داده‌ها سمت مرورگر ذخیره می‌شوند'
+                      : 'اتصال به سرور REST API'}`
                 </p>
               </div>
             </button>
