@@ -113,7 +113,7 @@ export function DataTable<T>({
                           ? 'none'
                           : undefined
                     }
-                    className={`px-4 py-3 text-right font-medium text-slate-500 dark:text-slate-400 ${col.className ?? ''}`}
+                    className={`px-4 py-3 text-start font-medium text-slate-500 dark:text-slate-400 ${col.className ?? ''}`}
                   >
                     {isSortable ? (
                       <button

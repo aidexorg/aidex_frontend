@@ -30,7 +30,6 @@ export function BulkActionBar({
     <div
       role="region"
       aria-label="عملیات گروهی"
-      dir="rtl"
       className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-xl border border-sage-200 bg-sage-50/90 px-4 py-2.5 shadow-sm backdrop-blur"
     >
       <span className="text-sm font-medium text-sage-800" aria-live="polite">
@@ -65,7 +64,7 @@ export function BulkActionBar({
         type="button"
         onClick={onClear}
         disabled={busy}
-        className="mr-auto inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 disabled:opacity-50"
+        className="ms-auto inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 disabled:opacity-50"
         aria-label="پاک کردن انتخاب"
       >
         <X size={14} aria-hidden="true" />

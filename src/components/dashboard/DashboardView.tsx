@@ -44,7 +44,7 @@ const ActionStat = memo(function ActionStat({ label, value, icon, hint, ariaLabe
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="block w-full text-right rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
+      className="block w-full text-start rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400"
     >
       <StatCard
         label={label}
@@ -96,7 +96,7 @@ const FollowupsPanel = memo(function FollowupsPanel({
                 type="button"
                 onClick={() => onOpenProfile?.(item.profile)}
                 aria-label={`باز کردن پرونده ${item.profile.first_name} ${item.profile.last_name}`}
-                className="w-full text-right card p-3 flex items-center gap-3 hover:bg-slate-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400 dark:hover:bg-slate-700/50"
+                className="w-full text-start card p-3 flex items-center gap-3 hover:bg-slate-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sage-400 dark:hover:bg-slate-700/50"
               >
                 <div className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                 <div className="flex-1 min-w-0">

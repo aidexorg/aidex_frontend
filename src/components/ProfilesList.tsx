@@ -338,7 +338,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
       {
         key: 'actions',
         header: '',
-        className: 'w-12 text-left',
+        className: 'w-12 text-start',
         render: (p) => (
           <ProfileQuickActionsMenu
             profileLabel={profileLabel(p)}
@@ -396,7 +396,7 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
               aria-pressed={statusFilter === f.key}
               className={statusFilter === f.key ? 'chip-active' : 'chip'}
             >
-              {f.key === 'all' && <Filter size={14} className="inline ml-1" />}
+              {f.key === 'all' && <Filter size={14} className="inline ms-1" />}
               {f.label}
             </button>
           ))}
