@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Eye, EyeOff, Lock } from 'lucide-react';
 import { DataError, useData } from '@/data';
 import type { Account } from '@/types';
 import { ErrorBanner, Spinner } from './ui';
@@ -19,6 +20,8 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -104,28 +107,52 @@ export function RegisterView({ onGoLogin, onAuthenticated }: RegisterViewProps) 
         </div>
         <div>
           <label htmlFor="register-password" className="label">{t('register.password')}</label>
-          <input
-            id="register-password"
-            className="input"
-            type="password"
-            required
-            autoComplete="new-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={t('register.passwordPlaceholder')}
-          />
+          <div className="relative">
+            <Lock size={16} className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              id="register-password"
+              className="input pe-10 ps-10"
+              type={showPassword ? 'text' : 'password'}
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t('register.passwordPlaceholder')}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
         <div>
           <label htmlFor="register-password-confirm" className="label">{t('register.confirmPassword')}</label>
-          <input
-            id="register-password-confirm"
-            className="input"
-            type="password"
-            required
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-          />
+          <div className="relative">
+            <Lock size={16} className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              id="register-password-confirm"
+              className="input pe-10 ps-10"
+              type={showConfirm ? 'text' : 'password'}
+              required
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(!showConfirm)}
+              className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              aria-label={showConfirm ? t('login.hidePassword') : t('login.showPassword')}
+              aria-pressed={showConfirm}
+            >
+              {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
         </div>
         <button type="submit" disabled={saving} className="btn-primary w-full py-3">
           {saving ? <Spinner /> : t('register.submit')}

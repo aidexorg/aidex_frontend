@@ -5,6 +5,7 @@ export const messages = {
     'common.loading': 'در حال بارگذاری…',
     'common.retry': 'تلاش مجدد',
     'common.close': 'بستن',
+    'modal.close': 'بستن پنجره',
     'common.optional': 'اختیاری',
     'common.emDash': '—',
 
@@ -51,6 +52,10 @@ export const messages = {
     'login.submit': 'ورود',
     'login.forgotPassword': 'رمز عبور را فراموش کرده‌اید؟',
     'login.goRegister': 'حساب ندارید؟ ثبت‌نام',
+    'login.offlineSuggestion': 'سرور در دسترس نیست. می‌توانید بدون سرور و به‌صورت آفلاین کار کنید.',
+    'login.switchToOffline': 'فعال‌سازی حالت آفلاین',
+    'login.workOffline': 'کار بدون سرور (آفلاین)',
+    'login.offlineHint': 'داده‌ها در مرورگر شما ذخیره می‌شوند',
     'login.required': 'ایمیل و رمز عبور الزامی است.',
     'login.failed': 'ورود ناموفق بود.',
 
@@ -241,6 +246,7 @@ export const messages = {
     'common.loading': 'Loading…',
     'common.retry': 'Retry',
     'common.close': 'Close',
+    'modal.close': 'Close dialog',
     'common.optional': 'Optional',
     'common.emDash': '—',
 
@@ -289,6 +295,10 @@ export const messages = {
     'login.goRegister': 'No account? Register',
     'login.required': 'Email and password are required.',
     'login.failed': 'Sign-in failed.',
+    'login.offlineSuggestion': 'Server is unreachable. You can work offline without a backend.',
+    'login.switchToOffline': 'Enable offline mode',
+    'login.workOffline': 'Work offline (no server)',
+    'login.offlineHint': 'Data is stored in your browser',
 
     'register.title': 'Register',
     'register.subtitle': 'Operator account is separate from patient records.',

@@ -1,6 +1,7 @@
 import { type ReactNode, type RefObject, useId, useRef } from 'react';
 import { X } from 'lucide-react';
 import { useDialogFocus } from '@/lib/accessibility';
+import { useTranslation } from './LocaleProvider';
 
 interface ModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ export function Modal({
   size = 'md',
   initialFocusRef,
 }: ModalProps) {
+  const { t } = useTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   useDialogFocus({
@@ -58,7 +60,7 @@ export function Modal({
             type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg p-1 transition dark:hover:text-slate-200 dark:hover:bg-slate-700"
-            aria-label="بستن پنجره"
+            aria-label={t('modal.close')}
           >
             <X size={20} />
           </button>

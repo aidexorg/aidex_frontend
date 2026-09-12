@@ -31,7 +31,13 @@ export function StatCard({
           </p>
         </div>
         {Icon && (
-          <div className="icon-well bg-sage-50 text-sage-600 dark:bg-sage-900/40 dark:text-sage-400">
+          <div
+            className={`icon-well ${
+              variant === 'danger'
+                ? 'bg-red-50 text-red-500 dark:bg-red-900/40 dark:text-red-400'
+                : 'bg-sage-50 text-sage-600 dark:bg-sage-900/40 dark:text-sage-400'
+            }`}
+          >
             <Icon size={20} />
           </div>
         )}

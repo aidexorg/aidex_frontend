@@ -263,7 +263,7 @@ export function Layout({ current, onNavigate, children, account, onLogout, onSel
                 type="button"
                 onClick={() => onNavigate(item.key)}
                 aria-current={active ? 'page' : undefined}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2.5 transition ${
+                className={`flex flex-col items-center justify-center gap-0.5 min-h-[48px] py-2 transition ${
                   active ? 'text-sage-600' : 'text-slate-400'
                 }`}
               >

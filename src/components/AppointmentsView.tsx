@@ -28,7 +28,7 @@ import { WeeklyCalendar } from './WeeklyCalendar';
 import { MonthlyCalendar } from './MonthlyCalendar';
 import { ArrivalsView } from './ArrivalsView';
 import { ContextMenu } from './ContextMenu';
-import { CreditCard, Users, Wallet, CalendarDays as CalIcon, TrendingUp } from 'lucide-react';
+import { CreditCard, Users, Wallet, TrendingUp } from 'lucide-react';
 import {
   type CalendarViewMode,
   STATUS_BADGE,
@@ -620,7 +620,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
           <StatCard
             label="تعداد نوبت"
             value={toFaDigits(financialStats.appointmentCount)}
-            icon={CalIcon}
+            icon={CalendarDays}
           />
           <StatCard
             label="میانگین هر نوبت"

@@ -3,6 +3,7 @@ import type {
   Action,
   Appointment,
   AppointmentStatus,
+  AuditLog,
   Part,
   Payment,
   Period,
@@ -330,6 +331,12 @@ export class OfflineProvider implements DataProvider {
 
   async deleteAppointment(id: string): Promise<void> {
     saveCollection('appointments', loadCollection<Appointment>('appointments').filter((a) => a.id !== id));
+  }
+
+  // ── Audit Logs (empty in offline mode) ──
+
+  async listAuditLogs(): Promise<AuditLog[]> {
+    return [];
   }
 
   // ── Auth (emulated) ──

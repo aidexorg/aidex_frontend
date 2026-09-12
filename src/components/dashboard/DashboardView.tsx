@@ -211,7 +211,7 @@ export function DashboardView({ onOpenProfile, onNavigate }: DashboardViewProps)
       <div className="relative card p-6 overflow-hidden">
         <div className="absolute top-0 left-0 w-32 h-32 bg-sage-100/50 rounded-full -translate-x-1/2 -translate-y-1/2 dark:bg-sage-800/30" />
         <div className="relative flex flex-wrap items-center gap-5">
-          <div className="w-16 h-16 rounded-full bg-sage-100 border-4 border-white shadow-md flex items-center justify-center dark:bg-sage-900/50 dark:border-slate-700">
+          <div className="w-16 h-16 rounded-full bg-sage-100 border-4 border-white shadow-md flex items-center justify-center dark:bg-sage-900/50 dark:border-slate-700 dark:shadow-black/30">
             <Users size={28} className="text-sage-500 dark:text-sage-400" />
           </div>
           <div className="flex-1 min-w-0">

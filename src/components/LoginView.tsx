@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { Eye, EyeOff, Lock, User } from 'lucide-react';
-import { DataError, useData } from '@/data';
+import { Eye, EyeOff, Lock, User, WifiOff } from 'lucide-react';
+import { DataError, useData, useDataProviderMode } from '@/data';
 import type { Account } from '@/types';
 import { ErrorBanner, Spinner } from './ui';
 import { useTranslation } from './LocaleProvider';
@@ -13,11 +13,22 @@ interface LoginViewProps {
 export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
   const data = useData();
   const { t } = useTranslation();
+  const { setMode } = useDataProviderMode();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOfflineSuggestion, setShowOfflineSuggestion] = useState(false);
+
+  const isNetworkError = (err: unknown): boolean => {
+    if (err instanceof TypeError) return true; // fetch failed
+    if (err instanceof Error) {
+      const msg = err.message.toLowerCase();
+      return msg.includes('network') || msg.includes('fetch') || msg.includes('failed to fetch') || msg.includes('refused');
+    }
+    return false;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -28,6 +39,7 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
     }
     setSaving(true);
     setError(null);
+    setShowOfflineSuggestion(false);
     try {
       const account = await data.loginAccount({ email: trimmedEmail, password });
       setPassword('');
@@ -40,9 +52,17 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
             ? err.message
             : t('login.failed');
       setError(msg);
+      if (isNetworkError(err)) {
+        setShowOfflineSuggestion(true);
+      }
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSwitchToOffline = () => {
+    setMode('offline');
+    setShowOfflineSuggestion(false);
   };
 
   return (
@@ -104,6 +124,26 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
         <button type="submit" disabled={saving} className="btn-primary w-full py-3">
           {saving ? <Spinner /> : t('login.submit')}
         </button>
+
+        {/* Offline mode suggestion when backend is unreachable */}
+        {showOfflineSuggestion && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 animate-fade-in dark:border-amber-800/50 dark:bg-amber-950/40">
+            <div className="flex items-start gap-2">
+              <WifiOff size={16} className="text-amber-600 mt-0.5 shrink-0 dark:text-amber-400" />
+              <div className="flex-1">
+                <p className="text-sm text-amber-800 dark:text-amber-200">{t('login.offlineSuggestion')}</p>
+                <button
+                  type="button"
+                  onClick={handleSwitchToOffline}
+                  className="mt-2 text-xs font-medium text-amber-700 underline underline-offset-2 hover:text-amber-900 dark:text-amber-300 dark:hover:text-amber-100"
+                >
+                  {t('login.switchToOffline')}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <p className="text-center text-sm text-slate-400">
           {t('login.forgotPassword')}
         </p>
@@ -113,6 +153,21 @@ export function LoginView({ onGoRegister, onAuthenticated }: LoginViewProps) {
           </button>
         )}
       </form>
+
+      {/* Always-visible offline mode entry point */}
+      <div className="pt-3 border-t border-slate-100 dark:border-slate-700">
+        <button
+          type="button"
+          onClick={handleSwitchToOffline}
+          className="w-full flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition dark:text-slate-400 dark:hover:text-slate-200"
+        >
+          <WifiOff size={14} />
+          {t('login.workOffline')}
+        </button>
+        <p className="text-[10px] text-slate-300 text-center mt-1 dark:text-slate-600">
+          {t('login.offlineHint')}
+        </p>
+      </div>
     </div>
   );
 }

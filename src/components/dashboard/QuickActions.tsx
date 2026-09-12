@@ -1,4 +1,4 @@
-import { CalendarDays, Users, CheckCircle2, Activity, Stethoscope } from 'lucide-react';
+import { CalendarDays, Users, CheckCircle2, Wallet, Stethoscope } from 'lucide-react';
 
 interface QuickActionsProps {
   onNavigate?: (view: string) => void;
@@ -8,9 +8,9 @@ export function QuickActions({ onNavigate }: QuickActionsProps) {
   const actions = [
     { label: 'نوبت جدید', icon: CalendarDays, action: () => onNavigate?.('appointments'), bg: 'bg-teal-50 hover:bg-teal-100', iconColor: 'text-teal-600' },
     { label: 'بیمار جدید', icon: Users, action: () => onNavigate?.('profiles'), bg: 'bg-sky-50 hover:bg-sky-100', iconColor: 'text-sky-600' },
-    { label: 'ثبت پرداخت', icon: CheckCircle2, action: () => onNavigate?.('payments'), bg: 'bg-emerald-50 hover:bg-emerald-100', iconColor: 'text-emerald-600' },
+    { label: 'ثبت پرداخت', icon: CheckCircle2, action: () => onNavigate?.('profiles'), bg: 'bg-emerald-50 hover:bg-emerald-100', iconColor: 'text-emerald-600' },
     { label: 'جستجو', icon: Stethoscope, action: () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })), bg: 'bg-amber-50 hover:bg-amber-100', iconColor: 'text-amber-600' },
-    { label: 'گزارش روزانه', icon: Activity, action: () => onNavigate?.('reports'), bg: 'bg-purple-50 hover:bg-purple-100', iconColor: 'text-purple-600' },
+    { label: 'موجودی حساب', icon: Wallet, action: () => onNavigate?.('profiles'), bg: 'bg-purple-50 hover:bg-purple-100', iconColor: 'text-purple-600' },
   ];
 
   return (
