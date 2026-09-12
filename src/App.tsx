@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ToastProvider';
 import { FollowupCountProvider } from '@/components/FollowupCountProvider';
 import { OfflineBanner } from '@/components/OfflineBanner';
 import { PwaUpdateNotice } from '@/components/PwaUpdateNotice';
+import { PwaInstallBanner } from '@/components/PwaInstallBanner';
 import { LoadingState } from '@/components/ui';
 import { useData } from '@/data';
 import { shouldIgnoreShortcut } from '@/lib/accessibility';
@@ -235,6 +236,7 @@ function App() {
       {shell}
       <OfflineBanner offset={account ? 'layout' : 'auth'} />
       <PwaUpdateNotice />
+      <PwaInstallBanner />
     </ToastProvider>
   );
 }

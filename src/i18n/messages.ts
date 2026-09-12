@@ -80,6 +80,9 @@ export const messages = {
 
     'pwa.updateReady': 'نسخه جدید اپلیکیشن آماده است',
     'pwa.reload': 'بارگذاری مجدد',
+    'pwa.installTitle': 'نصب اپلیکیشن',
+    'pwa.installHint': 'ایدکس را روی دستگاه خود نصب کنید',
+    'pwa.install': 'نصب',
 
     'toast.undo': 'بازگردانی',
 
@@ -321,6 +324,9 @@ export const messages = {
 
     'pwa.updateReady': 'A new app version is ready',
     'pwa.reload': 'Reload',
+    'pwa.installTitle': 'Install app',
+    'pwa.installHint': 'Add AIDEX to your home screen',
+    'pwa.install': 'Install',
 
     'toast.undo': 'Undo',
 
