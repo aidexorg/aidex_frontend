@@ -11,10 +11,10 @@ function needsPollingWatch(): boolean {
   return cwd.startsWith('/mnt/');
 }
 
-const pollWatch = needsPollingWatch();
+const pollWatch = true //needsPollingWatch();
 
 export default defineConfig({
-  base: '/aidex_frontend/',
+  base: '/',
   plugins: [
     react(),
     VitePWA({

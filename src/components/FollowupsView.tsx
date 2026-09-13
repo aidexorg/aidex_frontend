@@ -6,6 +6,7 @@ import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import { INCOMPLETE_REASONS } from '@/types';
 import type { Profile } from '@/types';
 import { LoadingState, EmptyState } from './ui';
+import { PageHeader } from './design';
 
 interface FollowupsViewProps {
   onOpenProfile: (profile: Profile) => void;
@@ -40,12 +41,10 @@ export function FollowupsView({ onOpenProfile }: FollowupsViewProps) {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="page-title">پیگیری‌ها</h1>
-        <p className="page-sub">
-          اقدامات ناقص یا نیازمند پیگیری
-        </p>
-      </div>
+      <PageHeader
+        title="پیگیری‌ها"
+        subtitle="اقدامات ناقص یا نیازمند پیگیری"
+      />
 
       {/* Filter tabs */}
       <div className="flex gap-2">

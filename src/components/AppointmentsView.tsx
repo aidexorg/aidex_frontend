@@ -457,7 +457,7 @@ export function AppointmentsView({ onOpenProfile }: AppointmentsViewProps) {
                 }
                 action={
                   filter === 'all' && (
-                    <button type="button" onClick={openNewAppointment} className="btn-primary mt-2">
+                    <button type="button" onClick={openNewAppointment} className="btn-sage mt-2">
                       <Plus size={16} />
                       ایجاد نوبت
                     </button>

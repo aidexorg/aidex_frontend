@@ -3,6 +3,7 @@ import { BarChart3, TrendingUp, Calendar, Wallet } from 'lucide-react';
 import { useData } from '@/data';
 import { formatPrice, formatMonthYear, toFaDigits } from '@/lib/format';
 import { LoadingState, EmptyState } from './ui';
+import { PageHeader } from './design';
 
 /** text.txt §1_2 — English amount with one decimal */
 function formatIncomeAmount(amount: number): string {
@@ -170,10 +171,10 @@ export function ReportsView() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="page-title">گزارش درآمد</h1>
-        <p className="page-sub">تحلیل درآمد و هزینه‌های صورت‌شده ماهانه</p>
-      </div>
+      <PageHeader
+        title="گزارش درآمد"
+        subtitle="تحلیل درآمد و هزینه‌های صورت‌شده ماهانه"
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="card p-4">

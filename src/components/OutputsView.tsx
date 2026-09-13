@@ -345,27 +345,23 @@ export function OutputsView({ onOpenProfile }: OutputsViewProps) {
             </div>
             <div>
               <label className="label">نوع خروجی</label>
-              <div className="flex gap-2">
+              <div
+                role="group"
+                aria-label="نوع خروجی"
+                className="flex flex-wrap gap-2"
+              >
                 <button
                   onClick={() => setOutputType('profile')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition ${
-                    outputType === 'profile'
-                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm shadow-teal-600/20'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
+                  className={outputType === 'profile' ? 'chip-active' : 'chip'}
                 >
-                  <User size={16} />
+                  <User size={14} className="inline ms-1" />
                   پرونده بیمار
                 </button>
                 <button
                   onClick={() => setOutputType('review')}
-                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border transition ${
-                    outputType === 'review'
-                      ? 'bg-teal-600 text-white border-teal-600 shadow-sm shadow-teal-600/20'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  }`}
+                  className={outputType === 'review' ? 'chip-active' : 'chip'}
                 >
-                  <ClipboardList size={16} />
+                  <ClipboardList size={14} className="inline ms-1" />
                   مرور درمان
                 </button>
               </div>

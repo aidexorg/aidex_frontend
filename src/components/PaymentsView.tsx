@@ -4,6 +4,7 @@ import { useData } from '@/data';
 import { formatPrice, formatDate, toFaDigits } from '@/lib/format';
 import type { Payment, Period, Profile } from '@/types';
 import { LoadingState, EmptyState } from './ui';
+import { PageHeader } from './design';
 
 interface PaymentRow extends Payment {
   profile: Profile | null;
@@ -66,10 +67,10 @@ export function PaymentsView({ onOpenProfile }: PaymentsViewProps) {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="page-title">پرداخت‌ها</h1>
-        <p className="page-sub">لیست تمام پرداخت‌های ثبت‌شده</p>
-      </div>
+      <PageHeader
+        title="پرداخت‌ها"
+        subtitle="لیست تمام پرداخت‌های ثبت‌شده"
+      />
 
       {/* Summary card */}
       <div className="card p-4 flex items-center justify-between">

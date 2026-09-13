@@ -199,7 +199,7 @@ export function ProfileForm({
       className="space-y-5"
     >
       <FormDraftUI draft={draft} />
-      {/* Header card — same for both variants */}
+      {/* Header card — shared identity for modal and page */}
       <div className="rounded-2xl bg-gradient-to-br from-teal-600 to-teal-700 p-4 text-white flex flex-wrap items-center gap-4">
         <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-xl font-bold">
           {initial}
@@ -488,9 +488,6 @@ export function ProfileForm({
           {editing ? 'بازگشت به پرونده' : 'بازگشت به پرونده‌ها'}
         </button>
         <div className="card p-5 md:p-6">
-          <h1 className="text-lg font-bold text-slate-900 mb-4">
-            {editing ? 'ویرایش پرونده' : 'پرونده جدید'}
-          </h1>
           {formBody}
         </div>
       </div>
@@ -501,7 +498,6 @@ export function ProfileForm({
     <Modal
       open={open}
       onClose={handleClose}
-      title={editing ? 'ویرایش پرونده' : 'پرونده جدید'}
       size="xl"
     >
       {formBody}

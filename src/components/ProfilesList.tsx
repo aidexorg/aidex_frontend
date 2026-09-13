@@ -405,32 +405,24 @@ export function ProfilesList({ onOpenProfile, onCreateProfile }: ProfilesListPro
         <div
           role="group"
           aria-label="نوع نمایش فهرست"
-          className="inline-flex rounded-xl border border-slate-200 bg-white p-0.5 dark:border-slate-600 dark:bg-slate-800"
+          className="inline-flex flex-wrap gap-2"
         >
           <button
             type="button"
             onClick={() => setView('table')}
             aria-pressed={viewMode === 'table'}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              viewMode === 'table'
-                ? 'bg-sage-50 text-sage-700'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
+            className={viewMode === 'table' ? 'chip-active' : 'chip'}
           >
-            <Rows3 size={14} aria-hidden="true" />
+            <Rows3 size={14} className="inline ms-1" />
             جدول
           </button>
           <button
             type="button"
             onClick={() => setView('card')}
             aria-pressed={viewMode === 'card'}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              viewMode === 'card'
-                ? 'bg-sage-50 text-sage-700'
-                : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
+            className={viewMode === 'card' ? 'chip-active' : 'chip'}
           >
-            <LayoutGrid size={14} aria-hidden="true" />
+            <LayoutGrid size={14} className="inline ms-1" />
             کارت
           </button>
         </div>
